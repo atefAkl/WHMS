@@ -202,26 +202,6 @@ export default function Show({ season, allTerms }) {
                                                     </code>
                                                 </div>
                                             ))}
-                                    </div>
-
-                                    {/* Smart Variables Guide */}
-                                    <div className="mt-8 p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl max-w-xl">
-                                        <div className="flex items-center gap-2 mb-3 text-amber-800 font-bold text-xs uppercase tracking-wider">
-                                            <Variable className="h-4 w-4 text-amber-600" />
-                                            {lang === 'ar' ? 'دليل المتغيرات الذكية' : 'Smart Variables Guide'}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                            {[
-                                                { label: lang === 'ar' ? 'الفترة الإلزامية' : 'Mandatory Per.', code: '{$mandatory_period}' },
-                                                { label: lang === 'ar' ? 'فترة التجديد' : 'Renewal Per.', code: '{$renew_period}' },
-                                            ].map(v => (
-                                                <div key={v.code} className="flex items-center justify-between group border-b border-amber-500/10 pb-1">
-                                                    <span className="text-[10px] text-amber-700">{v.label}</span>
-                                                    <code className="text-[10px] bg-white/50 px-1.5 py-0.5 rounded text-amber-600 font-mono">
-                                                        {v.code}
-                                                    </code>
-                                                </div>
-                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -341,6 +321,7 @@ export default function Show({ season, allTerms }) {
                                             </div>
                                             <InputError message={errors.renewal_period} />
                                         </div>
+                                    </div>
                                 </div>
                             )}
 

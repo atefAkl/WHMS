@@ -65,18 +65,18 @@ export default function Index() {
                 bg: 'bg-rose-500/10'
             },
             {
-                title: lang === 'ar' ? 'إعدادات النظام' : 'General Options',
-                desc: lang === 'ar' ? 'خيارات النظام العامة' : 'General system options',
+                title: lang === 'ar' ? 'الإعدادات العامة' : 'General Settings',
+                desc: lang === 'ar' ? 'هوية المنشأة، تفضيلات النظام، الجودة، والفوترة' : 'Company profile, system preferences, quality & billing',
                 icon: SettingsIcon,
-                route: '#', // placeholder
+                route: route('settings.general.index'),
                 color: 'text-amber-500',
                 bg: 'bg-amber-500/10'
             },
             {
-                title: lang === 'ar' ? 'النسخ الاحتياطي' : 'Database Backups',
-                desc: lang === 'ar' ? 'حفظ واسترجاع البيانات' : 'Backup and restore',
+                title: lang === 'ar' ? 'إدارة المشتركين (SaaS Dashboard)' : 'SaaS Tenants',
+                desc: lang === 'ar' ? 'لوحة إدارة الاشتراكات والنطاقات الفرعية' : 'Manage tenants, subdomains & subscriptions',
                 icon: Database,
-                route: '#', // placeholder
+                route: route('saas.tenants.index'),
                 color: 'text-cyan-500',
                 bg: 'bg-cyan-500/10'
             },
@@ -103,27 +103,35 @@ export default function Index() {
         <AuthenticatedLayout header={breadcrumbs}>
             <Head title={t.title} />
 
-            <div className="py-4 space-y-4">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="pb-4 space-y-3">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-3">
                     
-                    <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-text">{t.title}</h2>
-                        <p className="text-sm text-text-muted mt-1">{t.description}</p>
+                    {/* Header Banner - matching Customer Show/Index standards */}
+                    <div className="flex items-center justify-between border border-border rounded-xl px-4 py-3 bg-surface shadow-sm transition-shadow hover:shadow-md">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <SettingsIcon className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold text-text leading-tight">{t.title}</h1>
+                                <p className="text-[12px] text-text-muted mt-0.5">{t.description}</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {t.cards.map((card, idx) => (
                             <Link 
                                 key={idx} 
                                 href={card.route}
-                                className="group flex items-start gap-4 p-5 rounded-xl border border-border bg-surface hover:border-primary/50 hover:shadow-md transition-all duration-200"
+                                className="group flex items-start gap-3 p-4 rounded-xl border border-border bg-surface hover:border-primary/50 hover:shadow-md transition-all duration-200"
                             >
-                                <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors", card.bg, card.color, "group-hover:bg-primary group-hover:text-white")}>
-                                    <card.icon className="h-6 w-6" />
+                                <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors", card.bg, card.color, "group-hover:bg-primary group-hover:text-white")}>
+                                    <card.icon className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-text group-hover:text-primary transition-colors">{card.title}</h3>
-                                    <p className="text-sm text-text-muted mt-1">{card.desc}</p>
+                                    <h3 className="font-bold text-text text-[13px] group-hover:text-primary transition-colors">{card.title}</h3>
+                                    <p className="text-[11px] text-text-muted mt-0.5">{card.desc}</p>
                                 </div>
                             </Link>
                         ))}

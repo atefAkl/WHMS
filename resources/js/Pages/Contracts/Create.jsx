@@ -25,7 +25,7 @@ const getHijriDate = (dateStr) => {
     }).format(d);
 };
 
-export default function Create({ customer, contacts: initialContacts, seasonTerms: initialSeasonTerms, allTerms: initialAllTerms, storageItems, nextSerial, defaults }) {
+export default function Create({ customer, contacts: initialContacts, seasonTerms: initialSeasonTerms, allTerms: initialAllTerms, storageItems, nextSerial, defaults, settings }) {
     const { lang } = useLang();
     const [currentStep, setCurrentStep] = useState(1);
     const [contacts, setContacts] = useState(initialContacts || []);
@@ -103,10 +103,20 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
         const contactName = selectedContact ? selectedContact.name : '__________';
 
         return text
+            .replace(/\{\$company_name\}/g, settings?.company_name || '__________')
+            .replace(/\{\$company_slogan\}/g, settings?.company_slogan || '__________')
+            .replace(/\{\$company_cr\}/g, settings?.company_cr || '__________')
+            .replace(/\{\$company_vat\}/g, settings?.company_vat || '__________')
+            .replace(/\{\$company_license\}/g, settings?.company_license || '__________')
+            .replace(/\{\$company_phone\}/g, settings?.company_phone || '__________')
+            .replace(/\{\$company_email\}/g, settings?.company_email || '__________')
+            .replace(/\{\$company_address\}/g, settings?.company_address || '__________')
+            .replace(/\{\$company_gm\}/g, settings?.company_gm || '__________')
+            .replace(/\{\$company_dgm\}/g, settings?.company_dgm || '__________')
             .replace(/\{\$mandatory_period\}/g, data.mandatory_period || '__________')
             .replace(/\{\$renew_period\}/g, data.renewal_period || '__________')
-            .replace(/\{\$customer_name\}/g, customer.name_ar || '__________')
-            .replace(/\{\$customer_phone\}/g, customer.phone || '__________')
+            .replace(/\{\$customer_name\}/g, customer.name_ar || customer.name || '__________')
+            .replace(/\{\$customer_phone\}/g, customer.phone_number || customer.phone || '__________')
             .replace(/\{\$contact_name\}/g, contactName)
             .replace(/\{\$contract_number\}/g, data.contract_number || '__________')
             .replace(/\{\$start_date\}/g, data.start_date || '__________');
@@ -135,15 +145,20 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
     const [termForm, setTermForm] = useState({ text_ar: '', text_en: '', has_variables: false });
     const saveTerm = (e) => {
         e.preventDefault();
-        axios.post(route('terms.store'), termForm)
-            .then(res => {
-                const newTerm = res.data;
-                const newList = [...activeTerms, newTerm];
-                setActiveTerms(newList);
-                syncTermIds(newList);
-                setShowTermModal(false);
-                setTermForm({ text_ar: '', text_en: '', has_variables: false });
-            });
+        if (!termForm.text_ar.trim()) return;
+        const customId = 'custom_' + termForm.text_ar;
+        const newTerm = {
+            id: customId,
+            text_ar: termForm.text_ar,
+            text_en: termForm.text_en,
+            has_variables: termForm.text_ar.includes('{$'),
+            is_custom: true
+        };
+        const newList = [...activeTerms, newTerm];
+        setActiveTerms(newList);
+        syncTermIds(newList);
+        setShowTermModal(false);
+        setTermForm({ text_ar: '', text_en: '', has_variables: false });
     };
 
     const submit = (status) => {
@@ -242,9 +257,9 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
                                         <h3 className="font-bold">{lang === 'ar' ? 'المؤسسة (الطرف الأول)' : 'Institution'}</h3>
                                     </div>
                                     <div className="space-y-2 text-sm">
-                                        <p><span className="text-text-muted">{lang === 'ar' ? 'الاسم:' : 'Name:'}</span> Warehouse OS</p>
-                                        <p><span className="text-text-muted">{lang === 'ar' ? 'السجل التجاري:' : 'CR Number:'}</span> 1010101010</p>
-                                        <p><span className="text-text-muted">{lang === 'ar' ? 'الرقم الضريبي:' : 'VAT Number:'}</span> 300000000000003</p>
+                                        <p><span className="text-text-muted">{lang === 'ar' ? 'الاسم:' : 'Name:'}</span> {settings?.company_name || 'Warehouse OS'}</p>
+                                        <p><span className="text-text-muted">{lang === 'ar' ? 'السجل التجاري:' : 'CR Number:'}</span> {settings?.company_cr || '1010101010'}</p>
+                                        <p><span className="text-text-muted">{lang === 'ar' ? 'الرقم الضريبي:' : 'VAT Number:'}</span> {settings?.company_vat || '300000000000003'}</p>
                                     </div>
                                 </div>
 
@@ -451,6 +466,11 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
                                         </p>
                                         <div className="space-y-2">
                                             {[
+                                                { label: lang === 'ar' ? 'اسم الشركة' : 'Company Name', code: '{$company_name}' },
+                                                { label: lang === 'ar' ? 'سجل الشركة' : 'Company CR', code: '{$company_cr}' },
+                                                { label: lang === 'ar' ? 'ترخيص الشركة' : 'License No.', code: '{$company_license}' },
+                                                { label: lang === 'ar' ? 'ممثل الشركة' : 'Company GM', code: '{$company_gm}' },
+                                                { label: lang === 'ar' ? 'عنوان الشركة' : 'Company Address', code: '{$company_address}' },
                                                 { label: lang === 'ar' ? 'اسم العميل' : 'Customer Name', code: '{$customer_name}' },
                                                 { label: lang === 'ar' ? 'هاتف العميل' : 'Customer Phone', code: '{$customer_phone}' },
                                                 { label: lang === 'ar' ? 'اسم المندوب' : 'Contact Name', code: '{$contact_name}' },
@@ -502,8 +522,13 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
                                                             <p className="text-[12px] text-text leading-relaxed">
                                                                 {resolveTermText(term.text_ar)}
                                                             </p>
+                                                            {term.is_custom && (
+                                                                <span className="text-[9px] bg-purple-500/10 text-purple-600 border border-purple-500/20 px-1.5 py-0.5 rounded font-bold me-2">
+                                                                    {lang === 'ar' ? 'شرط خاص بالعقد' : 'Custom Term'}
+                                                                </span>
+                                                            )}
                                                             {term.has_variables && (
-                                                                <span className="text-[9px] text-amber-600 flex items-center gap-0.5 mt-0.5">
+                                                                <span className="text-[9px] text-amber-600 inline-flex items-center gap-0.5 mt-0.5">
                                                                     <Variable className="h-2.5 w-2.5" /> {lang === 'ar' ? 'معاينة مع القيم الفعلية' : 'Preview with actual values'}
                                                                 </span>
                                                             )}

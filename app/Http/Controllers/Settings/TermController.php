@@ -20,14 +20,37 @@ class TermController extends Controller
     public function updateSettings(Request $request)
     {
         $validated = $request->validate([
+            'company_name'    => 'nullable|string',
+            'company_slogan'  => 'nullable|string',
+            'company_cr'      => 'nullable|string',
+            'company_vat'     => 'nullable|string',
+            'company_license' => 'nullable|string',
+            'company_phone'   => 'nullable|string',
+            'company_email'   => 'nullable|string',
+            'company_address' => 'nullable|string',
+            'company_gm'      => 'nullable|string',
+            'company_dgm'     => 'nullable|string',
+            'company_logo'    => 'nullable|image|max:2048',
+            'show_quality_data'  => 'nullable|boolean',
+            'quality_issue_no'   => 'nullable|string',
+            'quality_issue_date' => 'nullable|string',
             'default_introduction'     => 'nullable|string',
             'default_preamble'         => 'nullable|string',
-            'default_mandatory_period' => 'integer|min:0',
-            'default_renewal_period'   => 'integer|min:0',
+            'default_mandatory_period' => 'nullable|integer|min:0',
+            'default_renewal_period'   => 'nullable|integer|min:0',
         ]);
 
+        if ($request->hasFile('company_logo')) {
+            $file = $request->file('company_logo');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('images'), $filename);
+            $validated['company_logo'] = '/images/' . $filename;
+        } else {
+            unset($validated['company_logo']);
+        }
+
         foreach ($validated as $key => $value) {
-            ContractSetting::updateOrCreate(['key' => $key], ['value' => $value]);
+            ContractSetting::updateOrCreate(['key' => $key], ['value' => $value ?? '']);
         }
 
         return redirect()->back()->with('success', 'تم تحديث الإعدادات العامة بنجاح.');

@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useLang } from '@/Contexts/LanguageContext';
 import { 
     Home, ChevronRight, FileText, LayoutList, Clock, 
-    Save, X, GripVertical, Check, Plus, Edit, Trash2, Info, Search
+    Save, X, GripVertical, Check, Plus, Edit, Trash2, Info, Search, Building2, Variable, Upload
 } from 'lucide-react';
 import Modal from '@/Components/Modal';
 import TextInput from '@/Components/TextInput';
@@ -18,7 +18,7 @@ import Tooltip from '@/Components/Tooltip';
 
 export default function ContractSettings({ terms: initialTerms, settings }) {
     const { lang } = useLang();
-    const [activeTab, setActiveTab] = useState('library'); // library, parts, periods
+    const [activeTab, setActiveTab] = useState('company'); // company, library, parts, periods
     const [terms, setTerms] = useState(initialTerms || []);
     const [showTermModal, setShowTermModal] = useState(false);
     const [editingTerm, setEditingTerm] = useState(null);
@@ -27,6 +27,20 @@ export default function ContractSettings({ terms: initialTerms, settings }) {
     
     // ── 1. Global Settings Form ──
     const settingsForm = useForm({
+        company_name: settings.company_name || '',
+        company_slogan: settings.company_slogan || '',
+        company_cr: settings.company_cr || '',
+        company_vat: settings.company_vat || '',
+        company_license: settings.company_license || '',
+        company_phone: settings.company_phone || '',
+        company_email: settings.company_email || '',
+        company_address: settings.company_address || '',
+        company_gm: settings.company_gm || '',
+        company_dgm: settings.company_dgm || '',
+        company_logo: null,
+        show_quality_data: settings.show_quality_data === '1' || settings.show_quality_data === true,
+        quality_issue_no: settings.quality_issue_no || '',
+        quality_issue_date: settings.quality_issue_date || '',
         default_introduction: settings.default_introduction || '',
         default_preamble: settings.default_preamble || '',
         default_mandatory_period: settings.default_mandatory_period || 12,
@@ -104,6 +118,7 @@ export default function ContractSettings({ terms: initialTerms, settings }) {
     );
 
     const tabs = [
+        { id: 'company', label: lang === 'ar' ? 'بيانات الشركة' : 'Company Data', icon: Building2 },
         { id: 'library', label: lang === 'ar' ? 'مكتبة الشروط' : 'Terms Library', icon: LayoutList },
         { id: 'parts', label: lang === 'ar' ? 'أجزاء العقد' : 'Contract Parts', icon: FileText },
         { id: 'periods', label: lang === 'ar' ? 'المدد الزمنية' : 'Periods', icon: Clock },
@@ -134,7 +149,172 @@ export default function ContractSettings({ terms: initialTerms, settings }) {
                     </div>
 
                     <div className="p-6 flex-1">
-                        
+
+                        {/* Tab: Company Data (SaaS Tenant) */}
+                        {activeTab === 'company' && (
+                            <form onSubmit={saveSettings} className="space-y-6 max-w-4xl">
+                                <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10">
+                                    <Building2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-bold text-primary">{lang === 'ar' ? 'بيانات المؤسسة (الطرف الأول)' : 'Company / First Party Details'}</p>
+                                        <p className="text-xs text-text-muted mt-1 leading-relaxed">
+                                            {lang === 'ar' ? 'هذه البيانات تمثل الهوية القانونية للمنشأة وتستخدم في ترويسة وتواقيع العقود وتدعم بنية الـ SaaS.' : 'These details represent the legal identity of the establishment used in contract headers and signatures.'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'اسم المنشأة' : 'Company Name'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_name} 
+                                            onChange={e => settingsForm.setData('company_name', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'النشاط / الشعار الوصفي' : 'Slogan / Activity'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_slogan} 
+                                            onChange={e => settingsForm.setData('company_slogan', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'سجل تجاري' : 'Commercial Registration'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_cr} 
+                                            onChange={e => settingsForm.setData('company_cr', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'الرقم الضريبي' : 'VAT Number'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_vat} 
+                                            onChange={e => settingsForm.setData('company_vat', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'رقم ترخيص التخزين' : 'License Number'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_license} 
+                                            onChange={e => settingsForm.setData('company_license', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'رقم الهاتف / الجوال' : 'Phone Number'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_phone} 
+                                            onChange={e => settingsForm.setData('company_phone', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'البريد الإلكتروني' : 'Email Address'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_email} 
+                                            onChange={e => settingsForm.setData('company_email', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'العنوان الوطني' : 'National Address'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_address} 
+                                            onChange={e => settingsForm.setData('company_address', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'المدير العام (الممثل النظامي)' : 'General Manager'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_gm} 
+                                            onChange={e => settingsForm.setData('company_gm', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <InputLabel value={lang === 'ar' ? 'نائب المدير العام' : 'Deputy GM'} />
+                                        <TextInput 
+                                            className="mt-1 block w-full" 
+                                            value={settingsForm.data.company_dgm} 
+                                            onChange={e => settingsForm.setData('company_dgm', e.target.value)} 
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <InputLabel value={lang === 'ar' ? 'شعار الشركة (Logo)' : 'Company Logo'} />
+                                        <div className="mt-1 flex items-center gap-4">
+                                            {settings.company_logo && !settingsForm.data.company_logo && (
+                                                <img src={settings.company_logo} alt="Logo" className="h-12 w-12 object-contain bg-white rounded border border-border" />
+                                            )}
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                onChange={e => settingsForm.setData('company_logo', e.target.files[0])} 
+                                                className="block w-full text-sm text-text-muted file:me-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="md:col-span-2 border-t border-border pt-6 mt-2 space-y-4">
+                                        <div className="flex items-center justify-between p-4 bg-surface-muted/50 rounded-xl border border-border">
+                                            <div>
+                                                <p className="text-sm font-bold text-text">{lang === 'ar' ? 'تفعيل بيانات نظام الجودة' : 'Enable Quality System Data'}</p>
+                                                <p className="text-xs text-text-muted mt-0.5">{lang === 'ar' ? 'عرض رقم وتاريخ الإصدار في ترويسة العقود المطبوعة' : 'Show issue number and date in printed contract header'}</p>
+                                            </div>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={settingsForm.data.show_quality_data} 
+                                                onChange={e => settingsForm.setData('show_quality_data', e.target.checked)} 
+                                                className="rounded border-border text-primary focus:ring-primary h-5 w-5"
+                                            />
+                                        </div>
+
+                                        {settingsForm.data.show_quality_data && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-primary/5 rounded-xl border border-primary/10 animate-fadeIn">
+                                                <div>
+                                                    <InputLabel value={lang === 'ar' ? 'رقم الإصدار (Issue no)' : 'Issue Number'} />
+                                                    <TextInput 
+                                                        className="mt-1 block w-full" 
+                                                        value={settingsForm.data.quality_issue_no} 
+                                                        onChange={e => settingsForm.setData('quality_issue_no', e.target.value)} 
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <InputLabel value={lang === 'ar' ? 'تاريخ الإصدار (Issue Date)' : 'Issue Date'} />
+                                                    <TextInput 
+                                                        className="mt-1 block w-full" 
+                                                        value={settingsForm.data.quality_issue_date} 
+                                                        onChange={e => settingsForm.setData('quality_issue_date', e.target.value)} 
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-border flex justify-end">
+                                    <PrimaryButton disabled={settingsForm.processing}>
+                                        <Save className="h-4 w-4 me-2" />
+                                        {lang === 'ar' ? 'حفظ بيانات الشركة' : 'Save Company Data'}
+                                    </PrimaryButton>
+                                </div>
+                            </form>
+                        )}
+
                         {/* Tab: Terms Library */}
                         {activeTab === 'library' && (
                             <div className="space-y-4">
@@ -224,6 +404,11 @@ export default function ContractSettings({ terms: initialTerms, settings }) {
                                         </p>
                                         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                                             {[
+                                                { label: lang === 'ar' ? 'اسم الشركة' : 'Company Name', code: '{$company_name}' },
+                                                { label: lang === 'ar' ? 'سجل الشركة' : 'Company CR', code: '{$company_cr}' },
+                                                { label: lang === 'ar' ? 'ترخيص الشركة' : 'License No.', code: '{$company_license}' },
+                                                { label: lang === 'ar' ? 'ممثل الشركة' : 'Company GM', code: '{$company_gm}' },
+                                                { label: lang === 'ar' ? 'عنوان الشركة' : 'Company Address', code: '{$company_address}' },
                                                 { label: lang === 'ar' ? 'اسم العميل' : 'Customer Name', code: '{$customer_name}' },
                                                 { label: lang === 'ar' ? 'هاتف العميل' : 'Customer Phone', code: '{$customer_phone}' },
                                                 { label: lang === 'ar' ? 'اسم المندوب' : 'Contact Name', code: '{$contact_name}' },
@@ -345,8 +530,6 @@ export default function ContractSettings({ terms: initialTerms, settings }) {
                                 required
                             />
                             <InputError message={termErrors.text_ar} />
-                        </div>
-
                         </div>
                     </div>
 

@@ -10,6 +10,20 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
+function safeRoute(name) {
+    try {
+        return route(name);
+    } catch (e) {
+        if (name === 'logout') return '/logout';
+        if (name === 'profile.edit') return '/profile';
+        try {
+            return route('saas.tenants.index');
+        } catch (err) {
+            return '#';
+        }
+    }
+}
+
 export default function Topbar({ header }) {
     const user = usePage().props.auth.user;
     const { lang } = useLang();
@@ -26,7 +40,7 @@ export default function Topbar({ header }) {
                 {/* Season Badge */}
                 {usePage().props.auth.active_season_name && (
                     <Link 
-                        href={route('season.select')} 
+                        href={safeRoute('season.select')} 
                         className="hidden sm:flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 border border-primary/20 hover:bg-primary/20 transition-colors cursor-pointer"
                         title={lang === 'ar' ? 'تغيير الموسم' : 'Change Season'}
                     >
@@ -74,11 +88,11 @@ export default function Topbar({ header }) {
                             <p className="text-xs font-semibold text-text">{user.name}</p>
                             <p className="text-xs text-text-muted">{user.email}</p>
                         </div>
-                        <Dropdown.Link href={route('profile.edit')}>
+                        <Dropdown.Link href={safeRoute('profile.edit')}>
                             <Settings className={cn("inline h-4 w-4", lang === 'ar' ? 'ms-2' : 'me-2')} />
                             {lang === 'ar' ? 'الملف الشخصي' : 'Profile'}
                         </Dropdown.Link>
-                        <Dropdown.Link href={route('logout')} method="post" as="button">
+                        <Dropdown.Link href={safeRoute('logout')} method="post" as="button">
                             <LogOut className={cn("inline h-4 w-4", lang === 'ar' ? 'ms-2' : 'me-2')} />
                             {lang === 'ar' ? 'تسجيل الخروج' : 'Log Out'}
                         </Dropdown.Link>

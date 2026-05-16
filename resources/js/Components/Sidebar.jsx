@@ -39,6 +39,18 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
+function safeRoute(name) {
+    try {
+        return route(name);
+    } catch (e) {
+        try {
+            return route('saas.tenants.index');
+        } catch (err) {
+            return '#';
+        }
+    }
+}
+
 // ── Nav Structure ────────────────────────────────────────────
 const navItems = [
     {
@@ -146,7 +158,7 @@ function NavItem({ item, lang, openKey, setOpenKey }) {
                             return (
                                 <Link
                                     key={child.active}
-                                    href={route(child.route)}
+                                    href={safeRoute(child.route)}
                                     className={cn(
                                         'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
                                         childActive
@@ -168,7 +180,7 @@ function NavItem({ item, lang, openKey, setOpenKey }) {
     // Simple link (no children)
     return (
         <Link
-            href={route(item.route)}
+            href={safeRoute(item.route)}
             className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 isActive
@@ -237,7 +249,7 @@ export default function Sidebar() {
             {/* ── 3. Settings & Language ─────────────────── */}
             <div className="border-t border-border px-3 py-4 space-y-1 shrink-0">
                 <Link
-                    href={route('settings.index')}
+                    href={safeRoute('settings.index')}
                     className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
                 >
                     <Settings className="h-5 w-5 shrink-0" />
