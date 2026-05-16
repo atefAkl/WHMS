@@ -1,0 +1,50 @@
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Model;
+
+class Contract extends Model
+{
+    protected $fillable = [
+        'customer_id','contact_id','contract_number',
+        'write_date','write_date_hijri',
+        'start_date','start_date_hijri','end_date',
+        'mandatory_period','renewal_period',
+        'discount','vat_rate',
+        'status','total_capacity','pricing_terms',
+        'introduction','preamble','contract_date'
+    ];
+
+    protected $casts = [
+        'pricing_terms'    => 'array',
+        'write_date'       => 'date',
+        'start_date'       => 'date',
+        'end_date'         => 'date',
+        'mandatory_period' => 'integer',
+        'renewal_period'   => 'integer',
+        'discount'         => 'float',
+        'vat_rate'         => 'float',
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($contract) {
+            if (empty($contract->contract_number)) {
+                $last = self::latest('id')->first();
+                $seq  = $last ? ((int) substr($last->contract_number, 5)) + 1 : 1;
+                $contract->contract_number = '10015' . str_pad($seq, 5, '0', STR_PAD_LEFT);
+            }
+            // Auto-compute end_date from start_date + mandatory_period
+            if ($contract->start_date && $contract->mandatory_period) {
+                $contract->end_date = \Carbon\Carbon::parse($contract->start_date)
+                    ->addMonths($contract->mandatory_period);
+            }
+        });
+    }
+
+    public function customer()   { return $this->belongsTo(Customer::class); }
+    public function contact()    { return $this->belongsTo(Contact::class); }
+    public function items()      { return $this->hasMany(ContractItem::class); }
+    public function terms()      { return $this->belongsToMany(Term::class, 'contract_terms')->withPivot('sort_order')->orderByPivot('sort_order'); }
+    public function payments()   { return $this->hasMany(ContractPayment::class); }
+}

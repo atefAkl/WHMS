@@ -1,0 +1,273 @@
+import { Link } from '@inertiajs/react';
+import { useState } from 'react';
+import {
+    LayoutDashboard,
+    Package,
+    FileText,
+    Users,
+    Warehouse,
+    ChevronDown,
+    Settings,
+    Globe,
+    Boxes,
+    MapPin,
+    ClipboardList,
+    UserCog,
+    Building2,
+    Briefcase,
+    Receipt,
+    Wrench,
+    CircleDollarSign,
+    BookOpen,
+    FileSpreadsheet,
+    LineChart,
+    DoorClosed,
+    Box,
+    Layers,
+    Sliders,
+    Activity,
+    UserCircle,
+    Banknote,
+    UsersRound
+} from 'lucide-react';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import ApplicationLogo from './ApplicationLogo';
+import { useLang } from '@/Contexts/LanguageContext';
+
+function cn(...inputs) {
+    return twMerge(clsx(inputs));
+}
+
+// ── Nav Structure ────────────────────────────────────────────
+const navItems = [
+    {
+        name: { ar: 'الداشبورد', en: 'Dashboard' },
+        icon: LayoutDashboard,
+        route: 'dashboard',
+        active: 'dashboard',
+    },
+    {
+        name: { ar: 'المبيعات', en: 'Sales' },
+        icon: Briefcase,
+        active: 'sales.*',
+        children: [
+            { name: { ar: 'العملاء', en: 'Customers' }, icon: UsersRound, route: 'customers.index', active: 'customers.*' },
+            { name: { ar: 'العقود', en: 'Contracts' }, icon: FileText, route: 'dashboard', active: 'contracts.*' },
+            { name: { ar: 'الفواتير', en: 'Invoices' }, icon: Receipt, route: 'dashboard', active: 'invoices.*' },
+            { name: { ar: 'الخدمات', en: 'Services' }, icon: Wrench, route: 'dashboard', active: 'services.*' },
+        ],
+    },
+    {
+        name: { ar: 'المالية', en: 'Finance' },
+        icon: CircleDollarSign,
+        active: 'finance.*',
+        children: [
+            { name: { ar: 'الحسابات العامة', en: 'General Ledger' }, icon: BookOpen, route: 'dashboard', active: 'accounts.*' },
+            { name: { ar: 'السندات', en: 'Vouchers' }, icon: FileSpreadsheet, route: 'dashboard', active: 'vouchers.*' },
+            { name: { ar: 'التقارير', en: 'Reports' }, icon: LineChart, route: 'dashboard', active: 'finance.reports.*' },
+        ],
+    },
+    {
+        name: { ar: 'المخازن', en: 'Warehouses' },
+        icon: Warehouse,
+        active: 'warehouse.*',
+        children: [
+            { name: { ar: 'الغرف', en: 'Rooms' }, icon: DoorClosed, route: 'dashboard', active: 'rooms.*' },
+            { name: { ar: 'الطبالي', en: 'Pallets' }, icon: Boxes, route: 'pallets.index', active: 'pallets.*' },
+            { name: { ar: 'أصناف مخزنية', en: 'Inventory Items' }, icon: Box, route: 'dashboard', active: 'inventory.*' },
+            { name: { ar: 'أحجام العبوات', en: 'Packaging Sizes' }, icon: Layers, route: 'dashboard', active: 'packages.*' },
+            { name: { ar: 'اعدادات المخازن', en: 'Warehouse Settings' }, icon: Sliders, route: 'dashboard', active: 'warehouse.settings.*' },
+            { name: { ar: 'التقارير', en: 'Reports' }, icon: LineChart, route: 'dashboard', active: 'warehouse.reports.*' },
+        ],
+    },
+    {
+        name: { ar: 'العمليات', en: 'Operations' },
+        icon: Activity,
+        route: 'dashboard',
+        active: 'operations.*',
+    },
+    {
+        name: { ar: 'الموارد البشرية', en: 'Human Resources' },
+        icon: Users,
+        active: 'hr.*',
+        children: [
+            { name: { ar: 'الموظفين', en: 'Employees' }, icon: UserCircle, route: 'dashboard', active: 'employees.*' },
+            { name: { ar: 'الرواتب', en: 'Payroll' }, icon: Banknote, route: 'dashboard', active: 'payroll.*' },
+            { name: { ar: 'البصمة', en: 'Attendance' }, icon: MapPin, route: 'dashboard', active: 'attendance.*' },
+        ]
+    }
+];
+
+// ── Single Nav Item (with accordion via parent state) ─────────
+function NavItem({ item, lang, openKey, setOpenKey }) {
+    const isActive = route().current(item.active);
+    const hasChildren = item.children && item.children.length > 0;
+    const itemKey = item.active;
+    const isChildActive = hasChildren && item.children.some(c => route().current(c.active));
+    // Open if manually opened OR if a child is currently active (persists across reloads)
+    const isOpen = openKey === itemKey || isChildActive;
+
+    if (hasChildren) {
+        return (
+            <div>
+                <button
+                    onClick={() => setOpenKey(isOpen ? null : itemKey)}
+                    className={cn(
+                        'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                        isChildActive || isOpen
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-text-muted hover:bg-surface-muted hover:text-text'
+                    )}
+                >
+                    <div className="flex items-center gap-3">
+                        <item.icon className={cn('h-5 w-5 shrink-0', isChildActive || isOpen ? 'text-primary' : 'text-text-muted')} />
+                        <span>{item.name[lang]}</span>
+                    </div>
+                    <ChevronDown
+                        className={cn(
+                            'h-4 w-4 transition-transform duration-200',
+                            isOpen ? 'rotate-180' : '',
+                            isChildActive || isOpen ? 'text-primary' : 'text-text-muted'
+                        )}
+                    />
+                </button>
+
+                {/* Sub-items - animated */}
+                <div
+                    className={cn(
+                        'overflow-hidden transition-all duration-200',
+                        isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    )}
+                >
+                    <div className="mt-1 ms-4 space-y-0.5 border-s-2 border-border ps-3 pb-1">
+                        {item.children.map(child => {
+                            const childActive = route().current(child.active);
+                            return (
+                                <Link
+                                    key={child.active}
+                                    href={route(child.route)}
+                                    className={cn(
+                                        'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+                                        childActive
+                                            ? 'text-primary font-semibold'
+                                            : 'text-text-muted hover:text-text hover:bg-surface-muted'
+                                    )}
+                                >
+                                    <child.icon className="h-4 w-4 shrink-0" />
+                                    {child.name[lang]}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Simple link (no children)
+    return (
+        <Link
+            href={route(item.route)}
+            className={cn(
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-text-muted hover:bg-surface-muted hover:text-text'
+            )}
+        >
+            <item.icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-primary' : 'text-text-muted')} />
+            <span>{item.name[lang]}</span>
+        </Link>
+    );
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+export default function Sidebar() {
+    const { lang, setLang } = useLang();
+
+    // Compute which group should be open on first render based on current route
+    const getInitialOpenKey = () => {
+        for (const item of navItems) {
+            if (item.children && item.children.some(c => {
+                try { return route().current(c.active); } catch { return false; }
+            })) {
+                return item.active;
+            }
+        }
+        return null;
+    };
+
+    const [openKey, setOpenKey] = useState(() => getInitialOpenKey());
+
+    const languages = [
+        { code: 'ar', label: 'ع' },
+        { code: 'en', label: 'EN' },
+    ];
+
+    return (
+        <div className="flex h-screen w-64 shrink-0 flex-col border-e border-border bg-surface shadow-sm">
+
+            {/* ── 1. Brand ──────────────────────────────── */}
+            <div className="flex h-16 items-center gap-3 border-b border-border px-5 shrink-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+                    <ApplicationLogo className="h-5 w-auto fill-white" />
+                </div>
+                <div className="leading-tight">
+                    <p className="text-sm font-bold text-text">Warehouse OS</p>
+                    <p className="text-[11px] text-text-muted">
+                        {lang === 'ar' ? 'نظام إدارة المستودعات' : 'Warehouse Management'}
+                    </p>
+                </div>
+            </div>
+
+            {/* ── 2. Navigation ─────────────────────────── */}
+            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+                {navItems.map(item => (
+                    <NavItem
+                        key={item.active}
+                        item={item}
+                        lang={lang}
+                        openKey={openKey}
+                        setOpenKey={setOpenKey}
+                    />
+                ))}
+            </nav>
+
+            {/* ── 3. Settings & Language ─────────────────── */}
+            <div className="border-t border-border px-3 py-4 space-y-1 shrink-0">
+                <Link
+                    href={route('settings.index')}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                >
+                    <Settings className="h-5 w-5 shrink-0" />
+                    <span>{lang === 'ar' ? 'الإعدادات العامة' : 'Settings'}</span>
+                </Link>
+
+                {/* Language Toggle */}
+                <div className="flex items-center justify-between rounded-md px-3 py-2">
+                    <div className="flex items-center gap-2 text-text-muted">
+                        <Globe className="h-4 w-4 shrink-0" />
+                        <span className="text-sm font-medium">{lang === 'ar' ? 'اللغة' : 'Language'}</span>
+                    </div>
+                    <div className="flex rounded-md border border-border overflow-hidden">
+                        {languages.map(l => (
+                            <button
+                                key={l.code}
+                                onClick={() => setLang(l.code)}
+                                className={cn(
+                                    'px-2.5 py-1 text-xs font-bold transition-colors',
+                                    lang === l.code
+                                        ? 'bg-primary text-white'
+                                        : 'bg-surface text-text-muted hover:bg-surface-muted'
+                                )}
+                            >
+                                {l.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
