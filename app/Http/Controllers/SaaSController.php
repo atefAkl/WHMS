@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\ContractSetting;
 use App\Models\Tenant;
+use App\Models\TenantRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Inertia\Inertia;
 
 class SaaSController extends Controller
@@ -97,6 +99,46 @@ class SaaSController extends Controller
             'active_subdomains' => count($tenants),
         ];
 
-        return Inertia::render('SaaS/Tenants', compact('tenants', 'kpis', 'settings'));
+        $requests = TenantRequest::where('status', 'pending')->latest()->get();
+
+        return Inertia::render('SaaS/Tenants', compact('tenants', 'kpis', 'settings', 'requests'));
+    }
+
+    public function approveRequest(TenantRequest $tenantRequest)
+    {
+        try {
+            // 1. Create the Tenant
+            $tenant = Tenant::create([
+                'id' => $tenantRequest->requested_subdomain,
+                'data' => [
+                    'company_name' => $tenantRequest->company_name,
+                    'email' => $tenantRequest->email,
+                    'phone' => $tenantRequest->phone,
+                    'plan' => $tenantRequest->plan,
+                    'status' => 'نشط',
+                ]
+            ]);
+
+            // 2. Create the Domain
+            $tenant->domains()->create([
+                'domain' => $tenantRequest->requested_subdomain . '.localhost' // Change .localhost to your production TLD
+            ]);
+
+            // 3. Run migrations for the new tenant
+            Artisan::call('tenants:migrate', ['--tenants' => [$tenant->id]]);
+
+            // 4. Update request status
+            $tenantRequest->update(['status' => 'approved']);
+
+            return back()->with('success', 'تم إنشاء حساب العميل وتفعيل المستودع بنجاح.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'خطأ أثناء تفعيل الحساب: ' . $e->getMessage());
+        }
+    }
+
+    public function rejectRequest(TenantRequest $tenantRequest)
+    {
+        $tenantRequest->update(['status' => 'rejected']);
+        return back()->with('success', 'تم رفض الطلب بنجاح.');
     }
 }

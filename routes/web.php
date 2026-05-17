@@ -18,6 +18,10 @@ foreach ($centralDomains as $domain) {
             ]);
         })->name('central.welcome');
 
+        // Public routes - no auth required (for new tenant registration)
+        Route::post('/register-warehouse', [\App\Http\Controllers\TenantRequestController::class, 'store'])->name('tenant.register.store');
+        Route::get('/register-warehouse/pending', [\App\Http\Controllers\TenantRequestController::class, 'pending'])->name('tenant.register.pending');
+
         Route::middleware('auth')->group(function () {
             Route::get('/profile', [ProfileController::class, 'edit'])->name('central.profile.edit');
             Route::patch('/profile', [ProfileController::class, 'update'])->name('central.profile.update');
@@ -25,8 +29,10 @@ foreach ($centralDomains as $domain) {
 
             // Central SaaS Management Dashboard
             Route::get('/saas/tenants', [\App\Http\Controllers\SaaSController::class, 'index'])->name('saas.tenants.index');
+            Route::post('/saas/tenants/{tenantRequest}/approve', [\App\Http\Controllers\SaaSController::class, 'approveRequest'])->name('saas.tenants.approve');
+            Route::post('/saas/tenants/{tenantRequest}/reject', [\App\Http\Controllers\SaaSController::class, 'rejectRequest'])->name('saas.tenants.reject');
         });
 
-        require __DIR__.'/auth.php';
+        require __DIR__ . '/auth.php';
     });
 }
