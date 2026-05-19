@@ -20,10 +20,13 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('admin123'),
         ]);
 
-        $this->call([
-            CountrySeeder::class,
-            CustomerCategorySeeder::class,
-            PalletSeeder::class,
-        ]);
+        // Only run tenant seeders if tenancy is initialized
+        if (function_exists('tenancy') && tenancy()->initialized) {
+            $this->call([
+                CountrySeeder::class,
+                CustomerCategorySeeder::class,
+                PalletSeeder::class,
+            ]);
+        }
     }
 }

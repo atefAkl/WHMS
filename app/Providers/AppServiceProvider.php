@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
             if (in_array($request->getHost(), config('tenancy.central_domains', []))) {
                 return route('saas.tenants.index');
             }
-            return route('dashboard', ['tenant' => tenant('id')]);
+            return route('dashboard');
         });
     }
 }

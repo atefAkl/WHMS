@@ -15,11 +15,11 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'register-warehouse', 'saas/*'],
+    'paths' => ['*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://whm.apl', 'http://www.whm.apl', 'http://localhost'],
+    'allowed_origins' => [env('FRONTEND_URL', 'http://whm.apl:8080'), 'http://whm.apl', 'http://www.whm.apl', 'http://localhost', 'http://localhost:8080', 'http://whm.apl:8080', 'http://www.whm.apl:8080'],
 
     'allowed_origins_patterns' => [],
 

@@ -33,7 +33,11 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $redirectRoute = in_array($request->getHost(), config('tenancy.central_domains', [])) 
+            ? route('saas.tenants.index', absolute: false) 
+            : route('dashboard', absolute: false);
+
+        return redirect()->intended($redirectRoute);
     }
 
     /**
