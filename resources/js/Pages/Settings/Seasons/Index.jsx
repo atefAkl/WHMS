@@ -12,9 +12,9 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Tooltip from '@/Components/Tooltip';
 
-export default function Index({ seasons }) {
+export default function Index({ seasons, openCreate = false }) {
     const { lang } = useLang();
-    const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+    const [isCreateModalOpen, setCreateModalOpen] = useState(openCreate);
     const [itemToEdit, setItemToEdit] = useState(null);
     const [itemToDelete, setItemToDelete] = useState(null);
 

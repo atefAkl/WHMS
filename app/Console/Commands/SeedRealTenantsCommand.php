@@ -13,10 +13,10 @@ class SeedRealTenantsCommand extends Command
     public function handle()
     {
         $tenants = [
-            ['id' => 'ayman', 'domain' => 'ayman.whm.apl', 'name' => 'شركة مخازن أيمن المتقدمة', 'plan' => 'باقة المستودعات المتقدمة (Enterprise)', 'storage_used' => '85%', 'contracts_count' => 24, 'revenue' => '45,000 ر.س'],
-            ['id' => 'atyaf', 'domain' => 'atyaf.whm.apl', 'name' => 'شركة أطياف للتبريد والتغليف', 'plan' => 'باقة الأعمال (Business)', 'storage_used' => '62%', 'contracts_count' => 12, 'revenue' => '28,500 ر.س'],
-            ['id' => 'ksa-logistics', 'domain' => 'ksa-logistics.whm.apl', 'name' => 'مستودعات المملكة اللوجستية', 'plan' => 'باقة الشركات الكبرى (VIP)', 'storage_used' => '94%', 'contracts_count' => 86, 'revenue' => '150,000 ر.س'],
-            ['id' => 'alfajr', 'domain' => 'alfajr.whm.apl', 'name' => 'مؤسسة الفجر للحفظ البارد', 'plan' => 'الباقة الأساسية (Starter)', 'storage_used' => '30%', 'contracts_count' => 3, 'revenue' => '9,000 ر.س'],
+            ['id' => 'ayman', 'domain' => 'ayman.whms.test', 'name' => 'شركة مخازن أيمن المتقدمة', 'plan' => 'باقة المستودعات المتقدمة (Enterprise)', 'storage_used' => '85%', 'contracts_count' => 24, 'revenue' => '45,000 ر.س'],
+            ['id' => 'atyaf', 'domain' => 'atyaf.whms.test', 'name' => 'شركة أطياف للتبريد والتغليف', 'plan' => 'باقة الأعمال (Business)', 'storage_used' => '62%', 'contracts_count' => 12, 'revenue' => '28,500 ر.س'],
+            ['id' => 'ksa-logistics', 'domain' => 'ksa-logistics.whms.test', 'name' => 'مستودعات المملكة اللوجستية', 'plan' => 'باقة الشركات الكبرى (VIP)', 'storage_used' => '94%', 'contracts_count' => 86, 'revenue' => '150,000 ر.س'],
+            ['id' => 'alfajr', 'domain' => 'alfajr.whms.test', 'name' => 'مؤسسة الفجر للحفظ البارد', 'plan' => 'الباقة الأساسية (Starter)', 'storage_used' => '30%', 'contracts_count' => 3, 'revenue' => '9,000 ر.س'],
         ];
 
         foreach ($tenants as $t) {

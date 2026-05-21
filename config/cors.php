@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://whm.apl:8080'), 'http://whm.apl', 'http://www.whm.apl', 'http://localhost', 'http://localhost:8080', 'http://whm.apl:8080', 'http://www.whm.apl:8080'],
+    'allowed_origins' => [env('FRONTEND_URL', 'http://whms.test'), 'http://whms.test', 'http://www.whms.test', 'http://localhost', 'http://localhost:8080', 'http://whms.test', 'http://www.whms.test'],
 
     'allowed_origins_patterns' => [],
 

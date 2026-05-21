@@ -29,6 +29,10 @@ Route::middleware([
         Route::get('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'create'])->name('tenant.setup');
         Route::post('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'store'])->name('tenant.store');
 
+        // API for settings
+        Route::get('/api/settings', [\App\Http\Controllers\TenantSettingsController::class, 'index']);
+        Route::post('/api/settings', [\App\Http\Controllers\TenantSettingsController::class, 'store']);
+
         // Routes that require a configured tenant
         Route::middleware('tenant')->group(function () {
             // Season Selection

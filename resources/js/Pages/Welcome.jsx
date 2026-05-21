@@ -337,7 +337,7 @@ export default function Welcome({ auth, flash }) {
                                                 placeholder="almutahida"
                                             />
                                             <span className="absolute left-3 top-3 text-sm text-slate-400 font-mono">
-                                                .whm.apl
+                                                .whms.test
                                             </span>
                                         </div>
                                         <InputError

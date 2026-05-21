@@ -11,10 +11,12 @@ use App\Models\Term;
 
 class SeasonController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $seasons = Season::latest()->get();
-        return Inertia::render('Settings/Seasons/Index', compact('seasons'));
+        $openCreate = $request->boolean('create');
+
+        return Inertia::render('Settings/Seasons/Index', compact('seasons', 'openCreate'));
     }
 
     public function show(Season $season)
@@ -42,7 +44,11 @@ class SeasonController extends Controller
 
         Season::create($validated);
 
-        return redirect()->back()->with('success', 'ÿ™ŸÖ ÿ•ÿ∂ÿßŸÅÿ© ÿßŸÑŸÖŸàÿ≥ŸÖ ÿ®ŸÜÿ¨ÿßÿ≠.');
+        if (!session()->has('active_season_id')) {
+            return redirect()->route('season.select')->with('success', ' „ ≈÷«›… «·„Ê”„ »‰Ã«Õ. «Œ — «·„Ê”„ ··„ «»⁄….');
+        }
+
+        return redirect()->back()->with('success', ' „ ≈÷«›… «·„Ê”„ »‰Ã«Õ.');
     }
 
     public function update(Request $request, Season $season)
@@ -61,12 +67,12 @@ class SeasonController extends Controller
 
         $season->update($validated);
 
-        return redirect()->back()->with('success', 'ÿ™ŸÖ ÿ™ÿ≠ÿØŸäÿ´ ÿßŸÑŸÖŸàÿ≥ŸÖ ÿ®ŸÜÿ¨ÿßÿ≠.');
+        return redirect()->back()->with('success', ' „  ÕœÌÀ «·„Ê”„ »‰Ã«Õ.');
     }
 
     public function destroy(Season $season)
     {
         $season->delete();
-        return redirect()->back()->with('success', 'ÿ™ŸÖ ÿ≠ÿ∞ŸÅ ÿßŸÑŸÖŸàÿ≥ŸÖ.');
+        return redirect()->back()->with('success', ' „ Õ–› «·„Ê”„.');
     }
 }

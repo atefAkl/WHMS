@@ -234,7 +234,7 @@ export default function Tenants({ tenants, kpis, settings, requests }) {
                                                         <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full uppercase">{request.plan}</span>
                                                     </div>
                                                     <div className="flex flex-wrap gap-4 text-sm text-text-muted">
-                                                        <span className="flex items-center gap-1.5"><Globe className="w-4 h-4" /> {request.requested_subdomain}.localhost</span>
+                                                        <span className="flex items-center gap-1.5"><Globe className="w-4 h-4" /> {request.requested_subdomain}.whms.test</span>
                                                         <span className="flex items-center gap-1.5"><UserCheck className="w-4 h-4" /> {request.email}</span>
                                                         <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {new Date(request.created_at).toLocaleDateString('ar-EG')}</span>
                                                     </div>
