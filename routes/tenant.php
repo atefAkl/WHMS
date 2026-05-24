@@ -20,6 +20,11 @@ Route::middleware([
 
     require base_path('routes/auth.php');
 
+    Route::middleware('guest')->group(function () {
+        Route::get('/setup-password', [\App\Http\Controllers\TenantPasswordSetupController::class, 'show'])->name('tenant.password.setup');
+        Route::post('/setup-password', [\App\Http\Controllers\TenantPasswordSetupController::class, 'store'])->name('tenant.password.store');
+    });
+
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

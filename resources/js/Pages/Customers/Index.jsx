@@ -15,6 +15,8 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Tooltip from '@/Components/Tooltip';
+import ConfirmationModal from '@/Components/ConfirmationModal';
+
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -28,11 +30,14 @@ export default function Index({ auth, customers, filters, countries = [], catego
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
     const [selectedItems, setSelectedItems] = useState([]);
     
+    const [includeInactive, setIncludeInactive] = useState(false);
+    const displayedCustomers = customers.data.filter(c => includeInactive || c.status === 'active');
+    
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [customerToEdit, setCustomerToEdit] = useState(null);
     const [customerToDelete, setCustomerToDelete] = useState(null);
-
+ 
     const { data, setData, post, put, delete: destroy, processing, errors, reset, clearErrors } = useForm({
         name: '',
         foreign_name: '',
@@ -46,7 +51,9 @@ export default function Index({ auth, customers, filters, countries = [], catego
         country_id: countries.length > 0 ? countries[0].id : 1,
         parent_category_id: '',
         category_id: '',
+        password: '',
     });
+
 
     const t = {
         title: lang === 'ar' ? 'العملاء' : 'Customers',
@@ -92,12 +99,13 @@ export default function Index({ auth, customers, filters, countries = [], catego
         }
     };
 
-    const selectAll = () => setSelectedItems(customers.data.map(c => c.id));
+    const selectAll = () => setSelectedItems(displayedCustomers.map(c => c.id));
     const selectNone = () => setSelectedItems([]);
     const invertSelection = () => {
-        const allIds = customers.data.map(c => c.id);
+        const allIds = displayedCustomers.map(c => c.id);
         setSelectedItems(allIds.filter(id => !selectedItems.includes(id)));
     };
+
 
     const openCreateModal = () => {
         clearErrors();
@@ -130,9 +138,12 @@ export default function Index({ auth, customers, filters, countries = [], catego
     };
 
     const openDeleteModal = (customer) => {
+        clearErrors();
+        setData('password', '');
         setCustomerToDelete(customer);
         setIsDeleteModalOpen(true);
     };
+
 
     const closeModals = () => {
         setIsFormModalOpen(false);
@@ -161,9 +172,11 @@ export default function Index({ auth, customers, filters, countries = [], catego
     const deleteCustomer = () => {
         if (!customerToDelete) return;
         destroy(route('customers.destroy', customerToDelete.id), {
+            data: { password: data.password },
             onSuccess: () => closeModals(),
         });
     };
+
 
     const breadcrumbs = (
         <div className="flex items-center gap-2 text-sm text-text-muted">
@@ -179,12 +192,14 @@ export default function Index({ auth, customers, filters, countries = [], catego
         <AuthenticatedLayout header={breadcrumbs}>
             <Head title={t.title} />
 
-            <div className="pb-4 space-y-3">
+            <div className="pb-2 space-y-2">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
+
                     {/* 1. Page Title & Actions */}
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border border-border rounded-xl px-4 py-3 bg-surface shadow-sm mb-3 transition-shadow hover:shadow-md">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border border-border rounded-xl px-4 py-2.5 bg-surface shadow-sm mb-2 transition-shadow hover:shadow-md">
                         <div>
+
                             <h1 className="text-xl font-bold text-text leading-tight">{t.title}</h1>
                             <p className="text-[12px] text-text-muted mt-0.5">
                                 {lang === 'ar' ? 'إدارة بيانات العملاء والجهات المرتبطة بها' : 'Manage customers data and related entities'}
@@ -203,24 +218,25 @@ export default function Index({ auth, customers, filters, countries = [], catego
                     </div>
 
                     {/* 2. Stats Cards - Real Data */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
                         {[
-                            { label: t.stats.total,      value: stats.total ?? customers.total, icon: Users,      color: 'text-primary',   bg: 'bg-primary/10' },
-                            { label: t.stats.business,   value: stats.business ?? 0,            icon: TrendingUp, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                            { label: t.stats.noContract, value: stats.withoutContracts ?? 0,    icon: Activity,   color: 'text-amber-500',  bg: 'bg-amber-500/10' },
-                            { label: t.stats.newLast30,  value: stats.newLast30 ?? 0,           icon: UsersRound, color: 'text-emerald-500',bg: 'bg-emerald-500/10' },
+                             { label: t.stats.total,      value: stats.total ?? customers.total, icon: Users,      color: 'text-primary',   bg: 'bg-primary/10' },
+                             { label: t.stats.business,   value: stats.business ?? 0,            icon: TrendingUp, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                             { label: t.stats.noContract, value: stats.withoutContracts ?? 0,    icon: Activity,   color: 'text-amber-500',  bg: 'bg-amber-500/10' },
+                             { label: t.stats.newLast30,  value: stats.newLast30 ?? 0,           icon: UsersRound, color: 'text-emerald-500',bg: 'bg-emerald-500/10' },
                         ].map(({ label, value, icon: Icon, color, bg }) => (
-                            <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3 shadow-sm flex items-center gap-3 transition-shadow hover:shadow-md">
-                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${bg} ${color}`}>
-                                    <Icon className="h-4 w-4" />
+                            <div key={label} className="border border-border bg-surface p-2.5 shadow-sm transition-shadow hover:shadow-md flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                    <div className={`flex h-6.5 w-6.5 shrink-0 items-center justify-center ${bg} ${color}`}>
+                                        <Icon className="h-3.5 w-3.5" />
+                                    </div>
+                                    <p className="text-[10px] font-bold text-text-muted uppercase truncate">{label}</p>
                                 </div>
-                                <div className="min-w-0">
-                                    <p className="text-[10px] font-medium text-text-muted truncate">{label}</p>
-                                    <p className="text-xl font-bold text-text leading-tight">{value}</p>
-                                </div>
+                                <p className="text-xl font-bold text-text leading-tight">{value}</p>
                             </div>
                         ))}
                     </div>
+
 
                     {/* 3. Resource Data Layout */}
                     <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col">
@@ -239,6 +255,16 @@ export default function Index({ auth, customers, filters, countries = [], catego
                                 <button onClick={invertSelection} className="text-xs font-medium text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm transition-colors">
                                     {t.selection.invert}
                                 </button>
+                                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-text-muted hover:text-text border border-border px-2 py-1 bg-surface shadow-sm">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={includeInactive} 
+                                        onChange={(e) => setIncludeInactive(e.target.checked)} 
+                                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                    />
+                                    <span>{lang === 'ar' ? 'تضمين غير النشطين' : 'Include Inactive'}</span>
+                                </label>
+
                                 {selectedItems.length > 0 && (
                                     <span className="text-xs font-bold text-primary px-2 bg-primary/10 rounded-full py-0.5">
                                         {selectedItems.length} {lang === 'ar' ? 'محدد' : 'Selected'}
@@ -280,174 +306,176 @@ export default function Index({ auth, customers, filters, countries = [], catego
 
                         {/* Body: Data Presentation */}
                         <div className="flex-1 bg-surface p-0 min-h-[400px]">
-                            {customers.data.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-text-muted py-20">
-                                    <UsersRound className="h-12 w-12 opacity-20 mb-4" />
-                                    <p className="text-lg font-medium">{lang === 'ar' ? 'لم يتم العثور على عملاء' : 'No customers found'}</p>
-                                </div>
-                            ) : viewMode === 'list' ? (
-                                /* List View */
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-border">
-                                        <thead className="bg-surface-muted/50">
-                                            <tr>
-                                                <th scope="col" className="px-4 py-3 text-start w-12">
-                                                    <div className="flex items-center">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={selectedItems.length === customers.data.length && customers.data.length > 0}
-                                                            onChange={selectedItems.length === customers.data.length ? selectNone : selectAll}
-                                                            className="rounded border-border text-primary focus:ring-primary h-4 w-4" 
-                                                        />
-                                                    </div>
-                                                </th>
-                                                <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
-                                                    {t.columns.code}
-                                                </th>
-                                                <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
-                                                    {t.columns.name}
-                                                </th>
-                                                <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
-                                                    {t.columns.contact}
-                                                </th>
-                                                <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
-                                                    {t.columns.tax}
-                                                </th>
-                                                <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
-                                                    {t.columns.status}
-                                                </th>
-                                                <th scope="col" className="px-6 py-3 text-end text-xs font-semibold uppercase tracking-wider text-text-muted">
-                                                    {t.columns.actions}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border bg-surface">
-                                            {customers.data.map((customer) => (
-                                                <tr
-                                                    key={customer.id}
-                                                    className={`transition-colors hover:bg-surface-muted/50 ${selectedItems.includes(customer.id) ? 'bg-primary/5' : ''}`}
-                                                >
-                                                    <td className="px-4 py-3 w-12">
-                                                        <input type="checkbox" checked={selectedItems.includes(customer.id)} onChange={() => toggleSelection(customer.id)} className="rounded border-border text-primary focus:ring-primary h-4 w-4" />
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-text" dir="ltr">
-                                                        {customer.s_number}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-4 py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-                                                                <UsersRound className="h-3.5 w-3.5" />
-                                                            </div>
-                                                            <div>
-                                                                <div className="text-[12px] font-semibold text-text">{customer.name}</div>
-                                                                <div className="text-[10px] text-text-muted">{customer.category?.name_ar ?? '-'}</div>
-                                                            </div>
+                            {(() => {
+                                if (displayedCustomers.length === 0) {
+                                    return (
+                                        <div className="flex flex-col items-center justify-center h-full text-text-muted py-20">
+                                            <UsersRound className="h-12 w-12 opacity-20 mb-4" />
+                                            <p className="text-lg font-medium">{lang === 'ar' ? 'لم يتم العثور على عملاء' : 'No customers found'}</p>
+                                        </div>
+                                    );
+                                }
+                                return viewMode === 'list' ? (
+                                    /* List View */
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-border">
+                                            <thead className="bg-surface-muted/50">
+                                                <tr>
+                                                    <th scope="col" className="px-4 py-3 text-start w-12">
+                                                        <div className="flex items-center">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={selectedItems.length === displayedCustomers.length && displayedCustomers.length > 0}
+                                                                onChange={selectedItems.length === displayedCustomers.length ? selectNone : selectAll}
+                                                                className="rounded border-border text-primary focus:ring-primary h-4 w-4" 
+                                                            />
                                                         </div>
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-4 py-3">
-                                                        <div className="text-[12px] text-text font-medium" dir="ltr">{customer.phone_number}</div>
-                                                        <div className="text-[10px] text-text-muted mt-0.5">{customer.email || '-'}</div>
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-4 py-3 text-[12px] text-text">
-                                                        {customer.vat_number || customer.id_number || '-'}
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-4 py-3">
-                                                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${customer.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
-                                                            {t.status[customer.status] ?? customer.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="whitespace-nowrap px-4 py-3 text-end">
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <Tooltip text={lang === 'ar' ? 'عرض' : 'View'}>
-                                                                <a href={route('customers.show', customer.id)} className="p-1.5 rounded-md text-text-muted hover:text-indigo-500 hover:bg-indigo-500/10 transition-colors inline-flex">
-                                                                    <Eye className="h-3.5 w-3.5" />
-                                                                </a>
-                                                            </Tooltip>
-                                                            <Tooltip text={lang === 'ar' ? 'تعديل' : 'Edit'}>
-                                                                <button onClick={() => openEditModal(customer)} className="p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-primary/10 transition-colors">
-                                                                    <Edit className="h-3.5 w-3.5" />
-                                                                </button>
-                                                            </Tooltip>
-                                                            <Tooltip text={lang === 'ar' ? 'حذف' : 'Delete'} placement="top">
-                                                                <button onClick={() => openDeleteModal(customer)} className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors">
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </button>
-                                                            </Tooltip>
-                                                        </div>
-                                                    </td>
+                                                    </th>
+                                                    <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
+                                                        {t.columns.code}
+                                                    </th>
+                                                    <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
+                                                        {t.columns.name}
+                                                    </th>
+                                                    <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
+                                                        {t.columns.contact}
+                                                    </th>
+                                                    <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
+                                                        {t.columns.tax}
+                                                    </th>
+                                                    <th scope="col" className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted">
+                                                        {t.columns.status}
+                                                    </th>
+                                                    <th scope="col" className="px-6 py-3 text-end text-xs font-semibold uppercase tracking-wider text-text-muted">
+                                                        {t.columns.actions}
+                                                    </th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                /* Grid View */
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                                    {customers.data.map((customer) => (
-                                        <div 
-                                            key={customer.id} 
-                                            className={cn(
-                                                "border border-border rounded-xl p-4 flex flex-col gap-4 relative transition-shadow hover:shadow-md cursor-pointer",
-                                                selectedItems.includes(customer.id) ? "ring-2 ring-primary bg-primary/5" : "bg-surface"
-                                            )}
-                                            onClick={() => toggleSelection(customer.id)}
-                                        >
-                                            <div className="absolute top-4 end-4 flex items-center gap-2">
-                                                <Dropdown>
-                                                    <Dropdown.Trigger>
-                                                        <button onClick={(e) => e.stopPropagation()} className="text-text-muted hover:text-primary transition-colors p-1 rounded-md bg-surface border border-border shadow-sm">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </button>
-                                                    </Dropdown.Trigger>
-                                                    <Dropdown.Content align={lang === 'ar' ? 'left' : 'right'}>
-                                                        <button onClick={(e) => { e.stopPropagation(); openEditModal(customer); }} className="w-full text-start flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-muted transition-colors text-text">
-                                                            <Edit className="h-4 w-4" />
+                                            </thead>
+                                            <tbody className="divide-y divide-border bg-surface">
+                                                {displayedCustomers.map((customer) => (
+                                                    <tr
+                                                        key={customer.id}
+                                                        className={`transition-colors hover:bg-surface-muted/50 ${selectedItems.includes(customer.id) ? 'bg-primary/5' : ''}`}
+                                                    >
+                                                        <td className="px-4 py-3 w-12">
+                                                            <input type="checkbox" checked={selectedItems.includes(customer.id)} onChange={() => toggleSelection(customer.id)} className="rounded border-border text-primary focus:ring-primary h-4 w-4" />
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-[12px] font-bold text-text" dir="ltr">
+                                                            {customer.s_number}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+                                                                    <UsersRound className="h-3.5 w-3.5" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-[12px] font-semibold text-text">{customer.name}</div>
+                                                                    <div className="text-[10px] text-text-muted">{customer.category?.name_ar ?? '-'}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3">
+                                                            <div className="text-[12px] text-text font-medium" dir="ltr">{customer.phone_number}</div>
+                                                            <div className="text-[10px] text-text-muted mt-0.5">{customer.email || '-'}</div>
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-[12px] text-text">
+                                                            {customer.vat_number || customer.id_number || '-'}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3">
+                                                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${customer.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+                                                                {t.status[customer.status] ?? customer.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-end">
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <Tooltip text={lang === 'ar' ? 'عرض' : 'View'}>
+                                                                    <a href={route('customers.show', customer.id)} className="p-1.5 rounded-md text-text-muted hover:text-indigo-500 hover:bg-indigo-500/10 transition-colors inline-flex">
+                                                                        <Eye className="h-3.5 w-3.5" />
+                                                                    </a>
+                                                                </Tooltip>
+                                                                <Tooltip text={lang === 'ar' ? 'تعديل' : 'Edit'}>
+                                                                    <button onClick={() => openEditModal(customer)} className="p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-primary/10 transition-colors">
+                                                                        <Edit className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                </Tooltip>
+                                                                <Tooltip text={lang === 'ar' ? 'حذف' : 'Delete'} placement="top">
+                                                                    <button onClick={() => openDeleteModal(customer)} className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors">
+                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                    </button>
+                                                                </Tooltip>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    /* Grid View */
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                                        {displayedCustomers.map((customer) => (
+                                            <div 
+                                                key={customer.id} 
+                                                className={cn(
+                                                    "border border-border rounded-xl p-4 flex flex-col gap-4 relative transition-shadow hover:shadow-md cursor-pointer",
+                                                    selectedItems.includes(customer.id) ? "ring-2 ring-primary bg-primary/5" : "bg-surface"
+                                                )}
+                                                onClick={() => toggleSelection(customer.id)}
+                                            >
+                                                <div className="absolute top-4 end-4 flex items-center gap-2">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={selectedItems.includes(customer.id)}
+                                                        onChange={() => {}} // handled by parent onClick
+                                                        className="rounded border-border text-primary focus:ring-primary h-5 w-5 pointer-events-none" 
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                                        <UsersRound className="h-6 w-6" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-text text-base">{customer.name}</h3>
+                                                        <p className="text-xs text-text-muted">{customer.s_number}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-1 text-sm">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-text-muted">{lang === 'ar' ? 'الهاتف:' : 'Phone:'}</span>
+                                                        <span className="font-medium text-text">{customer.phone_number}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-text-muted">{lang === 'ar' ? 'البريد:' : 'Email:'}</span>
+                                                        <span className="font-medium text-text">{customer.email || '-'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-border">
+                                                        <span className="text-text-muted">{lang === 'ar' ? 'الحالة:' : 'Status:'}</span>
+                                                        <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold",
+                                                            customer.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+                                                        )}>
+                                                            {t.status[customer.status]}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-end gap-2 border-t border-border pt-2 mt-1">
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); openEditModal(customer); }} 
+                                                            className="text-xs text-primary font-bold hover:underline py-1 px-2 hover:bg-primary/5 transition-colors"
+                                                        >
                                                             {lang === 'ar' ? 'تعديل' : 'Edit'}
                                                         </button>
-                                                        <button onClick={(e) => { e.stopPropagation(); openDeleteModal(customer); }} className="w-full text-start flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-muted transition-colors text-danger">
-                                                            <Trash2 className="h-4 w-4" />
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); openDeleteModal(customer); }} 
+                                                            className="text-xs text-danger font-bold hover:underline py-1 px-2 hover:bg-danger/5 transition-colors"
+                                                        >
                                                             {lang === 'ar' ? 'حذف' : 'Delete'}
                                                         </button>
-                                                    </Dropdown.Content>
-                                                </Dropdown>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={selectedItems.includes(customer.id)}
-                                                    onChange={() => {}} // handled by parent onClick
-                                                    className="rounded border-border text-primary focus:ring-primary h-5 w-5 pointer-events-none" 
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                                    <UsersRound className="h-6 w-6" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-bold text-text text-base">{customer.name}</h3>
-                                                    <p className="text-xs text-text-muted">{customer.s_number}</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col gap-1 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-text-muted">{lang === 'ar' ? 'الهاتف:' : 'Phone:'}</span>
-                                                    <span className="font-medium text-text">{customer.phone_number}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-text-muted">{lang === 'ar' ? 'البريد:' : 'Email:'}</span>
-                                                    <span className="font-medium text-text">{customer.email || '-'}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-border">
-                                                    <span className="text-text-muted">{lang === 'ar' ? 'الحالة:' : 'Status:'}</span>
-                                                    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold",
-                                                        customer.status === 'active' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
-                                                    )}>
-                                                        {t.status[customer.status]}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Footer: Pagination */}
@@ -620,22 +648,25 @@ export default function Index({ auth, customers, filters, countries = [], catego
                 </form>
             </Modal>
 
-            {/* Delete Modal */}
-            <Modal show={isDeleteModalOpen} onClose={closeModals} maxWidth="sm">
-                <div className="p-6 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 mb-4">
-                        <Trash2 className="h-6 w-6 text-danger" />
-                    </div>
-                    <h3 className="text-lg font-bold text-text mb-2">{lang === 'ar' ? 'تأكيد الحذف' : 'Confirm Deletion'}</h3>
-                    <p className="text-sm text-text-muted mb-6">
-                        {lang === 'ar' ? 'هل أنت متأكد من حذف هذا العميل؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this customer? This action cannot be undone.'}
-                    </p>
-                    <div className="flex justify-center gap-3">
-                        <SecondaryButton onClick={closeModals}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</SecondaryButton>
-                        <DangerButton onClick={deleteCustomer} disabled={processing}>{lang === 'ar' ? 'حذف' : 'Delete'}</DangerButton>
-                    </div>
-                </div>
-            </Modal>
+            {/* Delete Confirmation Modal */}
+            <ConfirmationModal
+                show={isDeleteModalOpen}
+                title={lang === 'ar' ? 'تأكيد حذف العميل' : 'Confirm Customer Deletion'}
+                message={lang === 'ar' 
+                    ? `هل أنت متأكد من حذف العميل "${customerToDelete?.name}"؟ لا يمكن التراجع عن هذا الإجراء وسيتم مسح كافة البيانات المرتبطة به.`
+                    : `Are you sure you want to delete customer "${customerToDelete?.name}"? This action cannot be undone and all associated data will be removed.`}
+                confirmLabel={lang === 'ar' ? 'حذف العميل نهائياً' : 'Delete Customer'}
+                cancelLabel={lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                requirePassword={true}
+                passwordValue={data.password || ''}
+                onPasswordChange={(val) => setData('password', val)}
+                passwordError={errors.password}
+                onConfirm={deleteCustomer}
+                onCancel={closeModals}
+                processing={processing}
+                type="danger"
+            />
+
         </AuthenticatedLayout>
     );
 }

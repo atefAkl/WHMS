@@ -26,7 +26,12 @@ function safeRoute(name) {
 
 export default function Topbar({ header }) {
     const user = usePage().props.auth.user;
-    const { lang } = useLang();
+    const { lang, setLang } = useLang();
+
+    const isCentral = typeof route !== 'undefined' && (
+        route().current('saas.*') || 
+        route().current('central.*')
+    );
 
     return (
         <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-6 shadow-sm shrink-0">
@@ -52,6 +57,15 @@ export default function Topbar({ header }) {
 
             {/* Right: Actions + User */}
             <div className="flex items-center gap-2">
+
+                {/* Language Toggle */}
+                <button 
+                    onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-muted transition-colors font-black text-xs border border-border"
+                    title={lang === 'ar' ? 'English' : 'العربية'}
+                >
+                    {lang === 'ar' ? 'EN' : 'ع'}
+                </button>
 
                 {/* Messages */}
                 <button className="relative rounded-full p-2 text-text-muted hover:bg-surface-muted transition-colors" title={lang === 'ar' ? 'الرسائل' : 'Messages'}>
@@ -88,7 +102,7 @@ export default function Topbar({ header }) {
                             <p className="text-xs font-semibold text-text">{user.name}</p>
                             <p className="text-xs text-text-muted">{user.email}</p>
                         </div>
-                        <Dropdown.Link href={safeRoute('profile.edit')}>
+                        <Dropdown.Link href={safeRoute(isCentral ? 'central.profile.edit' : 'profile.edit')}>
                             <Settings className={cn("inline h-4 w-4", lang === 'ar' ? 'ms-2' : 'me-2')} />
                             {lang === 'ar' ? 'الملف الشخصي' : 'Profile'}
                         </Dropdown.Link>

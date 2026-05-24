@@ -4,6 +4,7 @@
 
 @layer base {
     :root {
+        --font-family: 'IBM Plex Sans Arabic', 'Noto Sans Arabic', sans-serif;
         --color-bg: #f6f7f9;
         --color-surface: #ffffff;
         --color-surface-muted: #f1f4f8;

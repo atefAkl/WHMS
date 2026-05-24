@@ -115,7 +115,7 @@ class CustomerController extends Controller
         return redirect()->back()->with('success', 'تم تحديث بيانات العميل بنجاح.');
     }
 
-    public function destroy(string $id)
+    public function destroy(\App\Http\Requests\DeleteResourceRequest $request, string $id)
     {
         Customer::findOrFail($id)->delete();
         return redirect()->route('customers.index')->with('success', 'تم حذف العميل بنجاح.');

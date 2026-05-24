@@ -34,6 +34,8 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ApplicationLogo from './ApplicationLogo';
 import { useLang } from '@/Contexts/LanguageContext';
+import { useTheme } from '@/Contexts/ThemeContext';
+
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -52,7 +54,7 @@ function safeRoute(name) {
 }
 
 // ── Nav Structure ────────────────────────────────────────────
-const navItems = [
+const tenantNavItems = [
     {
         name: { ar: 'الداشبورد', en: 'Dashboard' },
         icon: LayoutDashboard,
@@ -111,14 +113,31 @@ const navItems = [
     }
 ];
 
+const saasNavItems = [
+    {
+        name: { ar: 'إدارة المستأجرين والطلبات', en: 'Tenants & Requests' },
+        icon: LayoutDashboard,
+        route: 'saas.tenants.index',
+        active: 'saas.tenants.*',
+    },
+    {
+        name: { ar: 'ملف التعريف', en: 'Profile Settings' },
+        icon: UserCog,
+        route: 'central.profile.edit',
+        active: 'central.profile.*',
+    }
+];
+
+
 // ── Single Nav Item (with accordion via parent state) ─────────
 function NavItem({ item, lang, openKey, setOpenKey }) {
     const isActive = route().current(item.active);
     const hasChildren = item.children && item.children.length > 0;
     const itemKey = item.active;
     const isChildActive = hasChildren && item.children.some(c => route().current(c.active));
-    // Open if manually opened OR if a child is currently active (persists across reloads)
-    const isOpen = openKey === itemKey || isChildActive;
+    // Open strictly if this key is the active open key (exclusive accordion)
+    const isOpen = openKey === itemKey;
+
 
     if (hasChildren) {
         return (
@@ -196,11 +215,19 @@ function NavItem({ item, lang, openKey, setOpenKey }) {
 
 // ── Sidebar ───────────────────────────────────────────────────
 export default function Sidebar() {
-    const { lang, setLang } = useLang();
+    const { lang } = useLang();
+    const { theme, setTheme, bg, setBg, font, setFont } = useTheme();
 
+    const isCentral = typeof route !== 'undefined' && (
+        route().current('saas.*') || 
+        route().current('central.*')
+    );
+
+    const activeNavItems = isCentral ? saasNavItems : tenantNavItems;
+ 
     // Compute which group should be open on first render based on current route
     const getInitialOpenKey = () => {
-        for (const item of navItems) {
+        for (const item of activeNavItems) {
             if (item.children && item.children.some(c => {
                 try { return route().current(c.active); } catch { return false; }
             })) {
@@ -209,33 +236,54 @@ export default function Sidebar() {
         }
         return null;
     };
-
+ 
     const [openKey, setOpenKey] = useState(() => getInitialOpenKey());
-
-    const languages = [
-        { code: 'ar', label: 'ع' },
-        { code: 'en', label: 'EN' },
+ 
+    const themeColors = [
+        { id: 'blue', color: '#2563eb', label: { ar: 'أزرق', en: 'Blue' } },
+        { id: 'emerald', color: '#059669', label: { ar: 'زمردي', en: 'Emerald' } },
+        { id: 'amber', color: '#d97706', label: { ar: 'كهرماني', en: 'Amber' } },
+        { id: 'rose', color: '#e11d48', label: { ar: 'وردي', en: 'Rose' } },
+        { id: 'slate', color: '#475569', label: { ar: 'رمادي', en: 'Slate' } },
     ];
-
+ 
+    const bgModes = [
+        { id: 'flat-light', label: { ar: 'فاتح', en: 'Light' } },
+        { id: 'warm-cream', label: { ar: 'دافئ', en: 'Warm' } },
+        { id: 'flat-dark', label: { ar: 'داكن', en: 'Dark' } },
+        { id: 'deep-blue', label: { ar: 'ليلي', en: 'Blue' } },
+    ];
+ 
+    const fontFamilies = [
+        { id: 'cairo', label: 'Cairo (القاهرة)' },
+        { id: 'tajawal', label: 'Tajawal (تجول)' },
+        { id: 'alexandria', label: 'Alexandria (الإسكندرية)' },
+        { id: 'readex', label: 'Readex Pro (ريدكس)' },
+        { id: 'ibm', label: 'IBM Plex Arabic' },
+    ];
+ 
     return (
-        <div className="flex h-screen w-64 shrink-0 flex-col border-e border-border bg-surface shadow-sm">
-
+        <div className="flex h-screen w-64 shrink-0 flex-col border-e border-border bg-surface shadow-sm select-none">
+ 
             {/* ── 1. Brand ──────────────────────────────── */}
             <div className="flex h-16 items-center gap-3 border-b border-border px-5 shrink-0">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                    <ApplicationLogo className="h-5 w-auto fill-white" />
+                <div className="flex h-9 w-9 items-center justify-center bg-primary text-white font-black text-lg">
+                    W
                 </div>
                 <div className="leading-tight">
-                    <p className="text-sm font-bold text-text">Warehouse OS</p>
+                    <p className="text-sm font-bold text-text">WHMS</p>
                     <p className="text-[11px] text-text-muted">
-                        {lang === 'ar' ? 'نظام إدارة المستودعات' : 'Warehouse Management'}
+                        {isCentral 
+                            ? (lang === 'ar' ? 'الإدارة العامة' : 'SaaS Admin') 
+                            : (lang === 'ar' ? 'لوحة التحكم' : 'Control Panel')
+                        }
                     </p>
                 </div>
             </div>
-
+ 
             {/* ── 2. Navigation ─────────────────────────── */}
             <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-                {navItems.map(item => (
+                {activeNavItems.map(item => (
                     <NavItem
                         key={item.active}
                         item={item}
@@ -245,39 +293,89 @@ export default function Sidebar() {
                     />
                 ))}
             </nav>
-
-            {/* ── 3. Settings & Language ─────────────────── */}
-            <div className="border-t border-border px-3 py-4 space-y-1 shrink-0">
-                <Link
-                    href={safeRoute('settings.index')}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
-                >
-                    <Settings className="h-5 w-5 shrink-0" />
-                    <span>{lang === 'ar' ? 'الإعدادات العامة' : 'Settings'}</span>
-                </Link>
-
-                {/* Language Toggle */}
-                <div className="flex items-center justify-between rounded-md px-3 py-2">
-                    <div className="flex items-center gap-2 text-text-muted">
-                        <Globe className="h-4 w-4 shrink-0" />
-                        <span className="text-sm font-medium">{lang === 'ar' ? 'اللغة' : 'Language'}</span>
+ 
+            {/* ── 3. Settings & Appearance (Theme Picker) ── */}
+            <div className="border-t border-border px-3 py-3 space-y-3 shrink-0 bg-surface">
+                
+                {/* General Settings Link */}
+                {!isCentral && (
+                    <Link
+                        href={safeRoute('settings.index')}
+                        className="flex items-center gap-3 rounded-md px-3 py-1.5 text-xs font-semibold text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                    >
+                        <Settings className="h-4 w-4 shrink-0" />
+                        <span>{lang === 'ar' ? 'الإعدادات العامة' : 'General Settings'}</span>
+                    </Link>
+                )}
+ 
+                {/* Theme Panel */}
+                <div className="space-y-2 border-t border-border/50 pt-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                        {lang === 'ar' ? 'تخصيص المظهر' : 'Appearance'}
+                    </p>
+ 
+                    {/* A. Colors */}
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[11px] text-text-muted">{lang === 'ar' ? 'اللون الأساسي' : 'Primary'}</span>
+                        <div className="flex gap-1">
+                            {themeColors.map(c => (
+                                <button
+                                    key={c.id}
+                                    onClick={() => setTheme(c.id)}
+                                    style={{ backgroundColor: c.color }}
+                                    className={cn(
+                                        'h-4.5 w-4.5 border transition-all cursor-pointer relative',
+                                        theme === c.id 
+                                            ? 'border-text scale-110 shadow-sm' 
+                                            : 'border-transparent hover:scale-105'
+                                    )}
+                                    title={c.label[lang]}
+                                >
+                                    {theme === c.id && (
+                                        <span className="absolute inset-0 m-auto h-1.5 w-1.5 bg-white rounded-full"></span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <div className="flex rounded-md border border-border overflow-hidden">
-                        {languages.map(l => (
-                            <button
-                                key={l.code}
-                                onClick={() => setLang(l.code)}
-                                className={cn(
-                                    'px-2.5 py-1 text-xs font-bold transition-colors',
-                                    lang === l.code
-                                        ? 'bg-primary text-white'
-                                        : 'bg-surface text-text-muted hover:bg-surface-muted'
-                                )}
-                            >
-                                {l.label}
-                            </button>
-                        ))}
+ 
+                    {/* B. Background Mode */}
+                    <div className="space-y-1">
+                        <span className="text-[11px] text-text-muted block">{lang === 'ar' ? 'الخلفية' : 'Background'}</span>
+                        <div className="grid grid-cols-4 gap-1">
+                            {bgModes.map(b => (
+                                <button
+                                    key={b.id}
+                                    onClick={() => setBg(b.id)}
+                                    className={cn(
+                                        'py-1 px-0.5 text-[9px] font-bold border transition-colors cursor-pointer text-center',
+                                        bg === b.id
+                                            ? 'bg-primary/10 border-primary text-primary'
+                                            : 'bg-surface-muted border-border text-text-muted hover:border-text-muted'
+                                    )}
+                                >
+                                    {b.label[lang]}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+ 
+                    {/* C. Font Family */}
+                    <div className="space-y-1">
+                        <span className="text-[11px] text-text-muted block">{lang === 'ar' ? 'نوع الخط' : 'Font Family'}</span>
+                        <select
+                            value={font}
+                            onChange={(e) => setFont(e.target.value)}
+                            className="w-full bg-surface-muted border border-border text-text text-xs py-1 px-1.5 cursor-pointer outline-none focus:border-primary"
+                        >
+                            {fontFamilies.map(f => (
+                                <option key={f.id} value={f.id} className="bg-surface text-text">
+                                    {f.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+ 
                 </div>
             </div>
         </div>

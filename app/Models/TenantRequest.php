@@ -17,5 +17,7 @@ class TenantRequest extends Model
         'plan',
         'status',
         'admin_notes',
+        'setup_token',
+        'activation_link',
     ];
 }

@@ -17,7 +17,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 </div>
 
                 {/* Content Area */}
-                <main className="flex-1 overflow-y-auto px-6 pt-2 pb-6 print:p-0 print:overflow-visible">
+                <main className="flex-1 overflow-y-auto px-6 pt-2 pb-2 print:p-0 print:overflow-visible">
                     {children}
                 </main>
             </div>

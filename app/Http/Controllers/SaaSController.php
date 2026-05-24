@@ -116,46 +116,60 @@ class SaaSController extends Controller
     {
         $this->ensureCentralContext();
 
+        // ══ Phase 0: Guard ════════════════════════════════════════════════
+        // منع أي معالجة مكررة أو تعارض في البيانات قبل البدء
+        if ($tenantRequest->status !== 'pending') {
+            return back()->with('error', 'هذا الطلب تمت معالجته مسبقاً (الحالة: ' . $tenantRequest->status . ').');
+        }
+
+        if (Tenant::find($tenantRequest->requested_subdomain)) {
+            return back()->with('error', 'النطاق الفرعي "' . $tenantRequest->requested_subdomain . '" محجوز مسبقاً في النظام.');
+        }
+
+        // ══ Phase 1: Infrastructure ═══════════════════════════════════════
+        // هذه المرحلة يجب أن تنجح بالكامل أو تتراجع بالكامل
+        $tenant = null;
+
         try {
+            // ① إنشاء سجل التينانت
             $tenant = Tenant::create([
-                'id' => $tenantRequest->requested_subdomain,
+                'id'   => $tenantRequest->requested_subdomain,
                 'data' => [
                     'company_name' => $tenantRequest->company_name,
-                    'email' => $tenantRequest->email,
-                    'phone' => $tenantRequest->phone,
-                    'plan' => $tenantRequest->plan,
-                    'status' => 'نشط',
+                    'email'        => $tenantRequest->email,
+                    'phone'        => $tenantRequest->phone,
+                    'plan'         => $tenantRequest->plan,
+                    'status'       => 'نشط',
                 ],
             ]);
 
+            // ② إنشاء الدومين الفرعي
             $tenant->domains()->create([
                 'domain' => $tenantRequest->requested_subdomain . '.' . config('app.domain', 'whms.test'),
             ]);
 
+            // ③ تشغيل المايجريشن (ينشئ قاعدة بيانات التينانت)
             Artisan::call('tenants:migrate', ['--tenants' => [$tenant->id]]);
 
-            $tenant->run(function () use ($tenantRequest) {
-                // إنشاء مستخدم الدخول الأوّلي
+            // ④ زرع بيانات المستخدم الأولي والإعدادات
+            $setupToken = \Illuminate\Support\Str::random(40);
+
+            $tenant->run(function () use ($tenantRequest, $setupToken) {
                 \App\Models\User::updateOrCreate(
                     ['email' => $tenantRequest->email],
                     [
-                        'name' => $tenantRequest->company_name . ' Admin',
-                        'password' => Hash::make('admin123'),
+                        'name'        => $tenantRequest->company_name . ' Admin',
+                        'password'    => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)),
+                        'setup_token' => $setupToken,
                     ]
                 );
 
-                // ========================================================
-                // زرع بيانات التسجيل في contract_settings لتظهر معبأة مسبقاً
-                // في شاشة إعداد بيانات المنشأة (Setup Wizard)
-                // ========================================================
-                $registrationData = [
+                foreach ([
                     'company_name'  => $tenantRequest->company_name,
                     'company_email' => $tenantRequest->email,
                     'company_phone' => $tenantRequest->phone,
                     'company_plan'  => $tenantRequest->plan,
-                ];
-
-                foreach ($registrationData as $key => $value) {
+                ] as $key => $value) {
                     \App\Models\ContractSetting::updateOrCreate(
                         ['key' => $key],
                         ['value' => $value ?? '']
@@ -165,16 +179,68 @@ class SaaSController extends Controller
 
             $this->ensureCentralContext();
 
-            $tenantRequest->setConnection($this->centralConnection());
-            $tenantRequest->update(['status' => 'approved']);
+            // ⑤ بناء رابط التفعيل وحفظ حالة الموافقة في قاعدة البيانات
+            $appDomain      = config('app.domain', 'whms.test');
+            $activationLink = "http://{$tenantRequest->requested_subdomain}.{$appDomain}/setup-password?token={$setupToken}";
 
-            return back()->with('success', 'تم إنشاء حساب العميل وتفعيل المستودع بنجاح.');
-        } catch (\Exception $e) {
+            $tenantRequest->setConnection($this->centralConnection());
+            $tenantRequest->update([
+                'status'          => 'approved',
+                'setup_token'     => $setupToken,
+                'activation_link' => $activationLink,
+            ]);
+
+        } catch (\Throwable $e) {
+            // ══ Compensating Actions ══════════════════════════════════════
+            // نتراجع عن كل ما تم إنشاؤه في Phase 1
             $this->ensureCentralContext();
 
-            return back()->with('error', 'خطأ أثناء تفعيل الحساب: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Tenant approval failed at infrastructure phase', [
+                'request_id' => $tenantRequest->id,
+                'subdomain'  => $tenantRequest->requested_subdomain,
+                'message'    => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+            ]);
+
+            if ($tenant) {
+                try {
+                    $tenant->domains()->delete();
+                    // tenant->delete() يطلق TenantDeleted event الذي يحذف قاعدة البيانات
+                    $tenant->delete();
+                } catch (\Throwable $cleanupEx) {
+                    \Illuminate\Support\Facades\Log::error('Cleanup after failed approval also failed', [
+                        'message' => $cleanupEx->getMessage(),
+                    ]);
+                }
+            }
+
+            return back()->with('error', 'فشل تفعيل الحساب: ' . $e->getMessage());
+        }
+
+        // ══ Phase 2: Notification (best-effort) ══════════════════════════
+        // فشل البريد لا يعني فشل الموافقة - الحساب أصبح جاهزاً
+        try {
+            \Illuminate\Support\Facades\Mail::to($tenantRequest->email)
+                ->send(new \App\Mail\TenantActivationMail($activationLink, $tenantRequest->company_name));
+
+            return back()->with('success',
+                'تم إنشاء حساب العميل بنجاح وإرسال رابط التفعيل إلى ' . $tenantRequest->email . '.'
+            );
+
+        } catch (\Throwable $mailEx) {
+            \Illuminate\Support\Facades\Log::warning('Activation email failed after successful tenant approval', [
+                'request_id' => $tenantRequest->id,
+                'message'    => $mailEx->getMessage(),
+            ]);
+
+            // نعرض الرابط في الـ UI بدلاً من البريد
+            return back()->with('mail_warning', [
+                'message' => 'تم إنشاء حساب العميل بنجاح، لكن فشل إرسال البريد الإلكتروني. انسخ رابط التفعيل وأرسله للعميل يدوياً.',
+                'link'    => $activationLink,
+            ]);
         }
     }
+
 
     public function rejectRequest(TenantRequest $tenantRequest)
     {

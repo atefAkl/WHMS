@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, useForm } from "@inertiajs/react";
 import {
     Warehouse,
     ShieldCheck,
@@ -101,20 +101,20 @@ export default function Welcome({ auth, flash }) {
                         </div>
                         <div className="flex items-center gap-4">
                             {auth.user ? (
-                                <Link
-                                    href={route("dashboard")}
+                                <a
+                                    href="/saas/tenants"
                                     className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-md"
                                 >
                                     لوحة التحكم
-                                </Link>
+                                </a>
                             ) : (
                                 <>
-                                    <Link
-                                        href={route("login")}
+                                    <a
+                                        href="/login"
                                         className="text-slate-600 font-medium hover:text-indigo-600 transition-colors"
                                     >
                                         تسجيل الدخول
-                                    </Link>
+                                    </a>
                                     <a
                                         href="#register"
                                         className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-md"

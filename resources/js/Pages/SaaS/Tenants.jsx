@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
 import { 
     Globe, 
@@ -26,18 +26,31 @@ import {
     BadgeCheck
 } from 'lucide-react';
 import Modal from '@/Components/Modal';
+import ConfirmationModal from '@/Components/ConfirmationModal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 
+
 export default function Tenants({ tenants, kpis, settings, requests }) {
     const { lang } = useLang();
+    const { flash } = usePage().props;
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTenant, setSelectedTenant] = useState(null);
     const [showSimulationModal, setShowSimulationModal] = useState(false);
     const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' or 'requests'
+    const [confirmModal, setConfirmModal] = useState({
+        show: false,
+        title: '',
+        message: '',
+        confirmLabel: '',
+        cancelLabel: '',
+        onConfirm: () => {},
+        type: 'warning',
+    });
 
     const { post, processing } = useForm();
+
 
     const filteredTenants = tenants.filter(t => 
         t.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -51,16 +64,41 @@ export default function Tenants({ tenants, kpis, settings, requests }) {
     };
 
     const handleApprove = (id) => {
-        if (confirm(lang === 'ar' ? 'هل أنت متأكد من الموافقة على هذا الطلب؟ سيتم إنشاء قاعدة بيانات ونطاق فرعي آلياً.' : 'Are you sure you want to approve this request? A database and subdomain will be created automatically.')) {
-            post(route('saas.tenants.approve', id));
-        }
+        setConfirmModal({
+            show: true,
+            title: lang === 'ar' ? 'الموافقة على الطلب' : 'Approve Request',
+            message: lang === 'ar' 
+                ? 'هل أنت متأكد من الموافقة على هذا الطلب؟ سيتم إنشاء قاعدة بيانات ونطاق فرعي للمستأجر آلياً.' 
+                : 'Are you sure you want to approve this request? A database and subdomain will be created for the tenant automatically.',
+            confirmLabel: lang === 'ar' ? 'موافقة وتفعيل' : 'Approve',
+            cancelLabel: lang === 'ar' ? 'إلغاء' : 'Cancel',
+            type: 'info',
+            onConfirm: () => {
+                post(route('saas.tenants.approve', id), {
+                    onFinish: () => setConfirmModal(prev => ({ ...prev, show: false }))
+                });
+            }
+        });
+    };
+ 
+    const handleReject = (id) => {
+        setConfirmModal({
+            show: true,
+            title: lang === 'ar' ? 'رفض الطلب' : 'Reject Request',
+            message: lang === 'ar' 
+                ? 'هل أنت متأكد من رفض هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.' 
+                : 'Are you sure you want to reject this request? This action cannot be undone.',
+            confirmLabel: lang === 'ar' ? 'رفض الطلب' : 'Reject',
+            cancelLabel: lang === 'ar' ? 'إلغاء' : 'Cancel',
+            type: 'danger',
+            onConfirm: () => {
+                post(route('saas.tenants.reject', id), {
+                    onFinish: () => setConfirmModal(prev => ({ ...prev, show: false }))
+                });
+            }
+        });
     };
 
-    const handleReject = (id) => {
-        if (confirm(lang === 'ar' ? 'هل أنت متأكد من رفض هذا الطلب؟' : 'Are you sure you want to reject this request?')) {
-            post(route('saas.tenants.reject', id));
-        }
-    };
 
     const breadcrumbs = (
         <div className="flex items-center gap-2 text-[12px] text-text-muted">
@@ -78,8 +116,61 @@ export default function Tenants({ tenants, kpis, settings, requests }) {
         <AuthenticatedLayout header={breadcrumbs}>
             <Head title={lang === 'ar' ? 'إدارة المستأجرين والطلبات' : 'Tenants & Requests Management'} />
 
-            <div className="pb-8 space-y-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-6">
+            <div className="pb-4 space-y-2" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-2">
+
+                    {/* Flash Success Alert */}
+                    {flash?.success && (
+                        <div className="border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 flex items-center gap-2">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                            <span className="text-sm font-bold">{flash.success}</span>
+                        </div>
+                    )}
+
+                    {/* Flash Error Alert */}
+                    {flash?.error && (
+                        <div className="border border-rose-200 bg-rose-50 p-4 text-rose-800 flex items-center gap-2">
+                            <XCircle className="h-5 w-5 text-rose-600 shrink-0" />
+                            <span className="text-sm font-bold">{flash.error}</span>
+                        </div>
+                    )}
+
+                    {/* Mail Warning Alert - يظهر لما الحساب يُنشأ بنجاح لكن البريد يفشل */}
+                    {flash?.mail_warning && (
+                        <div className="border border-amber-300 bg-amber-50 p-4 text-amber-900">
+                            <div className="flex items-center gap-2 mb-3">
+                                <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0" />
+                                <span className="text-sm font-bold">{flash.mail_warning.message}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="activation-link-input"
+                                    readOnly
+                                    value={flash.mail_warning.link}
+                                    className="flex-1 text-xs font-mono bg-white border border-amber-300 px-3 py-2 text-amber-900 outline-none select-all"
+                                    onFocus={(e) => e.target.select()}
+                                />
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(flash.mail_warning.link);
+                                        alert(lang === 'ar' ? 'تم نسخ رابط التفعيل!' : 'Activation link copied!');
+                                    }}
+                                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shrink-0 flex items-center gap-1.5"
+                                >
+                                    {lang === 'ar' ? 'نسخ الرابط' : 'Copy Link'}
+                                </button>
+                                <a
+                                    href={flash.mail_warning.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-4 py-2 bg-white border border-amber-300 text-amber-800 hover:bg-amber-50 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5"
+                                >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    {lang === 'ar' ? 'فتح الرابط' : 'Open'}
+                                </a>
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Page Header */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border border-border rounded-2xl px-6 py-5 bg-surface shadow-sm">
@@ -331,6 +422,19 @@ export default function Tenants({ tenants, kpis, settings, requests }) {
                         </div>
                     )}
                 </Modal>
+ 
+                {/* Confirmation Modal */}
+                <ConfirmationModal
+                    show={confirmModal.show}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    confirmLabel={confirmModal.confirmLabel}
+                    cancelLabel={confirmModal.cancelLabel}
+                    type={confirmModal.type}
+                    onConfirm={confirmModal.onConfirm}
+                    onCancel={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                    processing={processing}
+                />
             </div>
         </AuthenticatedLayout>
     );
