@@ -14,9 +14,11 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
+import { useTheme } from '@/Contexts/ThemeContext';
 
 export default function General({ settings }) {
     const { lang } = useLang();
+    const { theme, setTheme, bg, setBg, font, setFont } = useTheme();
     const [activeTab, setActiveTab] = useState('company'); // company, system, quality, billing, files
 
     // Main Settings Form
@@ -373,6 +375,79 @@ export default function General({ settings }) {
                                                     <option value="100">100 عنصر لكل صفحة</option>
                                                 </select>
                                                 <InputError message={errors.app_pagination} />
+                                            </div>
+                                        </div>
+
+                                        {/* مظهر وتخصيص الواجهة (Theme & Appearance) */}
+                                        <div className="border-t border-border pt-4 mt-6">
+                                            <h3 className="text-xs font-bold text-text mb-1">{lang === 'ar' ? 'تخصيص مظهر واجهة المستخدم' : 'Theme & Appearance Customization'}</h3>
+                                            <p className="text-[11px] text-text-muted mb-4">{lang === 'ar' ? 'اختر الألوان المفضلة، نمط الخلفية، ونوع الخط المناسب لواجهتك.' : 'Choose color themes, background styles, and fonts for your UI.'}</p>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-surface-muted/30 p-4 rounded-xl border border-border">
+                                                {/* Theme Color */}
+                                                <div>
+                                                    <InputLabel value={lang === 'ar' ? 'لون السمة الرئيسي (Theme)' : 'Theme Color'} />
+                                                    <div className="flex gap-2.5 mt-2">
+                                                        {[
+                                                            { id: 'blue', color: '#2563eb', label: { ar: 'أزرق', en: 'Blue' } },
+                                                            { id: 'emerald', color: '#059669', label: { ar: 'زمردي', en: 'Emerald' } },
+                                                            { id: 'amber', color: '#d97706', label: { ar: 'كهرماني', en: 'Amber' } },
+                                                            { id: 'rose', color: '#e11d48', label: { ar: 'وردي', en: 'Rose' } },
+                                                            { id: 'slate', color: '#475569', label: { ar: 'رمادي', en: 'Slate' } },
+                                                        ].map(c => (
+                                                            <button
+                                                                key={c.id}
+                                                                type="button"
+                                                                onClick={() => setTheme(c.id)}
+                                                                className={`h-7 w-7 rounded-full border-2 transition-transform duration-200 hover:scale-110 shadow-sm ${
+                                                                    theme === c.id ? "border-primary scale-110 ring-2 ring-primary/20" : "border-transparent"
+                                                                }`}
+                                                                style={{ backgroundColor: c.color }}
+                                                                title={c.label[lang]}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Background Mode */}
+                                                <div>
+                                                    <InputLabel value={lang === 'ar' ? 'وضع الخلفية والسطوع' : 'Background Mode'} />
+                                                    <select
+                                                        className="mt-1.5 block w-full rounded-md border border-border bg-surface text-xs py-1.5 px-2 focus:border-primary focus:ring-primary shadow-sm"
+                                                        value={bg}
+                                                        onChange={e => setBg(e.target.value)}
+                                                    >
+                                                        {[
+                                                            { id: 'flat-light', label: { ar: 'فاتح', en: 'Light' } },
+                                                            { id: 'warm-cream', label: { ar: 'دافئ (كريمي)', en: 'Warm Cream' } },
+                                                            { id: 'flat-dark', label: { ar: 'داكن', en: 'Dark' } },
+                                                            { id: 'deep-blue', label: { ar: 'ليلي', en: 'Deep Blue' } },
+                                                        ].map(b => (
+                                                            <option key={b.id} value={b.id}>{b.label[lang]}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {/* Font Family */}
+                                                <div>
+                                                    <InputLabel value={lang === 'ar' ? 'خط واجهة المستخدم الرئيسي' : 'UI Font Family'} />
+                                                    <select
+                                                        className="mt-1.5 block w-full rounded-md border border-border bg-surface text-xs py-1.5 px-2 focus:border-primary focus:ring-primary shadow-sm"
+                                                        value={font}
+                                                        onChange={e => setFont(e.target.value)}
+                                                    >
+                                                        {[
+                                                            { id: 'noto', label: 'Noto Sans Arabic (الافتراضي)' },
+                                                            { id: 'cairo', label: 'Cairo (القاهرة)' },
+                                                            { id: 'tajawal', label: 'Tajawal (تجول)' },
+                                                            { id: 'alexandria', label: 'Alexandria (الإسكندرية)' },
+                                                            { id: 'readex', label: 'Readex Pro (ريدكس)' },
+                                                            { id: 'ibm', label: 'IBM Plex Arabic' },
+                                                        ].map(f => (
+                                                            <option key={f.id} value={f.id}>{f.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

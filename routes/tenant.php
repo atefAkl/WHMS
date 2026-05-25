@@ -57,6 +57,7 @@ Route::middleware([
                 Route::delete('customers/{customer}/contacts/{contact}', [\App\Http\Controllers\ContactController::class, 'destroy'])->name('customers.contacts.destroy');
 
                 // Contracts
+                Route::get('contracts', [\App\Http\Controllers\ContractController::class, 'index'])->name('contracts.index');
                 Route::get('contracts/create', [\App\Http\Controllers\ContractController::class, 'create'])->name('contracts.create');
                 Route::post('contracts', [\App\Http\Controllers\ContractController::class, 'store'])->name('contracts.store');
                 Route::get('contracts/{contract}', [\App\Http\Controllers\ContractController::class, 'show'])->name('contracts.show');

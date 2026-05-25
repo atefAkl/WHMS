@@ -6,15 +6,19 @@ use App\Models\ContractSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 
+use App\Traits\ApiResponse;
+
 class TenantSettingsController extends Controller
 {
+    use ApiResponse;
+
     /**
      * Return all contract settings for the current tenant.
      */
     public function index()
     {
         $settings = ContractSetting::pluck('value', 'key');
-        return response()->json($settings);
+        return $this->successResponse($settings);
     }
 
     /**
@@ -27,6 +31,6 @@ class TenantSettingsController extends Controller
         foreach ($data as $key => $value) {
             ContractSetting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
-        return response()->json(['message' => 'Settings updated successfully']);
+        return $this->successResponse(null, 'Settings updated successfully');
     }
 }

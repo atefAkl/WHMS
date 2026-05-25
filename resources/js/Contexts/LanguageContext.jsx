@@ -14,10 +14,20 @@ export function LanguageProvider({ children }) {
         document.documentElement.lang = lang;
         document.documentElement.dir = dir;
         localStorage.setItem('wms_lang', lang);
+        // Set cookie so backend middleware (HandleInertiaRequests) can read it
+        document.cookie = `wms_locale=${lang};path=/;max-age=31536000;SameSite=Lax`;
     }, [lang, dir]);
 
+    const changeLang = (newLang) => {
+        setLang(newLang);
+        // We import and call router.reload to refresh translations and flash messages from backend
+        import('@inertiajs/react').then(({ router }) => {
+            router.reload();
+        });
+    };
+
     return (
-        <LanguageContext.Provider value={{ lang, dir, setLang }}>
+        <LanguageContext.Provider value={{ lang, dir, setLang: changeLang }}>
             {children}
         </LanguageContext.Provider>
     );

@@ -133,9 +133,10 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
             .then(res => {
                 setShowContactModal(false);
                 setContactForm({ name: '', phone_number: '', id_number: '', job_title: '', can_sign: false, can_withdraw_goods: false });
-                if (res.data?.contact) {
-                    setContacts([...contacts, res.data.contact]);
-                    setData('contact_id', res.data.contact.id);
+                const contact = res.data?.contact || res.data?.data?.contact;
+                if (contact) {
+                    setContacts([...contacts, contact]);
+                    setData('contact_id', contact.id);
                 }
             })
             .catch(err => setContactErrors(err.response?.data?.errors || {}));

@@ -50,9 +50,10 @@ class SaaSController extends Controller
             $revenue = 0;
             $activeSeason = 'غير محدد';
             $storageUsed = '0%';
+            $setupToken = null;
 
             try {
-                $tenant->run(function () use (&$contractsCount, &$revenue, &$activeSeason, &$storageUsed) {
+                $tenant->run(function () use (&$contractsCount, &$revenue, &$activeSeason, &$storageUsed, &$setupToken) {
                     if (Schema::hasTable('contracts')) {
                         $contractsCount = \App\Models\Contract::count();
                         $revenue = \App\Models\Contract::sum('total_amount');
@@ -72,6 +73,15 @@ class SaaSController extends Controller
                             $storageUsed = round(($storedPallets / $totalPallets) * 100) . '%';
                         }
                     }
+
+                    if (Schema::hasTable('users')) {
+                        $userWithToken = \App\Models\User::whereNotNull('setup_token')
+                            ->where('setup_token', '!=', '')
+                            ->first();
+                        if ($userWithToken) {
+                            $setupToken = $userWithToken->setup_token;
+                        }
+                    }
                 });
             } catch (\Exception $e) {
                 // Tenant database may still be onboarding or partially migrated.
@@ -80,6 +90,8 @@ class SaaSController extends Controller
             }
 
             $totalRevenue += $revenue;
+
+            $appDomain = config('app.domain', 'whms.test');
 
             $tenants[] = [
                 'id' => $tenant->id,
@@ -92,6 +104,8 @@ class SaaSController extends Controller
                 'revenue' => number_format((float) $revenue, 2) . ' ر.س',
                 'expiry_date' => $data['expiry_date'] ?? date('Y-m-d', strtotime($tenant->created_at . ' +1 year')),
                 'status' => $data['status'] ?? 'نشط',
+                'setup_token' => $setupToken,
+                'activation_link' => $setupToken ? "http://{$tenant->id}.{$appDomain}/setup-password?token={$setupToken}" : null,
             ];
         }
 

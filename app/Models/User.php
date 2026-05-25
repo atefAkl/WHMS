@@ -27,6 +27,7 @@ class User extends Authenticatable
         'id_number',
         'job_title',
         'avatar',
+        'setup_token',
     ];
 
     /**
@@ -49,6 +50,22 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+        ];
+    }
+
+    /**
+     * Get the active permissions for the user.
+     *
+     * @return array<string>
+     */
+    public function getPermissions(): array
+    {
+        return [
+            'contracts.view',
+            'contracts.create',
+            'contracts.edit',
+            'contracts.delete',
+            'contracts.activate',
         ];
     }
 }

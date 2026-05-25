@@ -51,12 +51,13 @@ const fonts = {
     alexandria: "'Alexandria', sans-serif",
     readex: "'Readex Pro', sans-serif",
     ibm: "'IBM Plex Sans Arabic', sans-serif",
+    noto: "'Noto Sans Arabic', sans-serif",
 };
 
 export function ThemeProvider({ children }) {
     const [theme, setTheme] = useState(() => localStorage.getItem('wms_theme') || 'blue');
     const [bg, setBg] = useState(() => localStorage.getItem('wms_bg') || 'flat-light');
-    const [font, setFont] = useState(() => localStorage.getItem('wms_font') || 'ibm');
+    const [font, setFont] = useState(() => localStorage.getItem('wms_font') || 'noto');
 
     useEffect(() => {
         const root = document.documentElement;

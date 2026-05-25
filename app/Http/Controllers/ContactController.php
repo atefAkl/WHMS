@@ -6,8 +6,12 @@ use Illuminate\Http\Request;
 use App\Models\Contact;
 use App\Models\Customer;
 
+use App\Traits\ApiResponse;
+
 class ContactController extends Controller
 {
+    use ApiResponse;
+
     public function store(Request $request, string $customerId)
     {
         $customer = Customer::findOrFail($customerId);
@@ -24,7 +28,9 @@ class ContactController extends Controller
         $contact = $customer->contacts()->create($validated);
 
         if (($request->wantsJson() || $request->ajax()) && !$request->header('X-Inertia')) {
-            return response()->json(['message' => 'تم إضافة جهة الاتصال بنجاح.', 'contact' => $contact]);
+            return $this->successResponse([
+                'contact' => $contact
+            ], 'تم إضافة جهة الاتصال بنجاح.');
         }
 
         return redirect()->back()->with('success', 'تم إضافة جهة الاتصال.');

@@ -5,9 +5,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Term;
 use App\Models\Season;
+use App\Traits\ApiResponse;
 
 class TermController extends Controller
 {
+    use ApiResponse;
+
     public function index()
     {
         $terms = Term::orderBy('sort_order')->orderBy('id')->get();
@@ -24,7 +27,7 @@ class TermController extends Controller
         ]);
         $validated['sort_order'] = Term::max('sort_order') + 1;
         $term = Term::create($validated);
-        return response()->json($term, 201);
+        return $this->successResponse($term, 'Term created successfully', 201);
     }
 
     public function update(Request $request, Term $term)
@@ -36,13 +39,13 @@ class TermController extends Controller
             'is_active'     => 'boolean',
         ]);
         $term->update($validated);
-        return response()->json($term);
+        return $this->successResponse($term, 'Term updated successfully');
     }
 
     public function destroy(Term $term)
     {
         $term->delete();
-        return response()->json(['ok' => true]);
+        return $this->successResponse(null, 'Term deleted successfully');
     }
 
     /**
@@ -55,7 +58,7 @@ class TermController extends Controller
         foreach ($request->ordered_ids as $index => $id) {
             Term::where('id', $id)->update(['sort_order' => $index]);
         }
-        return response()->json(['ok' => true]);
+        return $this->successResponse(null, 'Terms reordered successfully');
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -67,7 +70,7 @@ class TermController extends Controller
      */
     public function seasonTerms(Season $season)
     {
-        return response()->json($season->terms()->get());
+        return $this->successResponse($season->terms()->get());
     }
 
     /**
@@ -82,7 +85,7 @@ class TermController extends Controller
             $pivot[$id] = ['sort_order' => $index];
         }
         $season->terms()->sync($pivot);
-        return response()->json(['ok' => true, 'terms' => $season->terms()->get()]);
+        return $this->successResponse($season->terms()->get(), 'Season terms synced successfully');
     }
 
     /**
@@ -95,6 +98,6 @@ class TermController extends Controller
         foreach ($request->ordered_ids as $index => $id) {
             $season->terms()->updateExistingPivot($id, ['sort_order' => $index]);
         }
-        return response()->json(['ok' => true]);
+        return $this->successResponse(null, 'Season terms reordered successfully');
     }
 }

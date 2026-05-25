@@ -67,7 +67,7 @@ const tenantNavItems = [
         active: 'sales.*',
         children: [
             { name: { ar: 'العملاء', en: 'Customers' }, icon: UsersRound, route: 'customers.index', active: 'customers.*' },
-            { name: { ar: 'العقود', en: 'Contracts' }, icon: FileText, route: 'dashboard', active: 'contracts.*' },
+            { name: { ar: 'العقود', en: 'Contracts' }, icon: FileText, route: 'contracts.index', active: 'contracts.*' },
             { name: { ar: 'الفواتير', en: 'Invoices' }, icon: Receipt, route: 'dashboard', active: 'invoices.*' },
             { name: { ar: 'الخدمات', en: 'Services' }, icon: Wrench, route: 'dashboard', active: 'services.*' },
         ],
@@ -294,8 +294,8 @@ export default function Sidebar() {
                 ))}
             </nav>
  
-            {/* ── 3. Settings & Appearance (Theme Picker) ── */}
-            <div className="border-t border-border px-3 py-3 space-y-3 shrink-0 bg-surface">
+            {/* ── 3. Settings ── */}
+            <div className="border-t border-border px-3 py-3 shrink-0 bg-surface">
                 
                 {/* General Settings Link */}
                 {!isCentral && (
@@ -307,76 +307,6 @@ export default function Sidebar() {
                         <span>{lang === 'ar' ? 'الإعدادات العامة' : 'General Settings'}</span>
                     </Link>
                 )}
- 
-                {/* Theme Panel */}
-                <div className="space-y-2 border-t border-border/50 pt-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                        {lang === 'ar' ? 'تخصيص المظهر' : 'Appearance'}
-                    </p>
- 
-                    {/* A. Colors */}
-                    <div className="flex items-center justify-between gap-1">
-                        <span className="text-[11px] text-text-muted">{lang === 'ar' ? 'اللون الأساسي' : 'Primary'}</span>
-                        <div className="flex gap-1">
-                            {themeColors.map(c => (
-                                <button
-                                    key={c.id}
-                                    onClick={() => setTheme(c.id)}
-                                    style={{ backgroundColor: c.color }}
-                                    className={cn(
-                                        'h-4.5 w-4.5 border transition-all cursor-pointer relative',
-                                        theme === c.id 
-                                            ? 'border-text scale-110 shadow-sm' 
-                                            : 'border-transparent hover:scale-105'
-                                    )}
-                                    title={c.label[lang]}
-                                >
-                                    {theme === c.id && (
-                                        <span className="absolute inset-0 m-auto h-1.5 w-1.5 bg-white rounded-full"></span>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
- 
-                    {/* B. Background Mode */}
-                    <div className="space-y-1">
-                        <span className="text-[11px] text-text-muted block">{lang === 'ar' ? 'الخلفية' : 'Background'}</span>
-                        <div className="grid grid-cols-4 gap-1">
-                            {bgModes.map(b => (
-                                <button
-                                    key={b.id}
-                                    onClick={() => setBg(b.id)}
-                                    className={cn(
-                                        'py-1 px-0.5 text-[9px] font-bold border transition-colors cursor-pointer text-center',
-                                        bg === b.id
-                                            ? 'bg-primary/10 border-primary text-primary'
-                                            : 'bg-surface-muted border-border text-text-muted hover:border-text-muted'
-                                    )}
-                                >
-                                    {b.label[lang]}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
- 
-                    {/* C. Font Family */}
-                    <div className="space-y-1">
-                        <span className="text-[11px] text-text-muted block">{lang === 'ar' ? 'نوع الخط' : 'Font Family'}</span>
-                        <select
-                            value={font}
-                            onChange={(e) => setFont(e.target.value)}
-                            className="w-full bg-surface-muted border border-border text-text text-xs py-1 px-1.5 cursor-pointer outline-none focus:border-primary"
-                        >
-                            {fontFamilies.map(f => (
-                                <option key={f.id} value={f.id} className="bg-surface text-text">
-                                    {f.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
- 
-                </div>
             </div>
         </div>
     );

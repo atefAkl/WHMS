@@ -216,7 +216,8 @@ export default function Setup({ settings, registration }) {
             try {
                 const response = await fetch('/api/settings');
                 if (!response.ok) return;
-                const settingsData = await response.json();
+                const resJson = await response.json();
+                const settingsData = resJson?.data || resJson;
                 // Merge fetched settings into form data (only if not already set)
                 setData(prev => ({
                     ...prev,

@@ -23,6 +23,19 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Handle the incoming request and set the application locale.
+     */
+    public function handle(Request $request, \Closure $next)
+    {
+        $locale = $request->cookie('wms_locale', 'ar');
+        if (in_array($locale, ['ar', 'en'])) {
+            app()->setLocale($locale);
+        }
+
+        return parent::handle($request, $next);
+    }
+
+    /**
      * Define the props that are shared by default.
      *
      * @return array<string, mixed>
@@ -34,6 +47,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'active_season_name' => session('active_season_name'),
+                'permissions' => $request->user() ? $request->user()->getPermissions() : [],
             ],
             'flash' => [
                 'success'      => fn () => $request->session()->get('success'),

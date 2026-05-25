@@ -2,12 +2,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Agent;
+use App\Traits\ApiResponse;
 
 class AgentController extends Controller
 {
+    use ApiResponse;
+
     public function index() {
-        return response()->json(Agent::where('is_active', true)->get());
+        return $this->successResponse(Agent::where('is_active', true)->get());
     }
 
     public function store(Request $request)

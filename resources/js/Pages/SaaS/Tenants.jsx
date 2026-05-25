@@ -392,6 +392,37 @@ export default function Tenants({ tenants, kpis, settings, requests }) {
                                     </div>
                                 </div>
 
+                                {selectedTenant.activation_link && (
+                                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-2">
+                                        <p className="text-xs font-bold text-amber-800 flex items-center gap-2">
+                                            <Info className="w-4 h-4 text-amber-600" />
+                                            {lang === 'ar' ? 'رابط التفعيل معلق' : 'Activation Link Pending'}
+                                        </p>
+                                        <p className="text-[11px] text-amber-700 leading-relaxed">
+                                            {lang === 'ar' 
+                                                ? 'هذا المستأجر لم يقم بإعداد كلمة المرور بعد. يمكنك نسخ رابط التفعيل هذا وإرساله له:' 
+                                                : 'This tenant has not set up their password yet. You can copy this activation link and send it to them:'}
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                readOnly
+                                                value={selectedTenant.activation_link}
+                                                className="flex-1 text-[11px] font-mono bg-white border border-amber-300 px-2 py-1.5 text-amber-900 outline-none select-all"
+                                                onFocus={(e) => e.target.select()}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(selectedTenant.activation_link);
+                                                    alert(lang === 'ar' ? 'تم نسخ رابط التفعيل!' : 'Activation link copied!');
+                                                }}
+                                                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shrink-0"
+                                            >
+                                                {lang === 'ar' ? 'نسخ' : 'Copy'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-2">
                                     <p className="text-xs font-bold text-amber-800 flex items-center gap-2">
                                         <ShieldAlert className="w-4 h-4" />
