@@ -19,6 +19,8 @@ return [
     'central_domains' => [
         'whms.test',
         'www.whms.test',
+        'whms.loc',
+        'www.whms.loc',
         '127.0.0.1',
         'localhost',
     ],
