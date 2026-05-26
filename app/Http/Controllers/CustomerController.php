@@ -59,7 +59,26 @@ class CustomerController extends Controller
                 ->orWhere('id_number', 'like', "%$s%"));
         }
 
-        $customers  = $query->with(['category.parent', 'country'])->latest()->paginate(10)->withQueryString();
+        $activeSeason = \App\Models\Season::find(session('active_season_id'));
+        $seasonStart = $activeSeason?->start_date;
+        $seasonEnd = $activeSeason?->end_date;
+
+        $customers  = $query->with([
+            'category.parent', 
+            'country', 
+            'contracts' => function($q) use ($seasonStart, $seasonEnd) {
+                if ($seasonStart && $seasonEnd) {
+                    $q->where(function($sub) use ($seasonStart, $seasonEnd) {
+                        $sub->whereBetween('start_date', [$seasonStart, $seasonEnd])
+                            ->orWhereBetween('end_date', [$seasonStart, $seasonEnd])
+                            ->orWhere(function($sub2) use ($seasonStart, $seasonEnd) {
+                                $sub2->where('start_date', '<=', $seasonStart)
+                                     ->where('end_date', '>=', $seasonEnd);
+                            });
+                    });
+                }
+            }
+        ])->latest()->paginate(10)->withQueryString();
         $countries  = \App\Models\Country::all();
         $categories = \App\Models\CustomerCategory::all();
 

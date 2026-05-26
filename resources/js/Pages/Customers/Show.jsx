@@ -14,6 +14,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Tooltip from '@/Components/Tooltip';
+import PageHeader from '@/Components/PageHeader';
 
 // ─── helpers ───────────────────────────────────────────────────
 const Field = ({ label, value, dir }) => (
@@ -134,21 +135,21 @@ export default function Show({ customer, countries = [], categories = [] }) {
                 <div className="mx-auto max-w-5xl space-y-3">
 
                     {/* ── Header Card ── */}
-                    <div className="flex items-center justify-between border border-border rounded-xl px-4 py-3 bg-surface shadow-sm mb-3 transition-shadow hover:shadow-md">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <UsersRound className="h-5 w-5" />
-                            </div>
-                            <div>
+                    <PageHeader
+                        icon={UsersRound}
+                        title={
+                            <>
                                 <h1 className="text-xl font-bold text-text leading-tight">{customer.name}</h1>
-                                <p className="text-[11px] text-text-muted font-mono">{customer.s_number}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                {lang === 'ar' ? customer.category?.name_ar : customer.category?.name_en}
-                            </span>
-                            {!editMode ? (
+                                <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                                    {lang === 'ar' ? customer.category?.name_ar : customer.category?.name_en}
+                                </span>
+                            </>
+                        }
+                        description={
+                            <p className="text-[11px] text-text-muted font-mono">{customer.s_number}</p>
+                        }
+                        actions={
+                            !editMode ? (
                                 <Tooltip text={lang === 'ar' ? 'تعديل البيانات' : 'Edit'}>
                                     <button onClick={() => setEditMode(true)} className="p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-primary/10 transition-colors">
                                         <Edit className="h-4 w-4" />
@@ -160,9 +161,9 @@ export default function Show({ customer, countries = [], categories = [] }) {
                                         <X className="h-4 w-4" />
                                     </button>
                                 </Tooltip>
-                            )}
-                        </div>
-                    </div>
+                            )
+                        }
+                    />
 
                     {/* ── Info / Edit ── */}
                     <SectionCard title={lang === 'ar' ? 'بيانات العميل' : 'Customer Info'} icon={User}>

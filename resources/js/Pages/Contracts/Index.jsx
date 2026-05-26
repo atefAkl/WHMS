@@ -32,11 +32,33 @@ import {
 import Pagination from "@/Components/Pagination";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import Tooltip from "@/Components/Tooltip";
+import PageHeader from "@/Components/PageHeader";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
+}
+
+/**
+ * Formats a monetary number to a compact representation with at most 3
+ * significant digits and a lowercase suffix (k / m).
+ * Returns { number: string, suffix: string }
+ * e.g.  26600  → { number: '26.6', suffix: 'k' }
+ *       1500000 → { number: '1.5',  suffix: 'm' }
+ *       850     → { number: '850',  suffix: ''  }
+ */
+function compactMoney(value) {
+    const n = parseFloat(value) || 0;
+    if (n >= 1_000_000) {
+        const v = n / 1_000_000;
+        return { number: parseFloat(v.toPrecision(3)).toString(), suffix: "m" };
+    }
+    if (n >= 1_000) {
+        const v = n / 1_000;
+        return { number: parseFloat(v.toPrecision(3)).toString(), suffix: "k" };
+    }
+    return { number: parseFloat(n.toPrecision(3)).toString(), suffix: "" };
 }
 
 export default function Index({ contracts, stats, filters, translations }) {
@@ -320,110 +342,101 @@ export default function Index({ contracts, stats, filters, translations }) {
             <div className="pb-2 space-y-2" dir={lang === "ar" ? "rtl" : "ltr"}>
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     {/* 1. Page Title & Actions */}
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border border-border rounded-xl px-4 py-2.5 bg-surface shadow-sm mb-2 transition-shadow hover:shadow-md">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 shadow-inner hover:bg-primary/20 hover:scale-105 transition-all cursor-pointer">
-                                <FileText className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-text leading-tight">
-                                    {t("home.page_title")}
-                                </h1>
-                                <p className="text-[12px] text-text-muted mt-0.5">
-                                    {t("home.subtitle")}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 relative">
-                            {/* Export Dropdown Action */}
-                            <div className="relative">
-                                <Tooltip
-                                    text={
-                                        lang === "ar"
-                                            ? "تصدير البيانات"
-                                            : "Export Data"
-                                    }
-                                >
-                                    <button
-                                        onClick={() =>
-                                            setIsExportDropdownOpen(
-                                                !isExportDropdownOpen,
-                                            )
+                    <PageHeader
+                        icon={FileText}
+                        title={t("home.page_title")}
+                        description={t("home.subtitle")}
+                        actions={
+                            <>
+                                {/* Export Dropdown Action */}
+                                <div className="relative">
+                                    <Tooltip
+                                        text={
+                                            lang === "ar"
+                                                ? "تصدير البيانات"
+                                                : "Export Data"
                                         }
-                                        className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text hover:bg-surface-muted transition-colors shadow-sm"
                                     >
-                                        <FileDown className="h-5 w-5" />
-                                    </button>
-                                </Tooltip>
-
-                                {isExportDropdownOpen && (
-                                    <>
-                                        <div
-                                            className="fixed inset-0 z-10"
+                                        <button
                                             onClick={() =>
-                                                setIsExportDropdownOpen(false)
+                                                setIsExportDropdownOpen(
+                                                    !isExportDropdownOpen,
+                                                )
                                             }
-                                        ></div>
-                                        <div
-                                            className={cn(
-                                                "absolute z-20 mt-1 w-32 rounded-lg border border-border bg-surface shadow-md py-1",
-                                                lang === "ar"
-                                                    ? "left-0"
-                                                    : "right-0",
-                                            )}
+                                            className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text hover:bg-surface-muted transition-colors shadow-sm"
                                         >
-                                            <button
-                                                onClick={() =>
-                                                    handleExport("pdf")
-                                                }
-                                                className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
-                                            >
-                                                <span>PDF</span>
-                                                <span className="text-[10px] text-text-muted font-mono">
-                                                    (.pdf)
-                                                </span>
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    handleExport("excel")
-                                                }
-                                                className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
-                                            >
-                                                <span>Excel</span>
-                                                <span className="text-[10px] text-text-muted font-mono">
-                                                    (.xlsx)
-                                                </span>
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    handleExport("csv")
-                                                }
-                                                className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
-                                            >
-                                                <span>CSV</span>
-                                                <span className="text-[10px] text-text-muted font-mono">
-                                                    (.csv)
-                                                </span>
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                                            <FileDown className="h-5 w-5" />
+                                        </button>
+                                    </Tooltip>
 
-                            {/* Add Contract Action (Icon only with Tooltip) */}
-                            {hasPermission("contracts.create") && (
-                                <Tooltip text={t("home.add_contract")}>
-                                    <Link
-                                        href={route("customers.index")}
-                                        className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover shadow-sm"
-                                    >
-                                        <Plus className="h-5 w-5" />
-                                    </Link>
-                                </Tooltip>
-                            )}
-                        </div>
-                    </div>
+                                    {isExportDropdownOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-10"
+                                                onClick={() =>
+                                                    setIsExportDropdownOpen(false)
+                                                }
+                                            ></div>
+                                            <div
+                                                className={cn(
+                                                    "absolute z-20 mt-1 w-32 rounded-lg border border-border bg-surface shadow-md py-1",
+                                                    lang === "ar"
+                                                        ? "left-0"
+                                                        : "right-0",
+                                                )}
+                                            >
+                                                <button
+                                                    onClick={() =>
+                                                        handleExport("pdf")
+                                                    }
+                                                    className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
+                                                >
+                                                    <span>PDF</span>
+                                                    <span className="text-[10px] text-text-muted font-mono">
+                                                        (.pdf)
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        handleExport("excel")
+                                                    }
+                                                    className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
+                                                >
+                                                    <span>Excel</span>
+                                                    <span className="text-[10px] text-text-muted font-mono">
+                                                        (.xlsx)
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        handleExport("csv")
+                                                    }
+                                                    className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
+                                                >
+                                                    <span>CSV</span>
+                                                    <span className="text-[10px] text-text-muted font-mono">
+                                                        (.csv)
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Add Contract Action (Icon only with Tooltip) */}
+                                {hasPermission("contracts.create") && (
+                                    <Tooltip text={t("home.add_contract")}>
+                                        <Link
+                                            href={route("customers.index")}
+                                            className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover shadow-sm"
+                                        >
+                                            <Plus className="h-5 w-5" />
+                                        </Link>
+                                    </Tooltip>
+                                )}
+                            </>
+                        }
+                    />
 
                     {/* 2. Stats Cards (Real Data, swapped layout: icon & text on the right/start, number on the left/end in RTL) */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
@@ -450,39 +463,66 @@ export default function Index({ contracts, stats, filters, translations }) {
                                 bg: "bg-amber-500/10",
                             },
                             {
-                                label: t("home.stats_value"),
+                                label: `${t("home.stats_value")} (${stats.currency ?? "SAR"})`,
                                 value: stats.value,
                                 icon: TrendingUp,
                                 color: "text-cyan-500",
                                 bg: "bg-cyan-500/10",
+                                isCurrency: true,
                             },
-                        ].map(({ label, value, icon: Icon, color, bg }, i) => (
-                            <div
-                                key={i}
-                                className="border border-border bg-surface px-4 py-3 shadow-sm transition-shadow hover:shadow-md flex items-center justify-between rounded-xl"
-                            >
-                                {/* Icon + label text (Renders on Right in RTL, Left in LTR) */}
-                                <div className="flex flex-col items-start gap-1 min-w-0">
-                                    <div
-                                        className={cn(
-                                            "flex h-7 w-7 items-center justify-center rounded-lg",
-                                            bg,
-                                            color,
-                                        )}
-                                    >
-                                        <Icon className="h-4 w-4" />
+                        ].map(
+                            (
+                                {
+                                    label,
+                                    value,
+                                    icon: Icon,
+                                    color,
+                                    bg,
+                                    isCurrency,
+                                },
+                                i,
+                            ) => (
+                                <div
+                                    key={i}
+                                    className="border border-border bg-surface px-4 py-3 shadow-sm transition-shadow hover:shadow-md flex items-center justify-between rounded-xl"
+                                >
+                                    {/* Icon + label text (Renders on Right in RTL, Left in LTR) */}
+                                    <div className="flex flex-col items-start gap-1 min-w-0">
+                                        <div
+                                            className={cn(
+                                                "flex h-7 w-7 items-center justify-center rounded-lg",
+                                                bg,
+                                                color,
+                                            )}
+                                        >
+                                            <Icon className="h-4 w-4" />
+                                        </div>
+                                        <p className="text-[10px] font-bold text-text-muted uppercase truncate max-w-[120px]">
+                                            {label}
+                                        </p>
                                     </div>
-                                    <p className="text-[10px] font-bold text-text-muted uppercase truncate max-w-[120px]">
-                                        {label}
-                                    </p>
-                                </div>
 
-                                {/* Number (Renders on Left in RTL, Right in LTR) */}
-                                <div className="text-3xl font-black text-text leading-tight">
-                                    {value}
+                                    {/* Number (Renders on Left in RTL, Right in LTR) */}
+                                    <div className="text-3xl font-black text-text leading-tight flex items-end gap-0.5">
+                                        {isCurrency ? (
+                                            <>
+                                                {compactMoney(value).number}
+                                                {compactMoney(value).suffix && (
+                                                    <span className="text-base font-bold text-text-muted mb-0.5">
+                                                        {
+                                                            compactMoney(value)
+                                                                .suffix
+                                                        }
+                                                    </span>
+                                                )}
+                                            </>
+                                        ) : (
+                                            value
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ),
+                        )}
                     </div>
 
                     {/* 3. Resource Data Layout */}

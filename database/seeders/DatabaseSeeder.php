@@ -13,12 +13,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::firstOrCreate([
-            'email' => 'admin@wms.com',
-        ], [
-            'name' => 'Admin',
-            'password' => bcrypt('admin123'),
-        ]);
+        // Only seed central admin user if tenancy is NOT initialized
+        if (!function_exists('tenancy') || !tenancy()->initialized) {
+            User::firstOrCreate([
+                'email' => 'admin@wms.com',
+            ], [
+                'name' => 'Admin',
+                'password' => bcrypt('admin123'),
+            ]);
+        }
 
         // Only run tenant seeders if tenancy is initialized
         if (function_exists('tenancy') && tenancy()->initialized) {

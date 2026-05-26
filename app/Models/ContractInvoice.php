@@ -17,8 +17,8 @@ class ContractInvoice extends Model
     ];
 
     protected $casts = [
-        'issue_date' => 'date',
-        'due_date'   => 'date',
+        'issue_date' => 'date:Y-m-d',
+        'due_date'   => 'date:Y-m-d',
         'amount'     => 'float',
         'paid_amount'=> 'float',
     ];

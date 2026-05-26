@@ -21,20 +21,26 @@ class SeasonController extends Controller
 
     public function show(Season $season)
     {
-        $allTerms = Term::orderBy('sort_order')->get();
-        $season->load(['terms' => function($q) {
-            $q->orderBy('season_terms.sort_order');
+        $allTerms = Term::whereNull('season_id')->whereNull('contract_id')->orderBy('sort_order')->get();
+        $season->load(['terms' => function ($q) {
+            $q->orderBy('sort_order');
         }]);
-        
+
+        $globalSettings = \App\Models\ContractSetting::whereNull('season_id')->pluck('value', 'key')->all();
+        $seasonSettings = \App\Models\ContractSetting::where('season_id', $season->id)->pluck('value', 'key')->all();
+        $settings = array_merge($globalSettings, $seasonSettings);
+
         return Inertia::render('Settings/Seasons/Show', [
             'season' => $season,
-            'allTerms' => $allTerms
+            'allTerms' => $allTerms,
+            'settings' => $settings,
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'code'       => 'required|string|max:50|unique:seasons,code',
             'name_ar'    => 'required|string|max:255',
             'name_en'    => 'nullable|string|max:255',
             'start_date' => 'required|date',
@@ -42,18 +48,47 @@ class SeasonController extends Controller
             'is_active'  => 'boolean',
         ]);
 
-        Season::create($validated);
+        $season = Season::create($validated);
 
-        if (!session()->has('active_season_id')) {
-            return redirect()->route('season.select')->with('success', '╩у ┼╓╟▌╔ ╟суц╙у ╚ф╠╟═. ╟╬╩╤ ╟суц╙у ссу╩╟╚┌╔.');
+        // Seed contract settings for the new season
+        $globalSettings = \App\Models\ContractSetting::whereNull('season_id')->get();
+        foreach ($globalSettings as $setting) {
+            \App\Models\ContractSetting::create([
+                'season_id' => $season->id,
+                'key'       => $setting->key,
+                'value'     => $setting->value,
+            ]);
         }
 
-        return redirect()->back()->with('success', '╩у ┼╓╟▌╔ ╟суц╙у ╚ф╠╟═.');
+        // Seed terms for the new season
+        $globalTerms = Term::whereNull('season_id')
+            ->whereNull('contract_id')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+        foreach ($globalTerms as $term) {
+            Term::create([
+                'season_id'     => $season->id,
+                'parent_id'     => $term->id,
+                'text_ar'       => $term->text_ar,
+                'text_en'       => $term->text_en,
+                'is_active'     => $term->is_active,
+                'has_variables' => $term->has_variables,
+                'sort_order'    => $term->sort_order,
+            ]);
+        }
+
+        if (!session()->has('active_season_id')) {
+            return redirect()->route('season.select')->with('success', '╪к┘Е ╪е┘Ж╪┤╪з╪б ╪з┘Д┘Е┘И╪│┘Е ╪и┘Ж╪м╪з╪н. ┘К╪▒╪м┘Й ╪з╪о╪к┘К╪з╪▒ ╪з┘Д┘Е┘И╪│┘Е ╪з┘Д┘Ж╪┤╪╖.');
+        }
+
+        return redirect()->back()->with('success', '╪к┘Е ╪е┘Ж╪┤╪з╪б ╪з┘Д┘Е┘И╪│┘Е ╪и┘Ж╪м╪з╪н.');
     }
 
     public function update(Request $request, Season $season)
     {
         $validated = $request->validate([
+            'code'             => 'required|string|max:50|unique:seasons,code,' . $season->id,
             'name_ar'          => 'required|string|max:255',
             'name_en'          => 'nullable|string|max:255',
             'start_date'       => 'required|date',
@@ -63,16 +98,35 @@ class SeasonController extends Controller
             'preamble'         => 'nullable|string',
             'mandatory_period' => 'integer|min:0',
             'renewal_period'   => 'integer|min:0',
+            'contract_title'   => 'nullable|string|max:255',
+            'footer'           => 'nullable|string',
         ]);
 
-        $season->update($validated);
+        $season->update(array_intersect_key($validated, array_flip([
+            'code', 'name_ar', 'name_en', 'start_date', 'end_date', 'is_active',
+            'introduction', 'preamble', 'mandatory_period', 'renewal_period'
+        ])));
 
-        return redirect()->back()->with('success', '╩у ╩═╧э╦ ╟суц╙у ╚ф╠╟═.');
+        if ($request->has('contract_title')) {
+            \App\Models\ContractSetting::updateOrCreate(
+                ['season_id' => $season->id, 'key' => 'contract_title'],
+                ['value' => $request->input('contract_title') ?? '']
+            );
+        }
+
+        if ($request->has('footer')) {
+            \App\Models\ContractSetting::updateOrCreate(
+                ['season_id' => $season->id, 'key' => 'footer'],
+                ['value' => $request->input('footer') ?? '']
+            );
+        }
+
+        return redirect()->back()->with('success', '╪к┘Е ╪к╪н╪п┘К╪л ╪з┘Д┘Е┘И╪│┘Е ╪и┘Ж╪м╪з╪н.');
     }
 
     public function destroy(Season $season)
     {
         $season->delete();
-        return redirect()->back()->with('success', '╩у ═╨▌ ╟суц╙у.');
+        return redirect()->back()->with('success', '╪к┘Е ╪н╪░┘Б ╪з┘Д┘Е┘И╪│┘Е ╪и┘Ж╪м╪з╪н.');
     }
 }

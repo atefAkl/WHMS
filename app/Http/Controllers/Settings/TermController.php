@@ -77,7 +77,25 @@ class TermController extends Controller
             'is_active' => 'boolean',
         ]);
 
+        $oldTextAr = $term->text_ar;
+        $oldTextEn = $term->text_en;
+
         $term->update($validated);
+
+        // Propagate season term text updates to unmodified contract-level terms
+        if ($term->season_id && !$term->contract_id) {
+            $contractIds = \App\Models\Contract::where('season_id', $term->season_id)->pluck('id')->toArray();
+            
+            if (!empty($contractIds)) {
+                Term::whereIn('contract_id', $contractIds)
+                    ->where('parent_id', $term->id)
+                    ->where('text_ar', $oldTextAr)
+                    ->update([
+                        'text_ar' => $term->text_ar,
+                        'text_en' => $term->text_en,
+                    ]);
+            }
+        }
 
         return redirect()->back()->with('success', 'تم تحديث الشرط بنجاح.');
     }

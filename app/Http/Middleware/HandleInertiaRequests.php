@@ -42,6 +42,16 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $locale = app()->getLocale();
+        $translations = [];
+        $langPath = function_exists('lang_path') ? lang_path($locale) : base_path("lang/{$locale}");
+        if (file_exists($langPath)) {
+            foreach (glob($langPath . '/*.php') as $file) {
+                $name = basename($file, '.php');
+                $translations[$name] = require $file;
+            }
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -54,6 +64,8 @@ class HandleInertiaRequests extends Middleware
                 'error'        => fn () => $request->session()->get('error'),
                 'mail_warning' => fn () => $request->session()->get('mail_warning'),
             ],
+            'translations' => $translations,
+            'locale' => $locale,
         ];
     }
 }

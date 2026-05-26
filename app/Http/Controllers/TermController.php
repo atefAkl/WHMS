@@ -70,33 +70,63 @@ class TermController extends Controller
      */
     public function seasonTerms(Season $season)
     {
-        return $this->successResponse($season->terms()->get());
+        return $this->successResponse($season->terms()->orderBy('sort_order')->get());
     }
 
     /**
      * Sync terms for a season (replaces all).
-     * Body: { term_ids: [1,2,3] }  – in desired order
+     * Body: { term_ids: [1,2,3] }  – in desired order (global term IDs)
      */
     public function syncSeasonTerms(Request $request, Season $season)
     {
-        $request->validate(['term_ids' => 'required|array', 'term_ids.*' => 'integer|exists:terms,id']);
-        $pivot = [];
-        foreach ($request->term_ids as $index => $id) {
-            $pivot[$id] = ['sort_order' => $index];
+        $request->validate([
+            'term_ids' => 'required|array',
+            'term_ids.*' => 'integer|exists:terms,id'
+        ]);
+
+        $existingTerms = Term::where('season_id', $season->id)->get();
+        $termIdsToSync = $request->term_ids;
+
+        // Delete terms that are no longer selected
+        Term::where('season_id', $season->id)
+            ->whereNotIn('parent_id', $termIdsToSync)
+            ->delete();
+
+        // Create or update terms
+        foreach ($termIdsToSync as $index => $globalId) {
+            $existing = $existingTerms->firstWhere('parent_id', $globalId);
+            if ($existing) {
+                $existing->update(['sort_order' => $index]);
+            } else {
+                $globalTerm = Term::find($globalId);
+                if ($globalTerm) {
+                    Term::create([
+                        'season_id' => $season->id,
+                        'parent_id' => $globalId,
+                        'text_ar' => $globalTerm->text_ar,
+                        'text_en' => $globalTerm->text_en,
+                        'is_active' => $globalTerm->is_active,
+                        'has_variables' => $globalTerm->has_variables,
+                        'sort_order' => $index,
+                    ]);
+                }
+            }
         }
-        $season->terms()->sync($pivot);
-        return $this->successResponse($season->terms()->get(), 'Season terms synced successfully');
+
+        return $this->successResponse($season->terms()->orderBy('sort_order')->get(), 'Season terms synced successfully');
     }
 
     /**
      * Reorder terms within a season.
-     * Body: { ordered_ids: [3,1,5,...] }
+     * Body: { ordered_ids: [3,1,5,...] } (season term IDs)
      */
     public function reorderSeasonTerms(Request $request, Season $season)
     {
         $request->validate(['ordered_ids' => 'required|array', 'ordered_ids.*' => 'integer']);
         foreach ($request->ordered_ids as $index => $id) {
-            $season->terms()->updateExistingPivot($id, ['sort_order' => $index]);
+            Term::where('id', $id)
+                ->where('season_id', $season->id)
+                ->update(['sort_order' => $index]);
         }
         return $this->successResponse(null, 'Season terms reordered successfully');
     }

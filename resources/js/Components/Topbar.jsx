@@ -11,11 +11,11 @@ function cn(...inputs) {
 }
 
 function safeRoute(name) {
+    if (name === 'logout') return '/logout';
+    if (name === 'profile.edit' || name === 'central.profile.edit') return '/profile';
     try {
         return route(name);
     } catch (e) {
-        if (name === 'logout') return '/logout';
-        if (name === 'profile.edit') return '/profile';
         try {
             return route('saas.tenants.index');
         } catch (err) {

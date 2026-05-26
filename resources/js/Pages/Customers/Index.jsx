@@ -26,6 +26,9 @@ import {
     Phone,
     CreditCard,
     Sliders,
+    X,
+    FileText,
+    FilePlus,
 } from "lucide-react";
 import Pagination from "@/Components/Pagination";
 import Modal from "@/Components/Modal";
@@ -37,6 +40,7 @@ import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import Tooltip from "@/Components/Tooltip";
 import ConfirmationModal from "@/Components/ConfirmationModal";
+import PageHeader from "@/Components/PageHeader";
 
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -53,13 +57,31 @@ export default function Index({
     categories = [],
     stats = {},
 }) {
-    const { lang } = useLang();
+    const { lang, __ } = useLang();
     const [viewMode, setViewMode] = useState("list");
     const [searchQuery, setSearchQuery] = useState(filters?.search || "");
     const [selectedItems, setSelectedItems] = useState([]);
 
     const [includeInactive, setIncludeInactive] = useState(false);
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+    const [selectedCustomerForContracts, setSelectedCustomerForContracts] = useState(null);
+
+    const openContractsModal = (customer) => setSelectedCustomerForContracts(customer);
+    const closeContractsModal = () => setSelectedCustomerForContracts(null);
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "-";
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch (e) {
+            return dateStr;
+        }
+    };
 
     const displayedCustomers = customers.data.filter(
         (c) => includeInactive || c.status === "active",
@@ -110,36 +132,33 @@ export default function Index({
     };
 
     const t = {
-        title: lang === "ar" ? "العملاء" : "Customers",
-        home: lang === "ar" ? "الرئيسية" : "Home",
-        add: lang === "ar" ? "إضافة عميل" : "Add Customer",
-        search:
-            lang === "ar"
-                ? "البحث بالاسم، الهاتف، الهوية..."
-                : "Search by name, phone, ID...",
+        title: __('customers.title'),
+        home: __('customers.home'),
+        add: __('customers.add'),
+        search: __('customers.search'),
         stats: {
-            total: lang === "ar" ? "إجمالي العملاء" : "Total Customers",
-            business: lang === "ar" ? "أعمال" : "Business",
-            individual: lang === "ar" ? "أفراد" : "Individuals",
-            noContract: lang === "ar" ? "بدون عقد" : "No Contract",
-            newLast30: lang === "ar" ? "جدد (30 يوم)" : "New (30 days)",
+            total: __('customers.stats.total'),
+            business: __('customers.stats.business'),
+            individual: __('customers.stats.individual'),
+            noContract: __('customers.stats.noContract'),
+            newLast30: __('customers.stats.newLast30'),
         },
         columns: {
-            code: lang === "ar" ? "الرقم التسلسلي" : "Serial No",
-            name: lang === "ar" ? "اسم العميل" : "Name",
-            contact: lang === "ar" ? "التواصل" : "Contact",
-            tax: lang === "ar" ? "الضريبي/الهوية" : "Tax/ID No.",
-            status: lang === "ar" ? "الحالة" : "Status",
-            actions: lang === "ar" ? "إجراءات" : "Actions",
+            code: __('customers.columns.code'),
+            name: __('customers.columns.name'),
+            contact: __('customers.columns.contact'),
+            tax: __('customers.columns.tax'),
+            status: __('customers.columns.status'),
+            actions: __('customers.columns.actions'),
         },
         status: {
-            active: lang === "ar" ? "نشط" : "Active",
-            inactive: lang === "ar" ? "غير نشط" : "Inactive",
+            active: __('customers.status.active'),
+            inactive: __('customers.status.inactive'),
         },
         selection: {
-            all: lang === "ar" ? "اختيار الكل" : "Select All",
-            none: lang === "ar" ? "إلغاء الاختيار" : "Select None",
-            invert: lang === "ar" ? "عكس الاختيار" : "Invert Selection",
+            all: __('customers.selection.all'),
+            none: __('customers.selection.none'),
+            invert: __('customers.selection.invert'),
         },
     };
 
@@ -262,109 +281,103 @@ export default function Index({
             <div className="pb-2 space-y-2" dir={lang === "ar" ? "rtl" : "ltr"}>
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     {/* 1. Page Title & Actions */}
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border border-border rounded-xl px-4 py-2.5 bg-surface shadow-sm mb-2 transition-shadow hover:shadow-md">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0 shadow-inner hover:bg-primary/20 hover:scale-105 transition-all cursor-pointer">
-                                <UsersRound className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-text leading-tight">
-                                    {t.title}
-                                </h1>
-                                <p className="text-[12px] text-text-muted mt-0.5">
-                                    {lang === "ar"
-                                        ? "إدارة بيانات العملاء والجهات المرتبطة بها"
-                                        : "Manage customers data and related entities"}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 relative">
-                            {/* Export Dropdown Action */}
-                            <div className="relative">
-                                <Tooltip
-                                    text={
-                                        lang === "ar"
-                                            ? "تصدير البيانات"
-                                            : "Export Data"
-                                    }
-                                >
-                                    <button
-                                        onClick={() =>
-                                            setIsExportDropdownOpen(
-                                                !isExportDropdownOpen,
-                                            )
+                    <PageHeader
+                        icon={UsersRound}
+                        title={t.title}
+                        description={
+                            lang === "ar"
+                                ? "إدارة بيانات العملاء والجهات المرتبطة بها"
+                                : "Manage customers data and related entities"
+                        }
+                        actions={
+                            <>
+                                {/* Export Dropdown Action */}
+                                <div className="relative">
+                                    <Tooltip
+                                        text={
+                                            lang === "ar"
+                                                ? "تصدير البيانات"
+                                                : "Export Data"
                                         }
-                                        className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text hover:bg-surface-muted transition-colors shadow-sm"
                                     >
-                                        <FileDown className="h-5 w-5" />
+                                        <button
+                                            onClick={() =>
+                                                setIsExportDropdownOpen(
+                                                    !isExportDropdownOpen,
+                                                )
+                                            }
+                                            className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-surface text-text hover:bg-surface-muted transition-colors shadow-sm"
+                                        >
+                                            <FileDown className="h-5 w-5" />
+                                        </button>
+                                    </Tooltip>
+
+                                    {isExportDropdownOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-10"
+                                                onClick={() =>
+                                                    setIsExportDropdownOpen(false)
+                                                }
+                                            ></div>
+                                            <div
+                                                className={cn(
+                                                    "absolute z-20 mt-1 w-32 rounded-lg border border-border bg-surface shadow-md py-1",
+                                                    lang === "ar"
+                                                        ? "left-0"
+                                                        : "right-0",
+                                                )}
+                                            >
+                                                <button
+                                                    onClick={() =>
+                                                        handleExport("pdf")
+                                                    }
+                                                    className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
+                                                >
+                                                    <span>PDF</span>
+                                                    <span className="text-[10px] text-text-muted font-mono">
+                                                        (.pdf)
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        handleExport("excel")
+                                                    }
+                                                    className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
+                                                >
+                                                    <span>Excel</span>
+                                                    <span className="text-[10px] text-text-muted font-mono">
+                                                        (.xlsx)
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        handleExport("csv")
+                                                    }
+                                                    className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
+                                                >
+                                                    <span>CSV</span>
+                                                    <span className="text-[10px] text-text-muted font-mono">
+                                                        (.csv)
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Add Customer Action (Icon only with Tooltip) */}
+                                <Tooltip text={t.add}>
+                                    <button
+                                        onClick={openCreateModal}
+                                        className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover shadow-sm"
+                                    >
+                                        <Plus className="h-5 w-5" />
                                     </button>
                                 </Tooltip>
-
-                                {isExportDropdownOpen && (
-                                    <>
-                                        <div
-                                            className="fixed inset-0 z-10"
-                                            onClick={() =>
-                                                setIsExportDropdownOpen(false)
-                                            }
-                                        ></div>
-                                        <div
-                                            className={cn(
-                                                "absolute z-20 mt-1 w-32 rounded-lg border border-border bg-surface shadow-md py-1",
-                                                lang === "ar"
-                                                    ? "left-0"
-                                                    : "right-0",
-                                            )}
-                                        >
-                                            <button
-                                                onClick={() =>
-                                                    handleExport("pdf")
-                                                }
-                                                className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
-                                            >
-                                                <span>PDF</span>
-                                                <span className="text-[10px] text-text-muted font-mono">
-                                                    (.pdf)
-                                                </span>
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    handleExport("excel")
-                                                }
-                                                className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
-                                            >
-                                                <span>Excel</span>
-                                                <span className="text-[10px] text-text-muted font-mono">
-                                                    (.xlsx)
-                                                </span>
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    handleExport("csv")
-                                                }
-                                                className="w-full text-start px-4 py-2 text-sm text-text hover:bg-surface-muted transition-colors flex items-center justify-between"
-                                            >
-                                                <span>CSV</span>
-                                                <span className="text-[10px] text-text-muted font-mono">
-                                                    (.csv)
-                                                </span>
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Add Customer Action (Icon only with Tooltip) */}
-                            <Tooltip text={t.add}>
-                                <button
-                                    onClick={openCreateModal}
-                                    className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover shadow-sm"
-                                >
-                                    <Plus className="h-5 w-5" />
-                                </button>
-                            </Tooltip>
-                        </div>
-                    </div>
+                            </>
+                        }
+                    />
 
                     {/* 2. Stats Cards - Real Data */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
@@ -672,6 +685,17 @@ export default function Index({
                                                         className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted"
                                                     >
                                                         <div className="flex items-center gap-1.5">
+                                                            <FileText className="h-3.5 w-3.5 text-text-muted/80 shrink-0" />
+                                                            <span>
+                                                                {__('customers.columns.contracts')}
+                                                            </span>
+                                                        </div>
+                                                    </th>
+                                                    <th
+                                                        scope="col"
+                                                        className="px-6 py-3 text-start text-xs font-semibold uppercase tracking-wider text-text-muted"
+                                                    >
+                                                        <div className="flex items-center gap-1.5">
                                                             <Activity className="h-3.5 w-3.5 text-text-muted/80 shrink-0" />
                                                             <span>
                                                                 {
@@ -782,6 +806,33 @@ export default function Index({
                                                                     customer.id_number ||
                                                                     "-"}
                                                             </td>
+                                                            <td className="whitespace-nowrap px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                                                {customer.contracts && customer.contracts.length > 0 ? (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                                                            <FileText className="h-3 w-3 shrink-0" />
+                                                                            {customer.contracts.length}
+                                                                        </span>
+                                                                        <button 
+                                                                            onClick={() => openContractsModal(customer)} 
+                                                                            className="text-xs font-semibold text-primary hover:underline hover:bg-primary/5 px-2 py-1 rounded transition-colors"
+                                                                        >
+                                                                            {__('customers.more')}
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-xs text-text-muted font-medium">{__('customers.none')}</span>
+                                                                        <a 
+                                                                            href={route("contracts.create", { customer_id: customer.id })} 
+                                                                            className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline bg-emerald-50 hover:bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors"
+                                                                        >
+                                                                            <Plus className="h-3 w-3 shrink-0" />
+                                                                            <span>{__('customers.add')}</span>
+                                                                        </a>
+                                                                    </div>
+                                                                )}
+                                                            </td>
                                                             <td className="whitespace-nowrap px-4 py-3">
                                                                 <span
                                                                     className={cn(
@@ -808,14 +859,7 @@ export default function Index({
                                                                         e.stopPropagation()
                                                                     }
                                                                 >
-                                                                    <Tooltip
-                                                                        text={
-                                                                            lang ===
-                                                                            "ar"
-                                                                                ? "عرض"
-                                                                                : "View"
-                                                                        }
-                                                                    >
+                                                                    <Tooltip text={__('customers.view')}>
                                                                         <a
                                                                             href={route(
                                                                                 "customers.show",
@@ -826,14 +870,18 @@ export default function Index({
                                                                             <Eye className="h-3.5 w-3.5" />
                                                                         </a>
                                                                     </Tooltip>
-                                                                    <Tooltip
-                                                                        text={
-                                                                            lang ===
-                                                                            "ar"
-                                                                                ? "تعديل"
-                                                                                : "Edit"
-                                                                        }
-                                                                    >
+                                                                    <Tooltip text={__('customers.add_contract')}>
+                                                                        <a
+                                                                            href={route(
+                                                                                "contracts.create",
+                                                                                { customer_id: customer.id }
+                                                                            )}
+                                                                            className="p-1.5 rounded-md text-text-muted hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors inline-flex"
+                                                                        >
+                                                                            <FilePlus className="h-3.5 w-3.5" />
+                                                                        </a>
+                                                                    </Tooltip>
+                                                                    <Tooltip text={__('customers.edit_action')}>
                                                                         <button
                                                                             onClick={() =>
                                                                                 openEditModal(
@@ -846,12 +894,7 @@ export default function Index({
                                                                         </button>
                                                                     </Tooltip>
                                                                     <Tooltip
-                                                                        text={
-                                                                            lang ===
-                                                                            "ar"
-                                                                                ? "حذف"
-                                                                                : "Delete"
-                                                                        }
+                                                                        text={__('customers.delete')}
                                                                         placement="top"
                                                                     >
                                                                         <button
@@ -938,11 +981,41 @@ export default function Index({
                                                                 "-"}
                                                         </span>
                                                     </div>
-                                                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-border">
+                                                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
                                                         <span className="text-text-muted">
                                                             {lang === "ar"
-                                                                ? "الحالة:"
-                                                                : "Status:"}
+                                                                ? "العقود:"
+                                                                : "Contracts:"}
+                                                        </span>
+                                                        {customer.contracts && customer.contracts.length > 0 ? (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                                                    <FileText className="h-3 w-3 shrink-0" />
+                                                                    {customer.contracts.length}
+                                                                </span>
+                                                                <button 
+                                                                    onClick={() => openContractsModal(customer)} 
+                                                                    className="text-xs font-semibold text-primary hover:underline hover:bg-primary/5 px-2 py-1 rounded transition-colors"
+                                                                >
+                                                                    {lang === "ar" ? "المزيد" : "More"}
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-xs text-text-muted font-medium">{__('customers.none')}</span>
+                                                                <a 
+                                                                    href={route("contracts.create", { customer_id: customer.id })} 
+                                                                    className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline bg-emerald-50 hover:bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-200 transition-colors"
+                                                                >
+                                                                    <Plus className="h-3 w-3 shrink-0" />
+                                                                    <span>{__('customers.add')}</span>
+                                                                </a>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-border">
+                                                        <span className="text-text-muted">
+                                                            {__('customers.columns.status') + ":"}
                                                         </span>
                                                         <span
                                                             className={cn(
@@ -962,6 +1035,20 @@ export default function Index({
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-end gap-2 border-t border-border pt-2 mt-1">
+                                                        <a
+                                                            href={route("customers.show", customer.id)}
+                                                            className="text-xs text-indigo-600 font-bold hover:underline py-1 px-2 hover:bg-indigo-50 transition-colors rounded"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {__('customers.view')}
+                                                        </a>
+                                                        <a
+                                                            href={route("contracts.create", { customer_id: customer.id })}
+                                                            className="text-xs text-emerald-600 font-bold hover:underline py-1 px-2 hover:bg-emerald-50 transition-colors rounded"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {__('customers.add_contract')}
+                                                        </a>
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -1473,6 +1560,103 @@ export default function Index({
                 processing={processing}
                 type="danger"
             />
+
+            {/* Contracts Modal */}
+            <Modal show={selectedCustomerForContracts !== null} onClose={closeContractsModal} maxWidth="2xl">
+                <div className="p-6">
+                    <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
+                        <h2 className="text-lg font-bold text-text flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            <span>
+                                {__('customers.contracts_for', { name: selectedCustomerForContracts?.name })}
+                            </span>
+                        </h2>
+                        <button 
+                            onClick={closeContractsModal}
+                            className="text-text-muted hover:text-text transition-colors p-1"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div className="overflow-x-auto min-h-[200px] max-h-[400px]">
+                        {selectedCustomerForContracts?.contracts?.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-text-muted">
+                                <FileText className="h-10 w-10 opacity-20 mb-2" />
+                                <p>{__('customers.no_contracts')}</p>
+                            </div>
+                        ) : (
+                            <table className="min-w-full divide-y divide-border">
+                                <thead className="bg-surface-muted/50">
+                                    <tr>
+                                        <th className="px-4 py-2 text-start text-xs font-bold text-text-muted">{__('customers.contract_no')}</th>
+                                        <th className="px-4 py-2 text-start text-xs font-bold text-text-muted">{__('customers.period')}</th>
+                                        <th className="px-4 py-2 text-start text-xs font-bold text-text-muted">{__('customers.columns.status')}</th>
+                                        <th className="px-4 py-2 text-end text-xs font-bold text-text-muted">{__('customers.action')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {selectedCustomerForContracts?.contracts?.map((contract) => (
+                                        <tr key={contract.id} className="hover:bg-surface-muted/30 transition-colors">
+                                            <td className="px-4 py-3 text-sm font-mono font-bold text-text">
+                                                #{contract.contract_number}
+                                            </td>
+                                            <td className="px-4 py-3 text-xs text-text-muted font-mono">
+                                                {formatDate(contract.start_date)} {__('customers.to')} {formatDate(contract.end_date)}
+                                            </td>
+                                            <td className="px-4 py-3 text-xs">
+                                                <span className={cn(
+                                                    "px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block",
+                                                    contract.status === 'active' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                                    contract.status === 'draft' && "bg-slate-50 text-slate-700 border-slate-200",
+                                                    contract.status === 'suspended' && "bg-amber-50 text-amber-700 border-amber-200",
+                                                    (contract.status === 'ended' || contract.status === 'cancelled') && "bg-rose-50 text-rose-700 border-rose-200"
+                                                )}>
+                                                    {lang === 'ar' 
+                                                        ? {
+                                                            active: __('customers.status.active'),
+                                                            draft: __('contracts.home.status_draft'),
+                                                            suspended: __('contracts.home.status_suspended'),
+                                                            ended: __('contracts.home.status_ended'),
+                                                            cancelled: __('contracts.home.status_cancelled')
+                                                          }[contract.status] || contract.status
+                                                        : {
+                                                            active: __('customers.status.active'),
+                                                            draft: __('contracts.home.status_draft'),
+                                                            suspended: __('contracts.home.status_suspended'),
+                                                            ended: __('contracts.home.status_ended'),
+                                                            cancelled: __('contracts.home.status_cancelled')
+                                                          }[contract.status] || contract.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-end">
+                                                <a 
+                                                    href={route('contracts.show', contract.id)}
+                                                    className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline hover:bg-primary/5 px-2.5 py-1 rounded transition-colors"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    <span>{__('customers.view')}</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-border flex justify-end gap-3" onClick={(e) => e.stopPropagation()}>
+                        <SecondaryButton onClick={closeContractsModal}>{__('customers.close')}</SecondaryButton>
+                        <a 
+                            href={route('contracts.create', { customer_id: selectedCustomerForContracts?.id })}
+                            className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-white text-sm font-semibold hover:bg-primary-hover shadow-sm transition-colors"
+                        >
+                            <Plus className="h-4 w-4 me-1.5 shrink-0" />
+                            {__('customers.add_new_contract')}
+                        </a>
+                    </div>
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

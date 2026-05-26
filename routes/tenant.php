@@ -61,6 +61,7 @@ Route::middleware([
                 Route::get('contracts/create', [\App\Http\Controllers\ContractController::class, 'create'])->name('contracts.create');
                 Route::post('contracts', [\App\Http\Controllers\ContractController::class, 'store'])->name('contracts.store');
                 Route::get('contracts/{contract}', [\App\Http\Controllers\ContractController::class, 'show'])->name('contracts.show');
+                Route::put('contracts/{contract}', [\App\Http\Controllers\ContractController::class, 'update'])->name('contracts.update');
                 Route::post('contracts/{contract}/activate', [\App\Http\Controllers\ContractController::class, 'activate'])->name('contracts.activate');
                 Route::post('contracts/{contract}/suspend', [\App\Http\Controllers\ContractController::class, 'suspend'])->name('contracts.suspend');
                 Route::post('contracts/{contract}/end', [\App\Http\Controllers\ContractController::class, 'endContract'])->name('contracts.end');

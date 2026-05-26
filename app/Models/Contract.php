@@ -11,14 +11,15 @@ class Contract extends Model
         'mandatory_period','renewal_period',
         'discount','vat_rate',
         'status','total_capacity','pricing_terms',
-        'introduction','preamble','contract_date'
+        'introduction','preamble','contract_date',
+        'contract_title', 'footer', 'season_id'
     ];
 
     protected $casts = [
         'pricing_terms'    => 'array',
-        'write_date'       => 'date',
-        'start_date'       => 'date',
-        'end_date'         => 'date',
+        'write_date'       => 'date:Y-m-d',
+        'start_date'       => 'date:Y-m-d',
+        'end_date'         => 'date:Y-m-d',
         'mandatory_period' => 'integer',
         'renewal_period'   => 'integer',
         'discount'         => 'float',
@@ -30,9 +31,27 @@ class Contract extends Model
         parent::boot();
         static::creating(function ($contract) {
             if (empty($contract->contract_number)) {
-                $last = self::latest('id')->first();
-                $seq  = $last ? ((int) substr($last->contract_number, 5)) + 1 : 1;
-                $contract->contract_number = '10015' . str_pad($seq, 5, '0', STR_PAD_LEFT);
+                if ($contract->season_id) {
+                    $season = Season::find($contract->season_id);
+                    if ($season && $season->code) {
+                        $prefix = $season->code . '14';
+                        $last = self::where('contract_number', 'like', $prefix . '%')
+                            ->orderBy('contract_number', 'desc')
+                            ->first();
+                        $seq = 1;
+                        if ($last) {
+                            $seq = ((int) substr($last->contract_number, strlen($prefix))) + 1;
+                        }
+                        $contract->contract_number = $prefix . str_pad($seq, 5, '0', STR_PAD_LEFT);
+                    }
+                }
+                
+                // Fallback if still empty
+                if (empty($contract->contract_number)) {
+                    $last = self::latest('id')->first();
+                    $seq  = $last ? ((int) substr($last->contract_number, 5)) + 1 : 1;
+                    $contract->contract_number = '10015' . str_pad($seq, 5, '0', STR_PAD_LEFT);
+                }
             }
             // Auto-compute end_date from start_date + mandatory_period
             if ($contract->start_date && $contract->mandatory_period) {
@@ -73,9 +92,10 @@ class Contract extends Model
     public function customer()   { return $this->belongsTo(Customer::class); }
     public function contact()    { return $this->belongsTo(Contact::class); }
     public function items()      { return $this->hasMany(ContractItem::class); }
-    public function terms()      { return $this->belongsToMany(Term::class, 'contract_terms')->withPivot('sort_order')->orderByPivot('sort_order'); }
+    public function terms()      { return $this->hasMany(Term::class)->orderBy('sort_order'); }
     public function payments()   { return $this->hasMany(ContractPayment::class); }
     public function periods()    { return $this->hasMany(ContractPeriod::class); }
     public function contractAgents() { return $this->hasMany(ContractAgent::class); }
     public function invoices()   { return $this->hasMany(ContractInvoice::class); }
+    public function season()     { return $this->belongsTo(Season::class); }
 }

@@ -19,6 +19,7 @@ export default function Index({ seasons, openCreate = false }) {
     const [itemToDelete, setItemToDelete] = useState(null);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+        code: '',
         name_ar: '',
         name_en: '',
         start_date: '',
@@ -35,6 +36,7 @@ export default function Index({ seasons, openCreate = false }) {
     const openEditModal = (season) => {
         clearErrors();
         setData({
+            code: season.code || '',
             name_ar: season.name_ar,
             name_en: season.name_en || '',
             start_date: season.start_date,
@@ -97,6 +99,7 @@ export default function Index({ seasons, openCreate = false }) {
                         <table className="w-full text-sm text-start">
                             <thead className="bg-surface-muted text-text-muted text-[11px] uppercase tracking-wide border-b border-border">
                                 <tr>
+                                    <th className="px-4 py-3">{lang === 'ar' ? 'الكود' : 'Code'}</th>
                                     <th className="px-4 py-3">{lang === 'ar' ? 'الاسم (عربي)' : 'Name (Arabic)'}</th>
                                     <th className="px-4 py-3">{lang === 'ar' ? 'الاسم (إنجليزي)' : 'Name (English)'}</th>
                                     <th className="px-4 py-3">{lang === 'ar' ? 'البداية' : 'Start'}</th>
@@ -115,6 +118,7 @@ export default function Index({ seasons, openCreate = false }) {
                                 ) : (
                                     seasons.map(season => (
                                         <tr key={season.id} className="hover:bg-surface-muted/30 transition-colors">
+                                            <td className="px-4 py-3 font-mono font-bold text-text">{season.code || '—'}</td>
                                             <td className="px-4 py-3 font-medium text-text">{season.name_ar}</td>
                                             <td className="px-4 py-3 text-text-muted">{season.name_en || '—'}</td>
                                             <td className="px-4 py-3 font-mono text-text-muted" dir="ltr">{season.start_date}</td>
@@ -165,6 +169,11 @@ export default function Index({ seasons, openCreate = false }) {
                     </div>
                     
                     <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <InputLabel value={lang === 'ar' ? 'كود الموسم (مثل DTS26) *' : 'Season Code (e.g. DTS26) *'} />
+                            <TextInput className="mt-1 w-full text-sm" value={data.code} onChange={e => setData('code', e.target.value)} required placeholder="e.g. DTS26" />
+                            <InputError message={errors.code} className="mt-1" />
+                        </div>
                         <div>
                             <InputLabel value={lang === 'ar' ? 'الاسم (بالعربية) *' : 'Name (Arabic) *'} />
                             <TextInput className="mt-1 w-full text-sm" value={data.name_ar} onChange={e => setData('name_ar', e.target.value)} required />

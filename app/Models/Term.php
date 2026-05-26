@@ -3,7 +3,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 class Term extends Model {
-    protected $fillable = ['text_ar', 'text_en', 'is_active', 'has_variables', 'sort_order'];
+    protected $fillable = ['text_ar', 'text_en', 'is_active', 'has_variables', 'sort_order', 'season_id', 'contract_id', 'parent_id'];
 
     protected $casts = [
         'is_active'     => 'boolean',
@@ -11,18 +11,24 @@ class Term extends Model {
         'sort_order'    => 'integer',
     ];
 
-    public function contracts()
+    public function contract()
     {
-        return $this->belongsToMany(Contract::class, 'contract_terms')
-                    ->withPivot('sort_order')
-                    ->orderByPivot('sort_order');
+        return $this->belongsTo(Contract::class);
     }
 
-    public function seasons()
+    public function season()
     {
-        return $this->belongsToMany(Season::class, 'season_terms')
-                    ->withPivot('sort_order')
-                    ->orderByPivot('sort_order');
+        return $this->belongsTo(Season::class);
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Term::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Term::class, 'parent_id');
     }
 
     /**

@@ -27,6 +27,7 @@ const getHijriDate = (dateStr) => {
 
 export default function Create({ customer, contacts: initialContacts, seasonTerms: initialSeasonTerms, allTerms: initialAllTerms, storageItems, nextSerial, defaults, settings }) {
     const { lang } = useLang();
+    const today = new Date().toISOString().split('T')[0];
     const [currentStep, setCurrentStep] = useState(1);
     const [contacts, setContacts] = useState(initialContacts || []);
     const [allTerms] = useState(initialAllTerms || []);
@@ -80,6 +81,9 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
         contact_id: '',
         introduction: defaults?.introduction || '',
         preamble: defaults?.preamble || '',
+        contract_title: defaults?.contract_title || '',
+        footer: defaults?.footer || '',
+        season_id: defaults?.season_id || '',
         items: [{ storage_item_id: storageItems[0]?.id || '', unit_count: 1, monthly_rent: storageItems[0]?.default_price || 0, discount: 0 }],
         term_ids: (initialSeasonTerms || []).map(t => t.id),
         payments: [],
@@ -240,6 +244,19 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
                                     <TextInput type="number" min="0" className="mt-1 w-full" value={data.renewal_period} onChange={e => setData('renewal_period', e.target.value)} />
                                     <p className="text-[10px] text-text-muted mt-1">{lang === 'ar' ? 'اكتب 0 لعدم التجديد' : 'Enter 0 for no renewal'}</p>
                                     <InputError message={errors.renewal_period} className="mt-1" />
+                                </div>
+                            </div>
+
+                            <div className="border-t border-border pt-4 mt-4 space-y-4">
+                                <div>
+                                    <InputLabel value={lang === 'ar' ? 'عنوان العقد' : 'Contract Title'} />
+                                    <TextInput type="text" className="mt-1 w-full" value={data.contract_title} onChange={e => setData('contract_title', e.target.value)} placeholder={lang === 'ar' ? 'مثال: عقد إيجار مساحات تخزينية' : 'Ex: Storage Space Lease Contract'} />
+                                    <InputError message={errors.contract_title} className="mt-1" />
+                                </div>
+                                <div>
+                                    <InputLabel value={lang === 'ar' ? 'تذييل/ذيل العقد' : 'Contract Footer'} />
+                                    <textarea className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[80px]" value={data.footer} onChange={e => setData('footer', e.target.value)} placeholder={lang === 'ar' ? 'نص تذييل العقد، شروط خاصة بالتسليم والتواقيع...' : 'Contract footer text, delivery conditions, signatures...'} />
+                                    <InputError message={errors.footer} className="mt-1" />
                                 </div>
                             </div>
                         </div>

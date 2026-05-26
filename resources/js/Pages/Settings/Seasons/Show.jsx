@@ -5,15 +5,17 @@ import axios from 'axios';
 import { useLang } from '@/Contexts/LanguageContext';
 import { 
     Calendar, Home, ChevronRight, FileText, LayoutList, Clock, 
-    Save, X, GripVertical, Check, Variable, Search, Info, Plus 
+    Save, X, GripVertical, Check, Variable, Search, Info, Plus, Edit 
 } from 'lucide-react';
 import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
+import Modal from '@/Components/Modal';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import TextInput from '@/Components/TextInput';
 import Tooltip from '@/Components/Tooltip';
 
-export default function Show({ season, allTerms }) {
+export default function Show({ season, allTerms, settings }) {
     const { lang } = useLang();
     const [activeTab, setActiveTab] = useState('parts'); // parts, terms, periods
     const [termSearch, setTermSearch] = useState('');
@@ -24,6 +26,7 @@ export default function Show({ season, allTerms }) {
     const [dragOver, setDragOver] = useState(null);
 
     const { data, setData, put, processing, errors } = useForm({
+        code: season.code || '',
         name_ar: season.name_ar || '',
         name_en: season.name_en || '',
         start_date: season.start_date || '',
@@ -33,6 +36,8 @@ export default function Show({ season, allTerms }) {
         preamble: season.preamble || '',
         mandatory_period: season.mandatory_period || 12,
         renewal_period: season.renewal_period || 12,
+        contract_title: settings?.contract_title || '',
+        footer: settings?.footer || '',
     });
 
     const submit = (e) => {
@@ -42,15 +47,16 @@ export default function Show({ season, allTerms }) {
 
     // ── Term Sync Logic ──────────────────────────────────────────
     const toggleTerm = async (term) => {
-        const isAssigned = seasonTerms.some(t => t.id === term.id);
+        const isAssigned = seasonTerms.some(t => t.id === term.id || t.parent_id === term.id);
         let newList;
         if (isAssigned) {
-            newList = seasonTerms.filter(t => t.id !== term.id);
+            newList = seasonTerms.filter(t => t.id !== term.id && t.parent_id !== term.id);
         } else {
-            newList = [...seasonTerms, term];
+            newList = [...seasonTerms, { ...term, parent_id: term.id }];
         }
         setSeasonTerms(newList);
-        await axios.post(route('seasons.terms.sync', season.id), { term_ids: newList.map(t => t.id) });
+        const parentIds = newList.map(t => t.parent_id || t.id);
+        await axios.post(route('seasons.terms.sync', season.id), { term_ids: parentIds });
     };
 
     const onDragStart = (index) => { dragIndex.current = index; };
@@ -65,6 +71,37 @@ export default function Show({ season, allTerms }) {
         setSeasonTerms(reordered);
         dragIndex.current = null; setDragOver(null);
         await axios.post(route('seasons.terms.reorder', season.id), { ordered_ids: reordered.map(t => t.id) });
+    };
+
+    // Term edit modal states and actions
+    const [termToEdit, setTermToEdit] = useState(null);
+    const [termEditForm, setTermEditForm] = useState({ text_ar: '', text_en: '', processing: false });
+
+    const openEditTermModal = (term) => {
+        setTermToEdit(term);
+        setTermEditForm({
+            text_ar: term.text_ar || '',
+            text_en: term.text_en || '',
+            processing: false
+        });
+    };
+
+    const saveTermText = async (e) => {
+        e.preventDefault();
+        setTermEditForm(prev => ({ ...prev, processing: true }));
+        try {
+            await axios.put(route('settings.terms.update', termToEdit.id), {
+                text_ar: termEditForm.text_ar,
+                text_en: termEditForm.text_en,
+                is_active: true
+            });
+            setSeasonTerms(prev => prev.map(t => t.id === termToEdit.id ? { ...t, text_ar: termEditForm.text_ar, text_en: termEditForm.text_en } : t));
+            setTermToEdit(null);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setTermEditForm(prev => ({ ...prev, processing: false }));
+        }
     };
 
     const breadcrumbs = (
@@ -145,10 +182,32 @@ export default function Show({ season, allTerms }) {
                                     <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10 mb-4">
                                         <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                                         <div>
-                                            <p className="text-sm font-bold text-primary">{lang === 'ar' ? 'مقدمة وتمهيد العقد' : 'Contract Intro & Preamble'}</p>
+                                            <p className="text-sm font-bold text-primary">{lang === 'ar' ? 'إعدادات وأجزاء العقد للموسم' : 'Contract Settings & Parts for Season'}</p>
                                             <p className="text-xs text-text-muted mt-1 leading-relaxed">
-                                                {lang === 'ar' ? 'هذه النصوص ستظهر تلقائياً في بداية كل عقد ينتمي لهذا الموسم.' : 'These texts will appear automatically at the start of every contract in this season.'}
+                                                {lang === 'ar' ? 'هذه البيانات والنصوص ستكون مرجعية ويتم تعبئتها تلقائياً لكل عقد جديد يُنشأ في هذا الموسم.' : 'These settings and texts will act as reference data and automatically fill for each new contract created in this season.'}
                                             </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <InputLabel value={lang === 'ar' ? 'كود الموسم (بادئة الترقيم)' : 'Season Code (Numbering Prefix)'} />
+                                            <TextInput
+                                                className="mt-1 block w-full text-sm"
+                                                value={data.code}
+                                                onChange={e => setData('code', e.target.value)}
+                                                required
+                                            />
+                                            <InputError message={errors.code} />
+                                        </div>
+                                        <div>
+                                            <InputLabel value={lang === 'ar' ? 'العنوان الافتراضي للعقود' : 'Default Contract Title'} />
+                                            <TextInput
+                                                className="mt-1 block w-full text-sm"
+                                                value={data.contract_title}
+                                                onChange={e => setData('contract_title', e.target.value)}
+                                            />
+                                            <InputError message={errors.contract_title} />
                                         </div>
                                     </div>
 
@@ -156,7 +215,7 @@ export default function Show({ season, allTerms }) {
                                         <div>
                                             <InputLabel value={lang === 'ar' ? 'مقدمة العقد' : 'Contract Introduction'} />
                                             <textarea
-                                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[120px]"
+                                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[100px]"
                                                 value={data.introduction}
                                                 onChange={e => setData('introduction', e.target.value)}
                                                 placeholder={lang === 'ar' ? 'مثال: الحمد لله والصلاة والسلام على رسول الله...' : 'Ex: In the name of Allah...'}
@@ -167,12 +226,23 @@ export default function Show({ season, allTerms }) {
                                         <div>
                                             <InputLabel value={lang === 'ar' ? 'تمهيد العقد' : 'Contract Preamble'} />
                                             <textarea
-                                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[120px]"
+                                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[100px]"
                                                 value={data.preamble}
                                                 onChange={e => setData('preamble', e.target.value)}
                                                 placeholder={lang === 'ar' ? 'مثال: حيث أن الطرف الأول يمتلك مستودعات، والطرف الثاني يرغب في...' : 'Ex: Whereas the first party owns warehouses...'}
                                             />
                                             <InputError message={errors.preamble} />
+                                        </div>
+
+                                        <div>
+                                            <InputLabel value={lang === 'ar' ? 'تذييل/ذيل العقد' : 'Contract Footer'} />
+                                            <textarea
+                                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[100px]"
+                                                value={data.footer}
+                                                onChange={e => setData('footer', e.target.value)}
+                                                placeholder={lang === 'ar' ? 'مثال: شروط الدفع والضمانات والتوقيعات...' : 'Ex: Payment terms, guarantees, signatures...'}
+                                            />
+                                            <InputError message={errors.footer} />
                                         </div>
                                     </div>
 
@@ -227,7 +297,7 @@ export default function Show({ season, allTerms }) {
                                         </div>
                                         <div className="border border-border rounded-xl overflow-hidden divide-y divide-border max-h-[400px] overflow-y-auto bg-surface-muted/10">
                                             {allTerms.filter(t => t.text_ar.includes(termSearch)).map(term => {
-                                                const isIn = seasonTerms.some(t => t.id === term.id);
+                                                const isIn = seasonTerms.some(t => t.id === term.id || t.parent_id === term.id);
                                                 return (
                                                     <div key={term.id} onClick={() => toggleTerm(term)} className={`flex items-start gap-3 px-3 py-2.5 cursor-pointer transition-colors ${isIn ? 'bg-primary/5' : 'hover:bg-surface-muted/40'}`}>
                                                         <div className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isIn ? 'bg-primary border-primary' : 'border-border'}`}>
@@ -271,6 +341,13 @@ export default function Show({ season, allTerms }) {
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-[12px] text-text leading-relaxed">{term.text_ar}</p>
                                                         </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditTermModal(term)}
+                                                            className="p-1 rounded-md text-text-muted hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
+                                                        >
+                                                            <Edit className="h-3.5 w-3.5" />
+                                                        </button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -330,6 +407,51 @@ export default function Show({ season, allTerms }) {
                 </div>
 
             </div>
+
+            {/* Term Edit Modal */}
+            <Modal show={!!termToEdit} onClose={() => setTermToEdit(null)} maxWidth="md">
+                <form onSubmit={saveTermText} className="p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-border pb-3">
+                        <h3 className="font-bold text-lg text-text">
+                            {lang === 'ar' ? 'تعديل نص الشرط للموسم' : 'Edit Term Text for Season'}
+                        </h3>
+                        <button type="button" onClick={() => setTermToEdit(null)} className="text-text-muted hover:text-text">
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <InputLabel value={lang === 'ar' ? 'نص الشرط (عربي) *' : 'Term Text (Arabic) *'} />
+                            <textarea
+                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[120px]"
+                                value={termEditForm.text_ar}
+                                onChange={e => setTermEditForm({ ...termEditForm, text_ar: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <InputLabel value={lang === 'ar' ? 'نص الشرط (إنجليزي)' : 'Term Text (English)'} />
+                            <textarea
+                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-sm min-h-[120px]"
+                                value={termEditForm.text_en}
+                                onChange={e => setTermEditForm({ ...termEditForm, text_en: e.target.value })}
+                                dir="ltr"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-border mt-2">
+                        <SecondaryButton type="button" onClick={() => setTermToEdit(null)}>
+                            {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+                        </SecondaryButton>
+                        <PrimaryButton disabled={termEditForm.processing}>
+                            <Save className="h-4 w-4 me-1.5" />
+                            {lang === 'ar' ? 'حفظ التعديلات' : 'Save Changes'}
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

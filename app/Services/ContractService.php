@@ -31,6 +31,9 @@ class ContractService
                 'status'           => $data['status'],
                 'introduction'     => $data['introduction'] ?? null,
                 'preamble'         => $data['preamble'] ?? null,
+                'contract_title'   => $data['contract_title'] ?? null,
+                'footer'           => $data['footer'] ?? null,
+                'season_id'        => $data['season_id'] ?? null,
             ]);
 
             // items
@@ -53,17 +56,36 @@ class ContractService
 
             // terms
             if (!empty($data['term_ids'])) {
-                $pivot = [];
                 $sortIndex = 0;
                 foreach ($data['term_ids'] as $id) {
+                    if (empty($id)) continue;
+                    
                     if (is_string($id) && str_starts_with($id, 'custom_')) {
                         $text = substr($id, 7);
-                        $newTerm = Term::create(['text_ar' => $text, 'is_active' => true]);
-                        $id = $newTerm->id;
+                        Term::create([
+                            'contract_id'   => $contract->id,
+                            'parent_id'     => null,
+                            'text_ar'       => $text,
+                            'text_en'       => null,
+                            'is_active'     => true,
+                            'has_variables' => str_contains($text, '{$'),
+                            'sort_order'    => $sortIndex++,
+                        ]);
+                    } else {
+                        $t = Term::find($id);
+                        if ($t) {
+                            Term::create([
+                                'contract_id'   => $contract->id,
+                                'parent_id'     => $t->id,
+                                'text_ar'       => $t->text_ar,
+                                'text_en'       => $t->text_en,
+                                'is_active'     => $t->is_active,
+                                'has_variables' => $t->has_variables,
+                                'sort_order'    => $sortIndex++,
+                            ]);
+                        }
                     }
-                    $pivot[$id] = ['sort_order' => $sortIndex++];
                 }
-                $contract->terms()->sync($pivot);
             }
 
             // payments
