@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Foundation\Application;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
@@ -15,7 +16,17 @@ Route::middleware([
 ])->group(function () {
 
     Route::get('/', function () {
-        return redirect()->route('dashboard');
+        // If user is authenticated, send to the dashboard; otherwise show a public landing page.
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return Inertia::render('Welcome', [
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'laravelVersion' => Application::VERSION,
+            'phpVersion' => PHP_VERSION,
+        ]);
     });
 
     require base_path('routes/auth.php');
@@ -87,12 +98,12 @@ Route::middleware([
                 // Settings Sub-module
                 Route::prefix('settings')->name('settings.')->group(function () {
                     Route::get('/', [\App\Http\Controllers\SettingsController::class, 'index'])->name('index');
-                    
+
                     Route::get('general', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'index'])->name('general.index');
                     Route::post('general', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'store'])->name('general.store');
                     Route::post('general/files', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'uploadFile'])->name('general.files.upload');
                     Route::delete('general/files/{id}', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'deleteFile'])->name('general.files.destroy');
-                    
+
                     Route::post('countries/seed', [\App\Http\Controllers\Settings\CountryController::class, 'seed'])->name('countries.seed');
                     Route::resource('countries', \App\Http\Controllers\Settings\CountryController::class)->except(['show', 'create', 'edit']);
                     Route::resource('categories', \App\Http\Controllers\Settings\CustomerCategoryController::class)->except(['show', 'create', 'edit']);
