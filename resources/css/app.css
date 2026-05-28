@@ -4,7 +4,7 @@
 
 @layer base {
     :root {
-        --font-family: 'IBM Plex Sans Arabic', 'Noto Sans Arabic', sans-serif;
+        --font-family: "IBM Plex Sans Arabic", "Noto Sans Arabic", sans-serif;
         --color-bg: #f6f7f9;
         --color-surface: #ffffff;
         --color-surface-muted: #f1f4f8;
@@ -17,9 +17,47 @@
         --color-warning: #d97706;
         --color-danger: #dc2626;
         --color-info: #0891b2;
+        --layout-main-gap-y: 6px;
     }
 
     body {
         @apply bg-background text-text font-sans antialiased;
     }
+}
+
+/* Button text display logic */
+.display-me {
+    display: none;
+}
+
+.show-button-text .display-me {
+    display: inline-block !important;
+    margin-inline-start: 0.375rem; /* 6px gap between icon and text */
+}
+
+/* Unified vertical spacing for top-level page sections */
+.main-stack-y > * + * {
+    margin-top: var(--layout-main-gap-y);
+}
+
+/* Hover shadow and move animation for all dashboard/settings cards */
+.settings-card,
+.dashboard-card,
+.bg-surface.border.rounded-xl,
+.bg-surface.border.rounded-lg,
+.bg-surface.border.rounded-2xl {
+    transition:
+        transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.settings-card:hover,
+.dashboard-card:hover,
+.bg-surface.border.rounded-xl:hover,
+.bg-surface.border.rounded-lg:hover,
+.bg-surface.border.rounded-2xl:hover {
+    transform: translateY(-2px) !important;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.05),
+        0 1px 3px rgba(0, 0, 0, 0.02) !important;
 }

@@ -80,15 +80,11 @@ export default function Index({ contracts, stats, filters, translations }) {
         if (format === "pdf") {
             window.print();
         } else {
-            alert(
-                lang === "ar"
-                    ? `جاري تصدير البيانات بصيغة ${format.toUpperCase()}...`
-                    : `Exporting data as ${format.toUpperCase()}...`,
-            );
+            alert(t("home.exporting", { format: format.toUpperCase() }));
         }
     };
 
-    const t = (key) => {
+    const t = (key, replacements = {}) => {
         const parts = key.split(".");
         let current = translations;
         for (const part of parts) {
@@ -98,6 +94,10 @@ export default function Index({ contracts, stats, filters, translations }) {
                 return key;
             }
         }
+        if (typeof current !== "string") return key;
+        Object.entries(replacements).forEach(([k, v]) => {
+            current = current.replace(`:${k}`, v);
+        });
         return current;
     };
 
@@ -240,97 +240,57 @@ export default function Index({ contracts, stats, filters, translations }) {
 
     // Modal Details based on action type
     const getModalDetails = () => {
-        if (lang === "ar") {
-            switch (actionType) {
-                case "activate":
-                    return {
-                        title: "تنشيط العقد",
-                        message: `هل أنت متأكد من رغبتك في تنشيط العقد رقم ${actionContract?.contract_number}؟ سيتم تغيير الحالة إلى نشط.`,
-                        confirmLabel: "تنشيط العقد",
-                        type: "info",
-                    };
-                case "suspend":
-                    return {
-                        title: "إيقاف مؤقت للعقد",
-                        message: `هل أنت متأكد من رغبتك في إيقاف العقد رقم ${actionContract?.contract_number} مؤقتاً؟`,
-                        confirmLabel: "إيقاف مؤقت",
-                        type: "warning",
-                    };
-                case "end":
-                    return {
-                        title: "إنهاء العقد",
-                        message: `هل أنت متأكد من إنهاء العقد رقم ${actionContract?.contract_number}؟ هذا الإجراء يسجل انتهاء فترة العقد.`,
-                        confirmLabel: "إنهاء العقد",
-                        type: "warning",
-                    };
-                case "cancel":
-                    return {
-                        title: "إلغاء العقد",
-                        message: `هل أنت متأكد من إلغاء العقد رقم ${actionContract?.contract_number}؟ لا يمكن التراجع عن هذا الإجراء.`,
-                        confirmLabel: "إلغاء العقد",
-                        type: "danger",
-                    };
-                case "delete":
-                    return {
-                        title: "حذف العقد نهائياً",
-                        message: `هل أنت متأكد من حذف العقد رقم ${actionContract?.contract_number} نهائياً من النظام؟ لا يمكن استعادة البيانات المحذوفة.`,
-                        confirmLabel: "حذف العقد",
-                        type: "danger",
-                    };
-                default:
-                    return {
-                        title: "",
-                        message: "",
-                        confirmLabel: "",
-                        type: "warning",
-                    };
+        const actionMap = {
+            activate: {
+                title: t("home.modal.activate.title"),
+                message: t("home.modal.activate.message", {
+                    number: actionContract?.contract_number ?? "",
+                }),
+                confirmLabel: t("home.modal.activate.confirm"),
+                type: "info",
+            },
+            suspend: {
+                title: t("home.modal.suspend.title"),
+                message: t("home.modal.suspend.message", {
+                    number: actionContract?.contract_number ?? "",
+                }),
+                confirmLabel: t("home.modal.suspend.confirm"),
+                type: "warning",
+            },
+            end: {
+                title: t("home.modal.end.title"),
+                message: t("home.modal.end.message", {
+                    number: actionContract?.contract_number ?? "",
+                }),
+                confirmLabel: t("home.modal.end.confirm"),
+                type: "warning",
+            },
+            cancel: {
+                title: t("home.modal.cancel.title"),
+                message: t("home.modal.cancel.message", {
+                    number: actionContract?.contract_number ?? "",
+                }),
+                confirmLabel: t("home.modal.cancel.confirm"),
+                type: "danger",
+            },
+            delete: {
+                title: t("home.modal.delete.title"),
+                message: t("home.modal.delete.message", {
+                    number: actionContract?.contract_number ?? "",
+                }),
+                confirmLabel: t("home.modal.delete.confirm"),
+                type: "danger",
+            },
+        };
+
+        return (
+            actionMap[actionType] || {
+                title: "",
+                message: "",
+                confirmLabel: "",
+                type: "warning",
             }
-        } else {
-            switch (actionType) {
-                case "activate":
-                    return {
-                        title: "Activate Contract",
-                        message: `Are you sure you want to activate contract no. ${actionContract?.contract_number}?`,
-                        confirmLabel: "Activate",
-                        type: "info",
-                    };
-                case "suspend":
-                    return {
-                        title: "Suspend Contract",
-                        message: `Are you sure you want to suspend contract no. ${actionContract?.contract_number}?`,
-                        confirmLabel: "Suspend",
-                        type: "warning",
-                    };
-                case "end":
-                    return {
-                        title: "End Contract",
-                        message: `Are you sure you want to mark contract no. ${actionContract?.contract_number} as ended?`,
-                        confirmLabel: "End Contract",
-                        type: "warning",
-                    };
-                case "cancel":
-                    return {
-                        title: "Cancel Contract",
-                        message: `Are you sure you want to cancel contract no. ${actionContract?.contract_number}? This cannot be undone.`,
-                        confirmLabel: "Cancel",
-                        type: "danger",
-                    };
-                case "delete":
-                    return {
-                        title: "Delete Contract",
-                        message: `Are you sure you want to delete contract no. ${actionContract?.contract_number}? All data will be permanently removed.`,
-                        confirmLabel: "Delete",
-                        type: "danger",
-                    };
-                default:
-                    return {
-                        title: "",
-                        message: "",
-                        confirmLabel: "",
-                        type: "warning",
-                    };
-            }
-        }
+        );
     };
 
     const modalDetails = getModalDetails();
@@ -339,8 +299,8 @@ export default function Index({ contracts, stats, filters, translations }) {
         <AuthenticatedLayout header={breadcrumbs}>
             <Head title={t("home.page_title")} />
 
-            <div className="pb-2 space-y-2" dir={lang === "ar" ? "rtl" : "ltr"}>
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="pb-2" dir={lang === "ar" ? "rtl" : "ltr"}>
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 main-stack-y">
                     {/* 1. Page Title & Actions */}
                     <PageHeader
                         icon={FileText}
@@ -350,13 +310,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                             <>
                                 {/* Export Dropdown Action */}
                                 <div className="relative">
-                                    <Tooltip
-                                        text={
-                                            lang === "ar"
-                                                ? "تصدير البيانات"
-                                                : "Export Data"
-                                        }
-                                    >
+                                    <Tooltip text={t("home.export_data")}>
                                         <button
                                             onClick={() =>
                                                 setIsExportDropdownOpen(
@@ -374,7 +328,9 @@ export default function Index({ contracts, stats, filters, translations }) {
                                             <div
                                                 className="fixed inset-0 z-10"
                                                 onClick={() =>
-                                                    setIsExportDropdownOpen(false)
+                                                    setIsExportDropdownOpen(
+                                                        false,
+                                                    )
                                                 }
                                             ></div>
                                             <div
@@ -439,7 +395,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                     />
 
                     {/* 2. Stats Cards (Real Data, swapped layout: icon & text on the right/start, number on the left/end in RTL) */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                         {[
                             {
                                 label: t("home.stats_total"),
@@ -556,13 +512,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                 <div className="flex flex-wrap items-center gap-3 justify-start md:justify-end">
                                     {/* Selection Tools (Icon-only with Tooltips) */}
                                     <div className="flex items-center gap-1.5">
-                                        <Tooltip
-                                            text={
-                                                lang === "ar"
-                                                    ? "اختيار الكل"
-                                                    : "Select All"
-                                            }
-                                        >
+                                        <Tooltip text={t("home.selection.all")}>
                                             <button
                                                 onClick={selectAll}
                                                 className="flex items-center justify-center h-8 w-8 rounded-lg bg-surface border border-border text-text hover:bg-surface-muted hover:text-primary transition-colors shadow-sm"
@@ -571,11 +521,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                             </button>
                                         </Tooltip>
                                         <Tooltip
-                                            text={
-                                                lang === "ar"
-                                                    ? "إلغاء الاختيار"
-                                                    : "Clear Selection"
-                                            }
+                                            text={t("home.selection.none")}
                                         >
                                             <button
                                                 onClick={selectNone}
@@ -585,11 +531,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                             </button>
                                         </Tooltip>
                                         <Tooltip
-                                            text={
-                                                lang === "ar"
-                                                    ? "عكس الاختيار"
-                                                    : "Invert Selection"
-                                            }
+                                            text={t("home.selection.invert")}
                                         >
                                             <button
                                                 onClick={invertSelection}
@@ -601,9 +543,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                         {selectedItems.length > 0 && (
                                             <span className="text-xs font-bold text-primary px-2 bg-primary/10 rounded-full py-0.5">
                                                 {selectedItems.length}{" "}
-                                                {lang === "ar"
-                                                    ? "محدد"
-                                                    : "Selected"}
+                                                {t("home.selection.selected")}
                                             </span>
                                         )}
                                     </div>
@@ -614,11 +554,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                     {/* View Mode Toggle */}
                                     <div className="flex items-center rounded-lg border border-border bg-surface p-0.5">
                                         <Tooltip
-                                            text={
-                                                lang === "ar"
-                                                    ? "عرض شبكي"
-                                                    : "Grid View"
-                                            }
+                                            text={t("home.view_mode.grid")}
                                         >
                                             <button
                                                 onClick={() =>
@@ -635,11 +571,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                             </button>
                                         </Tooltip>
                                         <Tooltip
-                                            text={
-                                                lang === "ar"
-                                                    ? "عرض قائمة"
-                                                    : "List View"
-                                            }
+                                            text={t("home.view_mode.list")}
                                         >
                                             <button
                                                 onClick={() =>
@@ -865,9 +797,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                                                 {formatDate(
                                                                     contract.start_date,
                                                                 )}{" "}
-                                                                {lang === "ar"
-                                                                    ? "إلى"
-                                                                    : "to"}{" "}
+                                                                {t("home.to")}{" "}
                                                                 {formatDate(
                                                                     contract.end_date,
                                                                 )}
@@ -1083,9 +1013,9 @@ export default function Index({ contracts, stats, filters, translations }) {
                                                 <div className="flex flex-col gap-1 text-sm">
                                                     <div className="flex justify-between">
                                                         <span className="text-text-muted">
-                                                            {lang === "ar"
-                                                                ? "البداية:"
-                                                                : "Start:"}
+                                                            {t(
+                                                                "home.grid.start",
+                                                            )}
                                                         </span>
                                                         <span className="font-medium text-text font-mono">
                                                             {formatDate(
@@ -1095,9 +1025,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-text-muted">
-                                                            {lang === "ar"
-                                                                ? "النهاية:"
-                                                                : "End:"}
+                                                            {t("home.grid.end")}
                                                         </span>
                                                         <span className="font-medium text-text font-mono">
                                                             {formatDate(
@@ -1107,9 +1035,9 @@ export default function Index({ contracts, stats, filters, translations }) {
                                                     </div>
                                                     <div className="flex justify-between items-center mt-2 pt-2 border-t border-border">
                                                         <span className="text-text-muted">
-                                                            {lang === "ar"
-                                                                ? "الحالة:"
-                                                                : "Status:"}
+                                                            {t(
+                                                                "home.grid.status",
+                                                            )}
                                                         </span>
                                                         <span
                                                             className={cn(
@@ -1275,7 +1203,7 @@ export default function Index({ contracts, stats, filters, translations }) {
                     title={modalDetails.title}
                     message={modalDetails.message}
                     confirmLabel={modalDetails.confirmLabel}
-                    cancelLabel={lang === "ar" ? "إلغاء" : "Cancel"}
+                    cancelLabel={t("home.cancel")}
                     type={modalDetails.type}
                     onConfirm={handleActionConfirm}
                     onCancel={closeConfirmModal}

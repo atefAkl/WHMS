@@ -41,12 +41,12 @@ function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
 
-function safeRoute(name) {
+function safeRoute(name, params = {}) {
     try {
-        return route(name);
+        return route(name, params);
     } catch (e) {
         try {
-            return route('saas.tenants.index');
+            return route('saas.tenants.index', params);
         } catch (err) {
             return '#';
         }
@@ -89,7 +89,7 @@ const tenantNavItems = [
         children: [
             { name: { ar: 'الغرف', en: 'Rooms' }, icon: DoorClosed, route: 'dashboard', active: 'rooms.*' },
             { name: { ar: 'الطبالي', en: 'Pallets' }, icon: Boxes, route: 'pallets.index', active: 'pallets.*' },
-            { name: { ar: 'أصناف مخزنية', en: 'Inventory Items' }, icon: Box, route: 'dashboard', active: 'inventory.*' },
+            { name: { ar: 'أصناف مخزنية', en: 'Inventory Items' }, icon: Box, route: 'inventory-items.index', active: 'inventory-items.*' },
             { name: { ar: 'أحجام العبوات', en: 'Packaging Sizes' }, icon: Layers, route: 'dashboard', active: 'packages.*' },
             { name: { ar: 'اعدادات المخازن', en: 'Warehouse Settings' }, icon: Sliders, route: 'dashboard', active: 'warehouse.settings.*' },
             { name: { ar: 'التقارير', en: 'Reports' }, icon: LineChart, route: 'dashboard', active: 'warehouse.reports.*' },
@@ -119,19 +119,32 @@ const saasNavItems = [
         icon: LayoutDashboard,
         route: 'saas.tenants.index',
         active: 'saas.tenants.*',
-    },
-    {
-        name: { ar: 'ملف التعريف', en: 'Profile Settings' },
-        icon: UserCog,
-        route: 'central.profile.edit',
-        active: 'central.profile.*',
     }
 ];
 
 
 // ── Single Nav Item (with accordion via parent state) ─────────
 function NavItem({ item, lang, openKey, setOpenKey }) {
-    const isActive = route().current(item.active);
+    let isActive = route().current(item.active);
+    
+    // Check parameters to handle query-string tabs like ?tab=terms
+    if (isActive && item.params) {
+        const queryParams = new URLSearchParams(window.location.search);
+        for (const [key, value] of Object.entries(item.params)) {
+            const currentVal = queryParams.get(key) || (key === 'tab' ? 'tenants' : '');
+            if (currentVal !== value) {
+                isActive = false;
+                break;
+            }
+        }
+    } else if (isActive && !item.params && route().current('saas.tenants.index')) {
+        const queryParams = new URLSearchParams(window.location.search);
+        const currentTab = queryParams.get('tab') || 'tenants';
+        if (currentTab !== 'tenants') {
+            isActive = false;
+        }
+    }
+
     const hasChildren = item.children && item.children.length > 0;
     const itemKey = item.active;
     const isChildActive = hasChildren && item.children.some(c => route().current(c.active));
@@ -177,7 +190,7 @@ function NavItem({ item, lang, openKey, setOpenKey }) {
                             return (
                                 <Link
                                     key={child.active}
-                                    href={safeRoute(child.route)}
+                                    href={safeRoute(child.route, child.params)}
                                     className={cn(
                                         'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
                                         childActive
@@ -199,7 +212,7 @@ function NavItem({ item, lang, openKey, setOpenKey }) {
     // Simple link (no children)
     return (
         <Link
-            href={safeRoute(item.route)}
+            href={safeRoute(item.route, item.params)}
             className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 isActive
@@ -296,12 +309,28 @@ export default function Sidebar() {
  
             {/* ── 3. Settings ── */}
             <div className="border-t border-border px-3 py-3 shrink-0 bg-surface">
-                
-                {/* General Settings Link */}
-                {!isCentral && (
+                {isCentral ? (
+                    <Link
+                        href={safeRoute('saas.settings.index')}
+                        className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                            route().current('saas.settings.*')
+                                ? "bg-primary/10 text-primary"
+                                : "text-text-muted hover:bg-surface-muted hover:text-text"
+                        )}
+                    >
+                        <Settings className="h-4 w-4 shrink-0" />
+                        <span>{lang === 'ar' ? 'الإعدادات العامة' : 'General Settings'}</span>
+                    </Link>
+                ) : (
                     <Link
                         href={safeRoute('settings.index')}
-                        className="flex items-center gap-3 rounded-md px-3 py-1.5 text-xs font-semibold text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                        className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                            route().current('settings.*')
+                                ? "bg-primary/10 text-primary"
+                                : "text-text-muted hover:bg-surface-muted hover:text-text"
+                        )}
                     >
                         <Settings className="h-4 w-4 shrink-0" />
                         <span>{lang === 'ar' ? 'الإعدادات العامة' : 'General Settings'}</span>

@@ -24,6 +24,8 @@ class SeasonController extends Controller
         $allTerms = Term::whereNull('season_id')->whereNull('contract_id')->orderBy('sort_order')->get();
         $season->load(['terms' => function ($q) {
             $q->orderBy('sort_order');
+        }, 'blocks' => function ($q) {
+            $q->orderBy('sort_order');
         }]);
 
         $globalSettings = \App\Models\ContractSetting::whereNull('season_id')->pluck('value', 'key')->all();
@@ -34,6 +36,7 @@ class SeasonController extends Controller
             'season' => $season,
             'allTerms' => $allTerms,
             'settings' => $settings,
+            'blocks' => $season->blocks,
         ]);
     }
 
@@ -78,6 +81,18 @@ class SeasonController extends Controller
             ]);
         }
 
+        // Seed blocks for the new season
+        $globalBlocks = \App\Models\ContractBlock::whereNull('season_id')->whereNull('contract_id')->get();
+        foreach ($globalBlocks as $block) {
+            \App\Models\ContractBlock::create([
+                'season_id'  => $season->id,
+                'key'        => $block->key,
+                'is_enabled' => $block->is_enabled,
+                'content'    => $block->content,
+                'sort_order' => $block->sort_order,
+            ]);
+        }
+
         if (!session()->has('active_season_id')) {
             return redirect()->route('season.select')->with('success', 'تم إنشاء الموسم بنجاح. يرجى اختيار الموسم النشط.');
         }
@@ -94,34 +109,27 @@ class SeasonController extends Controller
             'start_date'       => 'required|date',
             'end_date'         => 'required|date|after_or_equal:start_date',
             'is_active'        => 'boolean',
-            'introduction'     => 'nullable|string',
-            'preamble'         => 'nullable|string',
             'mandatory_period' => 'integer|min:0',
             'renewal_period'   => 'integer|min:0',
-            'contract_title'   => 'nullable|string|max:255',
-            'footer'           => 'nullable|string',
         ]);
 
-        $season->update(array_intersect_key($validated, array_flip([
-            'code', 'name_ar', 'name_en', 'start_date', 'end_date', 'is_active',
-            'introduction', 'preamble', 'mandatory_period', 'renewal_period'
-        ])));
-
-        if ($request->has('contract_title')) {
-            \App\Models\ContractSetting::updateOrCreate(
-                ['season_id' => $season->id, 'key' => 'contract_title'],
-                ['value' => $request->input('contract_title') ?? '']
-            );
-        }
-
-        if ($request->has('footer')) {
-            \App\Models\ContractSetting::updateOrCreate(
-                ['season_id' => $season->id, 'key' => 'footer'],
-                ['value' => $request->input('footer') ?? '']
-            );
-        }
+        $season->update($validated);
 
         return redirect()->back()->with('success', 'تم تحديث الموسم بنجاح.');
+    }
+
+    public function updateBlock(Request $request, Season $season, $blockId)
+    {
+        $block = $season->blocks()->findOrFail($blockId);
+
+        $validated = $request->validate([
+            'is_enabled' => 'required|boolean',
+            'content'    => 'nullable|array',
+        ]);
+
+        $block->update($validated);
+
+        return redirect()->back()->with('success', 'تم تحديث جزء العقد بنجاح.');
     }
 
     public function destroy(Season $season)

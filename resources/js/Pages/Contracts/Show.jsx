@@ -76,9 +76,421 @@ export default function Show({
     storageItems = [],
     allTerms = [],
     translations,
+    tableColumns = [],
 }) {
     const { lang } = useLang();
     const [activeTab, setActiveTab] = useState("view");
+
+    const isBlockEnabled = (key) => {
+        if (!contract.blocks || contract.blocks.length === 0) return true;
+        const block = contract.blocks.find((b) => b.key === key);
+        return block ? block.is_enabled : true;
+    };
+
+    const getBlockText = (key) => {
+        const block = contract.blocks?.find((b) => b.key === key);
+        return block?.content?.text;
+    };
+
+    const replaceVariables = (text) => {
+        if (!text) return "";
+        let result = text;
+        const vars = {
+            '{$company_name}': settings?.company_name || "",
+            '{$company_slogan}': settings?.company_slogan || "",
+            '{$company_cr}': settings?.company_cr || "",
+            '{$company_vat}': settings?.company_vat || "",
+            '{$company_license}': settings?.company_license || "",
+            '{$company_phone}': settings?.company_phone || "",
+            '{$company_email}': settings?.company_email || "",
+            '{$company_address}': settings?.company_address || "",
+            '{$company_gm}': settings?.company_gm || "",
+            '{$company_dgm}': settings?.company_dgm || "",
+            '{$customer_name}': contract?.customer?.name || "",
+            '{$customer_phone}': contract?.customer?.phone_number || "",
+            '{$customer_cr}': contract?.customer?.cr_number || "",
+            '{$customer_id}': contract?.customer?.id_number || "",
+            '{$contract_number}': contract?.contract_number || "",
+            '{$start_date}': contract?.start_date || "",
+            '{$end_date}': contract?.end_date || "",
+            '{$mandatory_period}': contract?.mandatory_period || "",
+            '{$renew_period}': contract?.renewal_period || "",
+            '{$write_date}': contract?.write_date || "",
+            '{$write_date_hijri}': contract?.write_date_hijri || "",
+            '{$start_date_hijri}': contract?.start_date_hijri || "",
+            '{$terms_count}': contract?.terms?.length || 0,
+        };
+        Object.entries(vars).forEach(([key, val]) => {
+            result = result.replaceAll(key, val);
+        });
+        return result;
+    };
+
+    const renderUnifiedLayout = (isPrint = false) => {
+        const headerDesign = settings?.header_design_id || "1";
+        const footerDesign = settings?.footer_design_id || "1";
+        const templateText = settings?.unified_contract_template || "";
+
+        const showContractSerial = settings?.show_contract_serial === "1" || settings?.show_contract_serial === true;
+        const showCustomerSerial = settings?.show_customer_serial === "1" || settings?.show_customer_serial === true;
+        const showCertificateNumber = settings?.show_certificate_number === "1" || settings?.show_certificate_number === true;
+        const showQualityData = settings?.show_quality_data === "1" || settings?.show_quality_data === true;
+
+        const logoSrc = settings?.company_logo
+            ? (settings.company_logo.startsWith("http") || settings.company_logo.startsWith("/")
+                ? settings.company_logo
+                : "/storage/" + settings.company_logo)
+            : null;
+
+        const showItem = settings?.table_show_item === '1' || settings?.table_show_item === true || settings?.table_show_item === undefined;
+        const showQty = settings?.table_show_qty === '1' || settings?.table_show_qty === true || settings?.table_show_qty === undefined;
+        const showRent = settings?.table_show_rent === '1' || settings?.table_show_rent === true || settings?.table_show_rent === undefined;
+        const showDiscount = settings?.table_show_discount === '1' || settings?.table_show_discount === true || settings?.table_show_discount === undefined;
+        const showTotal = settings?.table_show_total === '1' || settings?.table_show_total === true || settings?.table_show_total === undefined;
+
+        const getColTitle = (code, fallbackAr, fallbackEn) => {
+            const col = (tableColumns || []).find(c => c.code === code);
+            if (col) return lang === 'ar' ? col.label_ar : col.label_en;
+            return lang === 'ar' ? fallbackAr : fallbackEn;
+        };
+
+        const activeColsCount = [showItem, showQty, showRent, showDiscount].filter(Boolean).length;
+
+        // Table Html
+        const tableHtml = (
+            <div className="my-6 space-y-2 text-start">
+                <h3 className="font-bold text-xs text-black uppercase tracking-wider mb-2">
+                    {t("show.storage_table")}
+                </h3>
+                <table className="w-full text-xs text-start border-collapse border border-black">
+                    <thead className="bg-gray-100 text-black uppercase font-bold">
+                        <tr>
+                            {showItem && (
+                                <th className="border border-black px-3 py-2 text-start">
+                                    {getColTitle('item_name', 'الصنف والمستودع', 'Item & Warehouse')}
+                                </th>
+                            )}
+                            {showQty && (
+                                <th className="border border-black px-3 py-2 text-center w-16">
+                                    {getColTitle('qty', 'الكمية', 'Qty')}
+                                </th>
+                            )}
+                            {showRent && (
+                                <th className="border border-black px-3 py-2 text-center w-28">
+                                    {getColTitle('rent', 'الإيجار الشهري', 'Monthly Rent')}
+                                </th>
+                            )}
+                            {showDiscount && (
+                                <th className="border border-black px-3 py-2 text-center w-24">
+                                    {getColTitle('discount', 'الخصم', 'Discount')}
+                                </th>
+                            )}
+                            {showTotal && (
+                                <th className="border border-black px-3 py-2 text-end w-32">
+                                    {getColTitle('total', 'الإجمالي شامل الضريبة', 'Total with VAT')}
+                                </th>
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-300">
+                        {contract.items?.map((item) => (
+                            <tr key={item.id}>
+                                {showItem && (
+                                    <td className="border border-black px-3 py-2 font-bold text-start">
+                                        {lang === "ar"
+                                            ? item.storage_item?.name_ar
+                                            : item.storage_item?.name_en || item.storage_item?.name_ar}
+                                    </td>
+                                )}
+                                {showQty && (
+                                    <td className="border border-black px-3 py-2 text-center font-mono">
+                                        {item.unit_count}
+                                    </td>
+                                )}
+                                {showRent && (
+                                    <td className="border border-black px-3 py-2 text-center font-mono" dir="ltr">
+                                        {item.monthly_rent}
+                                    </td>
+                                )}
+                                {showDiscount && (
+                                    <td className="border border-black px-3 py-2 text-center font-mono text-red-700" dir="ltr">
+                                        {item.discount > 0 ? `-${item.discount}` : "0"}
+                                    </td>
+                                )}
+                                {showTotal && (
+                                    <td className="border border-black px-3 py-2 text-end font-mono font-bold" dir="ltr">
+                                        {item.subtotal}
+                                    </td>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                    <tfoot className="bg-gray-100 font-bold border-t-2 border-black">
+                        <tr>
+                            <td colSpan={activeColsCount} className="border border-black px-3 py-2 text-end uppercase">
+                                {t("show.grand_total")}
+                            </td>
+                            {showTotal && (
+                                <td className="border border-black px-3 py-2 text-end font-mono text-sm" dir="ltr">
+                                    {contract.items?.reduce((sum, item) => sum + parseFloat(item.subtotal), 0).toFixed(2)}
+                                </td>
+                            )}
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        );
+
+        // Body text replacement
+        const evaluatedText = replaceVariables(templateText);
+
+        let parsedContent;
+        if (evaluatedText.includes("[ITEMS_TABLE]")) {
+            const parts = evaluatedText.split("[ITEMS_TABLE]");
+            parsedContent = (
+                <div className="text-start whitespace-pre-line leading-relaxed text-black">
+                    <div dangerouslySetInnerHTML={{ __html: parts[0] }} />
+                    {tableHtml}
+                    <div dangerouslySetInnerHTML={{ __html: parts[1] }} />
+                </div>
+            );
+        } else {
+            parsedContent = (
+                <div className="space-y-4">
+                    <div className="text-start whitespace-pre-line leading-relaxed text-black" dangerouslySetInnerHTML={{ __html: evaluatedText }} />
+                    {tableHtml}
+                </div>
+            );
+        }
+
+        return (
+            <div className={`w-full bg-white text-black font-sans text-start ${isPrint ? "" : "p-8 border border-zinc-200 shadow-sm max-w-4xl mx-auto rounded-xl"}`}>
+                {/* ──────── RENDER HEADER DESIGN (1-5) ──────── */}
+                {headerDesign === "1" && (
+                    <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-6">
+                        <div className="space-y-1 text-start text-xs text-zinc-700">
+                            <h2 className="text-base font-extrabold text-black">{settings?.company_name}</h2>
+                            <p className="text-[10px] font-bold">{settings?.company_slogan}</p>
+                            <p>{t("show.cr_short")} {settings?.company_cr}</p>
+                            <p>{t("show.vat_short")} {settings?.company_vat}</p>
+                            <p>{t("show.license")} {settings?.company_license}</p>
+                        </div>
+                        <div className="flex flex-col items-center justify-center pt-2">
+                           <div className="border border-black px-4 py-1.5 rounded font-extrabold text-sm uppercase bg-zinc-50 text-black">
+                               {contract.contract_title || t("show.contract_title")}
+                           </div>
+                           {showContractSerial && <div className="mt-1 text-xs font-mono font-bold text-black">{t("show.contract_no")} {contract.contract_number}</div>}
+                           {showCustomerSerial && <div className="text-xs font-mono text-zinc-700">{t("show.cr_id")} {contract.customer?.cr_number || contract.customer?.id_number || "—"}</div>}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                            {logoSrc ? (
+                                <img src={logoSrc} alt="Logo" className="h-12 w-auto object-contain" />
+                            ) : (
+                                <div className="h-12 w-12 border border-zinc-300 rounded bg-zinc-50 flex items-center justify-center text-[10px] font-bold">شعار</div>
+                            )}
+                            {showQualityData && settings?.quality_issue_no && (
+                                <div className="text-[10px] font-mono text-zinc-500 border border-zinc-200 p-1">
+                                    Rev: {settings.quality_issue_no}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {headerDesign === "2" && (
+                    <div className="flex flex-col items-center border-b border-black pb-4 mb-6 text-center">
+                        {logoSrc ? (
+                            <img src={logoSrc} alt="Logo" className="h-12 w-auto object-contain mb-2" />
+                        ) : (
+                            <div className="h-12 w-12 border border-zinc-300 rounded bg-zinc-50 flex items-center justify-center text-[10px] font-bold mb-2">شعار</div>
+                        )}
+                        <h2 className="text-base font-extrabold text-black">{settings?.company_name}</h2>
+                        <p className="text-xs text-zinc-600 font-bold mb-2">{settings?.company_slogan}</p>
+                        <div className="flex gap-4 text-xs font-mono text-zinc-700 bg-zinc-50 border border-zinc-200 px-4 py-1.5 rounded">
+                            <span>{t("show.cr_short")} {settings?.company_cr}</span>
+                            <span>•</span>
+                            <span>{t("show.vat_short")} {settings?.company_vat}</span>
+                            <span>•</span>
+                            <span>{t("show.license")} {settings?.company_license}</span>
+                        </div>
+                        <div className="border-t border-zinc-200 mt-3 pt-3 w-full flex justify-between text-xs font-mono">
+                            {showContractSerial && <span>{t("show.contract_no")} {contract.contract_number}</span>}
+                            <span className="font-extrabold text-black">{contract.contract_title || t("show.contract_title")}</span>
+                            {showCustomerSerial && <span>{t("show.cr_id")} {contract.customer?.cr_number || contract.customer?.id_number || "—"}</span>}
+                        </div>
+                    </div>
+                )}
+
+                {headerDesign === "3" && (
+                    <div className="border-b-2 border-black pb-3 mb-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-base font-extrabold text-black">{settings?.company_name}</h2>
+                            {logoSrc ? (
+                                <img src={logoSrc} alt="Logo" className="h-10 w-auto object-contain" />
+                            ) : (
+                                <div className="h-10 w-10 border border-zinc-300 rounded bg-zinc-50 flex items-center justify-center text-[10px]">شعار</div>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-zinc-600 mt-1 font-mono">
+                            <span>{t("show.cr_short")} {settings?.company_cr}</span>|
+                            <span>{t("show.vat_short")} {settings?.company_vat}</span>|
+                            <span>{t("show.license")} {settings?.company_license}</span>|
+                            <span>{lang === "ar" ? "العنوان:" : "Address:"} {settings?.company_address}</span>
+                        </div>
+                        <div className="flex justify-between items-center mt-3 border-t border-zinc-200 pt-3 text-xs font-mono">
+                            <span className="font-bold text-sm">{contract.contract_title || t("show.contract_title")}</span>
+                            <div className="flex gap-3">
+                                {showContractSerial && <span>{t("show.contract_no")} {contract.contract_number}</span>}
+                                {showCustomerSerial && <span>{t("show.cr_id")} {contract.customer?.cr_number || contract.customer?.id_number || "—"}</span>}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {headerDesign === "4" && (
+                    <div className="border border-zinc-200 rounded-lg overflow-hidden mb-6 shadow-sm">
+                        <div className="bg-primary/10 text-primary px-4 py-2.5 flex justify-between items-center">
+                            <h2 className="text-sm font-extrabold">{settings?.company_name}</h2>
+                            <span className="text-[10px] font-bold">{settings?.company_slogan}</span>
+                        </div>
+                        <div className="p-4 flex justify-between items-center bg-white text-xs font-mono">
+                            <div className="space-y-1">
+                                <p>{t("show.cr_short")} {settings?.company_cr}</p>
+                                <p>{t("show.vat_short")} {settings?.company_vat}</p>
+                            </div>
+                            <div className="text-center">
+                                <span className="font-extrabold text-black block text-sm">{contract.contract_title || t("show.contract_title")}</span>
+                                {showContractSerial && <span className="text-[10px] text-zinc-500">{contract.contract_number}</span>}
+                            </div>
+                            {logoSrc ? (
+                                <img src={logoSrc} alt="Logo" className="h-10 w-auto object-contain" />
+                            ) : (
+                                <div className="h-10 w-10 border border-zinc-300 rounded bg-zinc-50 flex items-center justify-center text-[10px]">شعار</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {headerDesign === "5" && (
+                    <div className="grid grid-cols-3 gap-3 border-b-2 border-black pb-4 mb-6 items-stretch text-xs font-mono">
+                        <div className="border border-zinc-300 p-3 rounded bg-zinc-50/50 space-y-1">
+                            <p className="font-bold border-b border-zinc-200 pb-1 mb-1.5">{lang === "ar" ? "نظام الجودة" : "Quality System"}</p>
+                            <p>{t("show.issue_no")} {settings?.quality_issue_no || "REV-01"}</p>
+                            <p>{t("show.issue_date_label")} {settings?.quality_issue_date || "2026-05-28"}</p>
+                        </div>
+                        <div className="flex flex-col items-center justify-center text-center">
+                            <span className="font-extrabold text-sm border-2 border-black px-4 py-1.5 rounded bg-zinc-50">{contract.contract_title || t("show.contract_title")}</span>
+                            {showContractSerial && <span className="mt-1.5 font-bold text-zinc-700">{contract.contract_number}</span>}
+                        </div>
+                        <div className="border border-zinc-300 p-3 rounded bg-zinc-50/50 flex flex-col justify-between items-end text-end">
+                            {logoSrc ? (
+                                <img src={logoSrc} alt="Logo" className="h-8 w-auto object-contain" />
+                            ) : (
+                                <div className="h-8 w-8 border border-zinc-300 rounded bg-zinc-50 flex items-center justify-center text-[10px]">شعار</div>
+                            )}
+                            <div className="mt-2">
+                                <p className="font-bold text-xs text-black">{settings?.company_name}</p>
+                                <p>{t("show.cr_short")} {settings?.company_cr}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ──────── RENDER BODY CONTENT ──────── */}
+                <div className="text-xs text-black leading-relaxed space-y-4">
+                    {parsedContent}
+                </div>
+
+                {/* ──────── RENDER SIGNATURE BOXES ──────── */}
+                <div className="border-t-2 border-black pt-6 mt-8 grid grid-cols-2 gap-12 text-xs text-black">
+                    <div className="space-y-4 text-start">
+                        <p className="font-bold border-b border-zinc-300 pb-1.5 text-sm">{lang === "ar" ? "الطرف الأول" : "First Party"}</p>
+                        <p><span className="font-semibold">{t("show.company")}</span> {settings?.company_name}</p>
+                        <p><span className="font-semibold">{t("show.name")}</span> {settings?.company_gm || t("show.general_manager")}</p>
+                        <p className="pt-4"><span className="font-semibold">{t("show.signature")}</span> ___________________________</p>
+                        <p className="text-[10px] text-zinc-500 font-bold">{t("show.official_stamp")}</p>
+                    </div>
+                    <div className="space-y-4 text-start">
+                        <p className="font-bold border-b border-zinc-300 pb-1.5 text-sm">{lang === "ar" ? "الطرف الثاني" : "Second Party"}</p>
+                        <p><span className="font-semibold">{t("show.customer_label")}</span> {contract.customer?.name}</p>
+                        <p><span className="font-semibold">{t("show.name")}</span> {contract.contract_agents?.[0]?.name || contract.customer?.name}</p>
+                        <p className="pt-4"><span className="font-semibold">{t("show.signature")}</span> ___________________________</p>
+                        
+                        {(settings?.include_second_party_proxy === "1" || settings?.include_second_party_proxy === true) && contract.contract_agents?.[1] && (
+                            <div className="pt-4 mt-4 border-t border-dashed border-zinc-200 space-y-2">
+                                <p className="font-bold text-zinc-800">{lang === "ar" ? "ينوب عنه في التوقيع:" : "Proxy Signatory:"}</p>
+                                <p><span className="font-semibold">{t("show.name")}</span> {contract.contract_agents[1].name}</p>
+                                {contract.contract_agents[1].job_title && (
+                                    <p><span className="font-semibold">{lang === "ar" ? "الصفة:" : "Job Title:"}</span> {contract.contract_agents[1].job_title}</p>
+                                )}
+                                <p className="pt-2"><span className="font-semibold">{t("show.signature")}</span> ___________________________</p>
+                            </div>
+                        )}
+                        
+                        <p className="pt-2"><span className="font-semibold">{t("show.date_label")}</span> ____ / ____ / ________</p>
+                    </div>
+                </div>
+
+                {/* ──────── RENDER FOOTER DESIGN (1-5) ──────── */}
+                <div className="mt-12 border-t border-zinc-200 pt-4 text-xs text-zinc-500">
+                    {footerDesign === "1" && (
+                        <div className="flex flex-col items-center gap-1 text-center">
+                            <p className="font-semibold text-zinc-700">{settings?.company_name}</p>
+                            <p>{settings?.company_address} | {t("show.phone")} {settings?.company_phone} | {t("show.email")} {settings?.company_email}</p>
+                        </div>
+                    )}
+
+                    {footerDesign === "2" && (
+                        <div className="grid grid-cols-3 gap-6 text-start">
+                            <div className="space-y-1">
+                                <p className="font-bold text-zinc-700">{lang === "ar" ? "عناوين التواصل" : "Contact details"}</p>
+                                <p>{t("show.phone")} {settings?.company_phone}</p>
+                                <p>{t("show.email")} {settings?.company_email}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="font-bold text-zinc-700">{lang === "ar" ? "الموقع الجغرافي" : "Est. Location"}</p>
+                                <p>{settings?.company_address}</p>
+                            </div>
+                            <div className="space-y-1 text-end flex flex-col justify-between items-end">
+                                <p className="font-bold text-zinc-700">{lang === "ar" ? "نظام المستودعات الذكي" : "Smart WMS System"}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {footerDesign === "3" && (
+                        <div className="flex justify-between items-center text-[10px] font-mono border-t border-zinc-200 pt-2">
+                            <span>{settings?.company_name} - {settings?.company_slogan}</span>
+                            <span>{t("show.email")} {settings?.company_email} • {t("show.phone")} {settings?.company_phone}</span>
+                        </div>
+                    )}
+
+                    {footerDesign === "4" && (
+                        <div className="space-y-2 text-start">
+                            <p className="px-1 text-[10px]">{settings?.company_address}</p>
+                            <div className="bg-primary/10 text-primary p-2 px-4 rounded flex justify-between items-center text-[10px] font-bold">
+                                <span>{t("show.phone")} {settings?.company_phone}</span>
+                                <span>{t("show.email")} {settings?.company_email}</span>
+                                <span>{settings?.company_name}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {footerDesign === "5" && (
+                        <div className="flex justify-between items-end text-start">
+                            <div className="space-y-1 text-[10px]">
+                                <p className="font-bold text-zinc-800">{settings?.company_name}</p>
+                                <p>{t("show.phone")} {settings?.company_phone} | {t("show.email")} {settings?.company_email}</p>
+                                <p>{settings?.company_address}</p>
+                            </div>
+                            <div className="h-12 w-12 border border-dashed border-zinc-300 rounded bg-white flex items-center justify-center text-[8px] text-zinc-400 uppercase font-mono shadow-inner">
+                                Stamp space
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
     const t = (key) => {
         const parts = key.split(".");
@@ -842,163 +1254,7 @@ export default function Show({
                                 </SectionCard>
                             </div>
 
-                            {/* Intro & Preamble */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <SectionCard
-                                    title={t("show.introduction_section")}
-                                    icon={FileText}
-                                >
-                                    <form
-                                        onSubmit={(e) => {
-                                            e.preventDefault();
-                                            saveSection("introduction");
-                                        }}
-                                        className="flex flex-col flex-1"
-                                    >
-                                        <div className="flex-1 flex flex-col">
-                                            <textarea
-                                                className="w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-xs min-h-[80px] flex-1"
-                                                value={data.introduction}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "introduction",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.introduction}
-                                                className="mt-1"
-                                            />
-                                        </div>
-                                        <div className="flex justify-end pt-1 border-t border-border mt-2">
-                                            <PrimaryButton
-                                                disabled={formProcessing}
-                                                className="text-xs py-1 px-3"
-                                            >
-                                                {t("show.save_introduction")}
-                                            </PrimaryButton>
-                                        </div>
-                                    </form>
-                                </SectionCard>
-                                <SectionCard
-                                    title={t("show.preamble_section")}
-                                    icon={FileText}
-                                >
-                                    <form
-                                        onSubmit={(e) => {
-                                            e.preventDefault();
-                                            saveSection("preamble");
-                                        }}
-                                        className="flex flex-col flex-1"
-                                    >
-                                        <div className="flex-1 flex flex-col">
-                                            <textarea
-                                                className="w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-xs min-h-[80px] flex-1"
-                                                value={data.preamble}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "preamble",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.preamble}
-                                                className="mt-1"
-                                            />
-                                        </div>
-                                        <div className="flex justify-end pt-1 border-t border-border mt-2">
-                                            <PrimaryButton
-                                                disabled={formProcessing}
-                                                className="text-xs py-1 px-3"
-                                            >
-                                                {t("show.save_preamble")}
-                                            </PrimaryButton>
-                                        </div>
-                                    </form>
-                                </SectionCard>
-                            </div>
 
-                            {/* Title & Footer */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <SectionCard
-                                    title={lang === "ar" ? "عنوان العقد" : "Contract Title"}
-                                    icon={FileText}
-                                >
-                                    <form
-                                        onSubmit={(e) => {
-                                            e.preventDefault();
-                                            saveSection("contract_title");
-                                        }}
-                                        className="flex flex-col flex-1"
-                                    >
-                                        <div className="flex-1 flex flex-col">
-                                            <TextInput
-                                                type="text"
-                                                className="w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-xs flex-1"
-                                                value={data.contract_title}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "contract_title",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.contract_title}
-                                                className="mt-1"
-                                            />
-                                        </div>
-                                        <div className="flex justify-end pt-1 border-t border-border mt-2">
-                                            <PrimaryButton
-                                                disabled={formProcessing}
-                                                className="text-xs py-1 px-3"
-                                            >
-                                                {lang === "ar" ? "حفظ العنوان" : "Save Title"}
-                                            </PrimaryButton>
-                                        </div>
-                                    </form>
-                                </SectionCard>
-
-                                <SectionCard
-                                    title={lang === "ar" ? "تذييل العقد" : "Contract Footer"}
-                                    icon={FileText}
-                                >
-                                    <form
-                                        onSubmit={(e) => {
-                                            e.preventDefault();
-                                            saveSection("footer");
-                                        }}
-                                        className="flex flex-col flex-1"
-                                    >
-                                        <div className="flex-1 flex flex-col">
-                                            <textarea
-                                                className="w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-xs min-h-[80px] flex-1"
-                                                value={data.footer}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "footer",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.footer}
-                                                className="mt-1"
-                                            />
-                                        </div>
-                                        <div className="flex justify-end pt-1 border-t border-border mt-2">
-                                            <PrimaryButton
-                                                disabled={formProcessing}
-                                                className="text-xs py-1 px-3"
-                                            >
-                                                {lang === "ar" ? "حفظ التذييل" : "Save Footer"}
-                                            </PrimaryButton>
-                                        </div>
-                                    </form>
-                                </SectionCard>
-                            </div>
 
                             {/* Storage Allocation Items */}
                             <SectionCard
@@ -1433,263 +1689,18 @@ export default function Show({
                                     </div>
                                 </form>
                             </SectionCard>
+
+                            {/* Unified Preview for Drafts */}
+                            <div className="mt-6 border-t border-border pt-6 text-start">
+                                <h3 className="text-sm font-bold text-text mb-4">
+                                    {lang === "ar" ? "معاينة العقد الموحد النشطة" : "Active Unified Contract Preview"}
+                                </h3>
+                                {renderUnifiedLayout(false)}
+                            </div>
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            {/* Timing & Stakeholders Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <SectionCard
-                                    title={t("show.timing")}
-                                    icon={Calendar}
-                                >
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <Field
-                                            label={t("show.write_date")}
-                                            value={`${contract.write_date} ${contract.write_date_hijri ? `/ ${contract.write_date_hijri}` : ""}`}
-                                            dir="ltr"
-                                        />
-                                        <Field
-                                            label={t("show.start_date")}
-                                            value={`${contract.start_date} ${contract.start_date_hijri ? `/ ${contract.start_date_hijri}` : ""}`}
-                                            dir="ltr"
-                                        />
-                                        <Field
-                                            label={t("show.end_date")}
-                                            value={contract.end_date}
-                                            dir="ltr"
-                                        />
-                                        <Field
-                                            label={t("show.mandatory_period")}
-                                            value={`${contract.mandatory_period} ${t("show.months")}`}
-                                        />
-                                        <Field
-                                            label={t("show.renewal_period")}
-                                            value={`${contract.renewal_period} ${t("show.months")}`}
-                                        />
-                                    </div>
-                                </SectionCard>
-
-                                <SectionCard
-                                    title={t("show.stakeholders")}
-                                    icon={Users}
-                                >
-                                    <div className="space-y-4">
-                                        <div className="flex items-start gap-3">
-                                            <Building2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                                            <div>
-                                                <p className="text-xs font-bold text-text mb-1">
-                                                    {t("show.institution")} -{" "}
-                                                    {settings?.company_name ||
-                                                        "Warehouse OS"}
-                                                </p>
-                                                <p
-                                                    className="text-xs text-text-muted font-mono"
-                                                    dir="ltr"
-                                                >
-                                                    CR:{" "}
-                                                    {settings?.company_cr ||
-                                                        "1010101010"}{" "}
-                                                    | VAT:{" "}
-                                                    {settings?.company_vat ||
-                                                        "300000000000003"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-start gap-3">
-                                            <User className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                                            <div>
-                                                <p className="text-xs font-bold text-text mb-1">
-                                                    {t("show.customer")} -{" "}
-                                                    {contract.customer?.name}
-                                                </p>
-                                                <p
-                                                    className="text-xs text-text-muted font-mono"
-                                                    dir="ltr"
-                                                >
-                                                    {
-                                                        contract.customer
-                                                            ?.phone_number
-                                                    }{" "}
-                                                    | CR/ID:{" "}
-                                                    {contract.customer
-                                                        ?.cr_number ||
-                                                        contract.customer
-                                                            ?.id_number}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </SectionCard>
-                            </div>
-
-                            {/* Intro & Preamble */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <SectionCard
-                                    title={t("show.introduction_section")}
-                                    icon={FileText}
-                                >
-                                    <p className="text-xs text-text leading-relaxed whitespace-pre-line">
-                                        {contract.introduction ||
-                                            t("show.no_introduction")}
-                                    </p>
-                                </SectionCard>
-                                <SectionCard
-                                    title={t("show.preamble_section")}
-                                    icon={FileText}
-                                >
-                                    <p className="text-xs text-text-relaxed whitespace-pre-line">
-                                        {contract.preamble ||
-                                            t("show.no_preamble")}
-                                    </p>
-                                </SectionCard>
-                            </div>
-
-                            {/* Title & Footer */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <SectionCard
-                                    title={lang === "ar" ? "عنوان العقد" : "Contract Title"}
-                                    icon={FileText}
-                                >
-                                    <p className="text-xs text-text leading-relaxed whitespace-pre-line font-bold">
-                                        {contract.contract_title || "—"}
-                                    </p>
-                                </SectionCard>
-                                <SectionCard
-                                    title={lang === "ar" ? "تذييل العقد" : "Contract Footer"}
-                                    icon={FileText}
-                                >
-                                    <p className="text-xs text-text leading-relaxed whitespace-pre-line">
-                                        {contract.footer || "—"}
-                                    </p>
-                                </SectionCard>
-                            </div>
-
-                            {/* Storage Allocation Items */}
-                            <SectionCard
-                                title={t("show.storage_allocation")}
-                                icon={Box}
-                            >
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-start">
-                                        <thead className="bg-surface-muted text-text-muted text-[11px] uppercase tracking-wider">
-                                            <tr>
-                                                <th className="px-4 py-3">
-                                                    {t("show.item")}
-                                                </th>
-                                                <th className="px-4 py-3 text-center w-24">
-                                                    {t("show.qty")}
-                                                </th>
-                                                <th className="px-4 py-3 w-36">
-                                                    {t("show.monthly_rent")}
-                                                </th>
-                                                <th className="px-4 py-3 w-28">
-                                                    {t("show.discount")}
-                                                </th>
-                                                <th className="px-4 py-3 text-end">
-                                                    {t("show.total_with_vat")}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border">
-                                            {contract.items?.map((item) => (
-                                                <tr
-                                                    key={item.id}
-                                                    className="hover:bg-surface-muted/30 transition-colors"
-                                                >
-                                                    <td className="px-4 py-3 font-bold">
-                                                        {lang === "ar"
-                                                            ? item.storage_item
-                                                                  ?.name_ar
-                                                            : item.storage_item
-                                                                  ?.name_en ||
-                                                              item.storage_item
-                                                                  ?.name_ar}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center font-mono font-semibold">
-                                                        {item.unit_count}
-                                                    </td>
-                                                    <td
-                                                        className="px-4 py-3 font-mono"
-                                                        dir="ltr"
-                                                    >
-                                                        {item.monthly_rent}
-                                                    </td>
-                                                    <td
-                                                        className="px-4 py-3 font-mono text-danger"
-                                                        dir="ltr"
-                                                    >
-                                                        {item.discount > 0
-                                                            ? `-${item.discount}`
-                                                            : "0"}
-                                                    </td>
-                                                    <td
-                                                        className="px-4 py-3 text-sm font-mono font-extrabold text-emerald-600 text-end"
-                                                        dir="ltr"
-                                                    >
-                                                        {item.subtotal}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot className="bg-surface-muted/50 border-t border-border">
-                                            <tr>
-                                                <td
-                                                    colSpan="4"
-                                                    className="px-4 py-4 text-end text-xs font-extrabold text-text uppercase tracking-wider"
-                                                >
-                                                    {t("show.grand_total")}
-                                                </td>
-                                                <td
-                                                    className="px-4 py-4 text-base font-mono font-extrabold text-emerald-600 text-end"
-                                                    dir="ltr"
-                                                >
-                                                    {contract.items
-                                                        ?.reduce(
-                                                            (sum, item) =>
-                                                                sum +
-                                                                parseFloat(
-                                                                    item.subtotal,
-                                                                ),
-                                                            0,
-                                                        )
-                                                        .toFixed(2)}
-                                                </td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </SectionCard>
-
-                            {/* Terms */}
-                            <SectionCard
-                                title={t("show.terms_conditions")}
-                                icon={FileText}
-                            >
-                                {contract.terms?.length === 0 ? (
-                                    <p className="text-xs text-text-muted text-center py-6">
-                                        {t("show.no_custom_terms")}
-                                    </p>
-                                ) : (
-                                    <ul className="space-y-3">
-                                        {contract.terms?.map((term) => (
-                                            <li
-                                                key={term.id}
-                                                className="flex items-start gap-3 text-xs text-text leading-relaxed p-3 rounded-lg bg-surface-muted/30 border border-border"
-                                            >
-                                                <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                                <span>
-                                                    {lang === "ar"
-                                                        ? term.text_ar
-                                                        : term.text_en ||
-                                                          term.text_ar}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </SectionCard>
-
-                            {/* Print Action Bar */}
+                            {renderUnifiedLayout(false)}
                             <div className="flex justify-end print:hidden">
                                 <PrimaryButton
                                     type="button"
@@ -2692,339 +2703,7 @@ export default function Show({
                 className="hidden print:block print:w-full print:bg-white print:text-black print:p-8 font-sans"
                 dir={lang === "ar" ? "rtl" : "ltr"}
             >
-                {/* Header */}
-                <div className="flex items-start justify-between border-b-2 border-black pb-6 mb-6">
-                    {/* Right: Company Info */}
-                    <div className="space-y-1 max-w-xs">
-                        <h2 className="text-lg font-extrabold text-black">
-                            {settings?.company_name ||
-                                "����� ���� ��� ���� �������"}
-                        </h2>
-                        <p className="text-xs text-gray-700 font-bold">
-                            {settings?.company_slogan ||
-                                "����� - ����� - ����� - ����� - �����"}
-                        </p>
-                        <div className="text-[11px] text-gray-600 space-y-0.5 pt-1 font-mono">
-                            <p>
-                                {t("show.cr_short")}{" "}
-                                {settings?.company_cr || "1010101010"}
-                            </p>
-                            <p>
-                                {t("show.vat_short")}{" "}
-                                {settings?.company_vat || "300000000000003"}
-                            </p>
-                            {settings?.company_license && (
-                                <p>
-                                    {t("show.license")}{" "}
-                                    {settings?.company_license}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Center: Title & Serial */}
-                    <div className="flex flex-col items-center justify-center pt-2">
-                        <div className="border-2 border-black px-6 py-2 rounded font-extrabold text-lg tracking-wide uppercase bg-gray-50">
-                            {t("show.contract_title")}
-                        </div>
-                        <div className="mt-2 text-xs font-mono font-bold text-gray-800">
-                            {t("show.contract_no")} {contract.contract_number}
-                        </div>
-                        <div className="text-[11px] font-mono text-gray-600">
-                            {t("show.date_label")} {contract.write_date}{" "}
-                            {contract.write_date_hijri
-                                ? `(${contract.write_date_hijri})`
-                                : ""}
-                        </div>
-                    </div>
-
-                    {/* Left: Logo & Quality System */}
-                    <div className="flex flex-col items-end space-y-3">
-                        {settings?.company_logo ? (
-                            <img
-                                src={"/storage/" + settings.company_logo}
-                                alt="Company Logo"
-                                className="h-16 w-auto object-contain"
-                            />
-                        ) : (
-                            <div className="flex h-16 w-16 items-center justify-center border border-gray-300 rounded bg-gray-50 text-gray-400">
-                                <Building2 className="h-8 w-8" />
-                            </div>
-                        )}
-
-                        {/* Quality System Box (Conditional) */}
-                        {(settings?.quality_system === "1" ||
-                            settings?.quality_system === true) && (
-                            <div className="border border-black p-2 rounded text-[10px] font-mono text-right bg-gray-50">
-                                <p className="font-bold text-black border-b border-gray-200 pb-0.5 mb-0.5">
-                                    {t("show.qms_data")}
-                                </p>
-                                <p>
-                                    {t("show.issue_no")}{" "}
-                                    {settings?.issue_no || "REV-01"}
-                                </p>
-                                <p>
-                                    {t("show.issue_date_label")}{" "}
-                                    {settings?.issue_date || "2026-01-01"}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Introduction & Preamble */}
-                <div className="space-y-4 mb-6 text-xs leading-relaxed text-black">
-                    {contract.introduction && (
-                        <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                            <h3 className="font-bold text-black mb-1">
-                                {t("show.introduction_label")}
-                            </h3>
-                            <p className="whitespace-pre-line">
-                                {contract.introduction}
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Parties */}
-                    <div className="border-l-4 border-r-4 border-black p-4 bg-gray-50/50 my-4 rounded">
-                        <h3 className="font-bold text-sm text-black mb-3 border-b border-gray-200 pb-1">
-                            {t("show.contract_parties")}
-                        </h3>
-                        <div className="grid grid-cols-2 gap-6 text-xs">
-                            <div className="space-y-1.5">
-                                <p className="font-extrabold text-black text-sm">
-                                    {t("show.first_party_label")}
-                                </p>
-                                <p className="font-bold">
-                                    {settings?.company_name ||
-                                        "����� ���� ��� ���� �������"}
-                                </p>
-                                <p className="text-gray-600 font-mono">
-                                    {t("show.cr_full")}{" "}
-                                    {settings?.company_cr || "1010101010"}
-                                </p>
-                                <p className="text-gray-600 font-mono">
-                                    {t("show.vat")}{" "}
-                                    {settings?.company_vat || "300000000000003"}
-                                </p>
-                                <p className="text-gray-700">
-                                    {t("show.represented_by")}{" "}
-                                    <span className="font-bold">
-                                        {settings?.company_gm ||
-                                            t("show.general_manager")}
-                                    </span>
-                                </p>
-                            </div>
-                            <div className="space-y-1.5">
-                                <p className="font-extrabold text-black text-sm">
-                                    {t("show.second_party_label")}
-                                </p>
-                                <p className="font-bold">
-                                    {contract.customer?.name}
-                                </p>
-                                <p className="text-gray-600 font-mono">
-                                    {t("show.phone")}{" "}
-                                    <span dir="ltr">
-                                        {contract.customer?.phone_number}
-                                    </span>
-                                </p>
-                                <p className="text-gray-600 font-mono">
-                                    {t("show.cr_id")}{" "}
-                                    {contract.customer?.cr_number ||
-                                        contract.customer?.id_number ||
-                                        "�"}
-                                </p>
-                                <p className="text-gray-700">
-                                    {t("show.represented_by")}{" "}
-                                    <span className="font-bold">
-                                        {contract.contract_agents?.[0]?.name ||
-                                            contract.customer?.name}
-                                    </span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {contract.preamble && (
-                        <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                            <h3 className="font-bold text-black mb-1">
-                                {t("show.preamble_label")}
-                            </h3>
-                            <p className="whitespace-pre-line">
-                                {contract.preamble}
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Storage Items Table */}
-                <div className="mb-6">
-                    <h3 className="font-bold text-xs text-black uppercase tracking-wider mb-2">
-                        {t("show.storage_table")}
-                    </h3>
-                    <table className="w-full text-xs text-start border-collapse border border-black">
-                        <thead className="bg-gray-100 text-black uppercase font-bold">
-                            <tr>
-                                <th className="border border-black px-3 py-2">
-                                    {t("show.item")}
-                                </th>
-                                <th className="border border-black px-3 py-2 text-center w-16">
-                                    {t("show.qty")}
-                                </th>
-                                <th className="border border-black px-3 py-2 text-center w-28">
-                                    {t("show.monthly_rent")}
-                                </th>
-                                <th className="border border-black px-3 py-2 text-center w-24">
-                                    {t("show.discount")}
-                                </th>
-                                <th className="border border-black px-3 py-2 text-end w-32">
-                                    {t("show.total_with_vat")}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-300">
-                            {contract.items?.map((item) => (
-                                <tr key={item.id}>
-                                    <td className="border border-black px-3 py-2 font-bold">
-                                        {lang === "ar"
-                                            ? item.storage_item?.name_ar
-                                            : item.storage_item?.name_en ||
-                                              item.storage_item?.name_ar}
-                                    </td>
-                                    <td className="border border-black px-3 py-2 text-center font-mono">
-                                        {item.unit_count}
-                                    </td>
-                                    <td
-                                        className="border border-black px-3 py-2 text-center font-mono"
-                                        dir="ltr"
-                                    >
-                                        {item.monthly_rent}
-                                    </td>
-                                    <td
-                                        className="border border-black px-3 py-2 text-center font-mono text-red-700"
-                                        dir="ltr"
-                                    >
-                                        {item.discount > 0
-                                            ? `-${item.discount}`
-                                            : "0"}
-                                    </td>
-                                    <td
-                                        className="border border-black px-3 py-2 text-end font-mono font-bold"
-                                        dir="ltr"
-                                    >
-                                        {item.subtotal}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot className="bg-gray-100 font-bold border-t-2 border-black">
-                            <tr>
-                                <td
-                                    colSpan="4"
-                                    className="border border-black px-3 py-2 text-end uppercase"
-                                >
-                                    {t("show.grand_total")}
-                                </td>
-                                <td
-                                    className="border border-black px-3 py-2 text-end font-mono text-sm"
-                                    dir="ltr"
-                                >
-                                    {contract.items
-                                        ?.reduce(
-                                            (sum, item) =>
-                                                sum + parseFloat(item.subtotal),
-                                            0,
-                                        )
-                                        .toFixed(2)}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                {/* Terms & Conditions */}
-                <div className="mb-12">
-                    <h3 className="font-bold text-xs text-black uppercase tracking-wider mb-3">
-                        {t("show.terms_conditions")}
-                    </h3>
-                    {contract.terms?.length === 0 ? (
-                        <p className="text-xs text-gray-500 italic">
-                            {t("show.no_custom_terms")}
-                        </p>
-                    ) : (
-                        <ol className="list-decimal list-inside space-y-2 text-xs text-black leading-relaxed">
-                            {contract.terms?.map((term) => (
-                                <li key={term.id} className="pl-1 pr-1">
-                                    <span className="font-medium">
-                                        {lang === "ar"
-                                            ? term.text_ar
-                                            : term.text_en || term.text_ar}
-                                    </span>
-                                </li>
-                            ))}
-                        </ol>
-                    )}
-                </div>
-
-                {/* Signatures Footer */}
-                <div className="border-t-2 border-black pt-8 mt-8 grid grid-cols-2 gap-12 text-xs text-black">
-                    <div className="space-y-4">
-                        <p className="font-extrabold text-sm border-b border-gray-300 pb-1">
-                            {t("show.first_party")}
-                        </p>
-                        <p>
-                            <span className="font-bold">
-                                {t("show.company")}
-                            </span>{" "}
-                            {settings?.company_name ||
-                                "����� ���� ��� ���� �������"}
-                        </p>
-                        <p>
-                            <span className="font-bold">{t("show.name")}</span>{" "}
-                            {settings?.company_gm || t("show.general_manager")}
-                        </p>
-                        <p className="pt-4">
-                            <span className="font-bold">
-                                {t("show.signature")}
-                            </span>{" "}
-                            ___________________________
-                        </p>
-                        <p className="pt-2">
-                            <span className="font-bold">
-                                {t("show.official_stamp")}
-                            </span>
-                        </p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <p className="font-extrabold text-sm border-b border-gray-300 pb-1">
-                            {t("show.second_party")}
-                        </p>
-                        <p>
-                            <span className="font-bold">
-                                {t("show.customer_label")}
-                            </span>{" "}
-                            {contract.customer?.name}
-                        </p>
-                        <p>
-                            <span className="font-bold">{t("show.name")}</span>{" "}
-                            {contract.contract_agents?.[0]?.name ||
-                                contract.customer?.name}
-                        </p>
-                        <p className="pt-4">
-                            <span className="font-bold">
-                                {t("show.signature")}
-                            </span>{" "}
-                            ___________________________
-                        </p>
-                        <p className="pt-2">
-                            <span className="font-bold">
-                                {t("show.date_label")}
-                            </span>{" "}
-                            ____ / ____ / ________
-                        </p>
-                    </div>
-                </div>
+                {renderUnifiedLayout(true)}
             </div>
         </AuthenticatedLayout>
     );

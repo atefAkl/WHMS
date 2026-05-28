@@ -62,6 +62,9 @@ export default function Tooltip({ text, placement = "top", children }) {
 
     const show = useCallback(() => {
         if (!triggerRef.current) return;
+        if (document.documentElement.classList.contains("show-button-text")) {
+            return;
+        }
         const rect = triggerRef.current.getBoundingClientRect();
         setCoords(calcPosition(rect));
         setVisible(true);

@@ -36,6 +36,25 @@ class ContractService
                 'season_id'        => $data['season_id'] ?? null,
             ]);
 
+            // Seed blocks for the contract from season blocks or global blocks
+            $sourceBlocks = collect();
+            if ($contract->season_id) {
+                $sourceBlocks = \App\Models\ContractBlock::where('season_id', $contract->season_id)->get();
+            }
+            if ($sourceBlocks->isEmpty()) {
+                $sourceBlocks = \App\Models\ContractBlock::whereNull('season_id')->whereNull('contract_id')->get();
+            }
+            foreach ($sourceBlocks as $block) {
+                \App\Models\ContractBlock::create([
+                    'contract_id' => $contract->id,
+                    'season_id'   => null,
+                    'key'         => $block->key,
+                    'is_enabled'  => $block->is_enabled,
+                    'content'     => $block->content,
+                    'sort_order'  => $block->sort_order,
+                ]);
+            }
+
             // items
             if (!empty($data['items'])) {
                 foreach ($data['items'] as $item) {

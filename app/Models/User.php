@@ -28,6 +28,7 @@ class User extends Authenticatable
         'job_title',
         'avatar',
         'setup_token',
+        'preferences',
     ];
 
     /**
@@ -50,6 +51,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'preferences' => 'array',
         ];
     }
 

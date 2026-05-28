@@ -85,7 +85,7 @@ class ContractController extends Controller
         $storageItems = StorageItem::where('is_active', true)->get();
         
         // 2. Get Active Season Defaults (Priority)
-        $activeSeason = Season::where('is_active', true)->first();
+        $activeSeason = Season::with(['blocks'])->where('is_active', true)->first();
         
         $nextSerial = $this->nextSerial($activeSeason ? $activeSeason->id : null);
 
@@ -93,13 +93,18 @@ class ContractController extends Controller
         $globalSettings = ContractSetting::pluck('value', 'key')->all();
         $seasonSettings = $activeSeason ? ContractSetting::where('season_id', $activeSeason->id)->pluck('value', 'key')->all() : [];
 
+        $introBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'intro') : null;
+        $preambleBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'preamble') : null;
+        $titleBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'title') : null;
+        $footerBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'footer') : null;
+
         $defaults = [
-            'introduction'     => $activeSeason->introduction ?? $globalSettings['default_introduction'] ?? '',
-            'preamble'         => $activeSeason->preamble     ?? $globalSettings['default_preamble']     ?? '',
+            'introduction'     => $introBlock ? ($introBlock->content['text'] ?? '') : ($globalSettings['default_introduction'] ?? ''),
+            'preamble'         => $preambleBlock ? ($preambleBlock->content['text'] ?? '') : ($globalSettings['default_preamble'] ?? ''),
             'mandatory_period' => $activeSeason->mandatory_period ?? $globalSettings['default_mandatory_period'] ?? 12,
             'renewal_period'   => $activeSeason->renewal_period   ?? $globalSettings['default_renewal_period']   ?? 12,
-            'contract_title'   => $seasonSettings['contract_title'] ?? $globalSettings['contract_title'] ?? '',
-            'footer'           => $seasonSettings['footer'] ?? $globalSettings['footer'] ?? '',
+            'contract_title'   => $titleBlock ? ($titleBlock->content['text'] ?? '') : ($seasonSettings['contract_title'] ?? $globalSettings['contract_title'] ?? ''),
+            'footer'           => $footerBlock ? ($footerBlock->content['text'] ?? '') : ($seasonSettings['footer'] ?? $globalSettings['footer'] ?? ''),
             'season_id'        => $activeSeason ? $activeSeason->id : null,
         ];
 
@@ -133,7 +138,8 @@ class ContractController extends Controller
             'payments',
             'periods',
             'contractAgents.contact',
-            'invoices'
+            'invoices',
+            'blocks'
         ])->findOrFail($id);
 
         // Auto-create first period for legacy contracts
@@ -170,8 +176,18 @@ class ContractController extends Controller
         $storageItems = StorageItem::where('is_active', true)->get();
         $allTerms = Term::orderBy('sort_order')->get();
 
+        $centralConnection = config('tenancy.database.central_connection');
+        $centralTableColumns = \DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_table_columns')->value('value');
+        $tableColumns = $centralTableColumns ? json_decode($centralTableColumns, true) : [
+            ["code" => "item_name", "label_ar" => "الصنف والمستودع", "label_en" => "Item & Warehouse", "default_visible" => true],
+            ["code" => "qty", "label_ar" => "الكمية", "label_en" => "Qty", "default_visible" => true],
+            ["code" => "rent", "label_ar" => "الإيجار الشهري", "label_en" => "Monthly Rent", "default_visible" => true],
+            ["code" => "discount", "label_ar" => "الخصم", "label_en" => "Discount", "default_visible" => true],
+            ["code" => "total", "label_ar" => "الإجمالي شامل الضريبة", "label_en" => "Total with VAT", "default_visible" => true]
+        ];
+
         return Inertia::render('Contracts/Show', [
-            ...compact('contract', 'settings', 'storageItems', 'allTerms'),
+            ...compact('contract', 'settings', 'storageItems', 'allTerms', 'tableColumns'),
             'translations' => __('contracts'),
         ]);
     }
@@ -407,6 +423,18 @@ class ContractController extends Controller
             }
 
             $contract->update($contractFields);
+
+            // Update contract blocks text based on updated contract fields
+            foreach (['intro' => 'introduction', 'preamble' => 'preamble', 'title' => 'contract_title', 'footer' => 'footer'] as $key => $field) {
+                if (array_key_exists($field, $contractFields)) {
+                    $block = $contract->blocks()->where('key', $key)->first();
+                    if ($block) {
+                        $content = $block->content ?? [];
+                        $content['text'] = $contractFields[$field] ?? '';
+                        $block->update(['content' => $content]);
+                    }
+                }
+            }
 
             // Recalculate end_date if start_date or mandatory_period changed
             if (isset($validated['start_date']) || isset($validated['mandatory_period'])) {

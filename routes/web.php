@@ -26,11 +26,31 @@ foreach ($centralDomains as $domain) {
             Route::get('/profile', [ProfileController::class, 'edit'])->name('central.profile.edit');
             Route::patch('/profile', [ProfileController::class, 'update'])->name('central.profile.update');
             Route::delete('/profile', [ProfileController::class, 'destroy'])->name('central.profile.destroy');
+            Route::post('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('central.profile.preferences');
 
-            // Central SaaS Management Dashboard
-            Route::get('/saas/tenants', [\App\Http\Controllers\SaaSController::class, 'index'])->name('saas.tenants.index');
-            Route::post('/saas/tenants/{tenantRequest}/approve', [\App\Http\Controllers\SaaSController::class, 'approveRequest'])->name('saas.tenants.approve');
-            Route::post('/saas/tenants/{tenantRequest}/reject', [\App\Http\Controllers\SaaSController::class, 'rejectRequest'])->name('saas.tenants.reject');
+            // Central SaaS Management Dashboard (SaaSController)
+            Route::get('/tenants', [\App\Http\Controllers\SaaSController::class, 'index'])->name('saas.tenants.index');
+            Route::get('/requests', [\App\Http\Controllers\SaaSController::class, 'index'])->name('saas.tenants.requests');
+            Route::post('/requests/{tenantRequest}/approve', [\App\Http\Controllers\SaaSController::class, 'approveRequest'])->name('saas.tenants.approve');
+            Route::post('/requests/{tenantRequest}/reject', [\App\Http\Controllers\SaaSController::class, 'rejectRequest'])->name('saas.tenants.reject');
+
+            // Central SaaS Settings (SaaSSettingController)
+            Route::get('/settings', [\App\Http\Controllers\SaaSSettingController::class, 'settingsIndex'])->name('saas.settings.index');
+            
+            Route::get('/settings/tenants', [\App\Http\Controllers\SaaSSettingController::class, 'tenantSettings'])->name('saas.settings.tenants');
+            Route::post('/settings/tenants', [\App\Http\Controllers\SaaSSettingController::class, 'updateTenantSettings'])->name('saas.settings.tenants.update');
+            
+            Route::get('/settings/terms', [\App\Http\Controllers\SaaSSettingController::class, 'termsSettings'])->name('saas.settings.terms');
+            Route::post('/settings/terms', [\App\Http\Controllers\SaaSSettingController::class, 'updateGlobalTerms'])->name('saas.settings.terms.update');
+
+            Route::get('/settings/contracts', [\App\Http\Controllers\SaaSSettingController::class, 'contractSettings'])->name('saas.settings.contracts');
+            Route::post('/settings/contracts', [\App\Http\Controllers\SaaSSettingController::class, 'updateContractSettings'])->name('saas.settings.contracts.update');
+
+            Route::get('/settings/geo-settings', [\App\Http\Controllers\SaaSSettingController::class, 'geoSettings'])->name('saas.settings.geo');
+            Route::get('/settings/financial', [\App\Http\Controllers\SaaSSettingController::class, 'financialSettings'])->name('saas.settings.financial');
+            Route::get('/settings/themes', [\App\Http\Controllers\SaaSSettingController::class, 'themesSettings'])->name('saas.settings.themes');
+            Route::get('/settings/notifications', [\App\Http\Controllers\SaaSSettingController::class, 'notificationsSettings'])->name('saas.settings.notifications');
+            Route::get('/settings/roles-permissions', [\App\Http\Controllers\SaaSSettingController::class, 'rolesPermissions'])->name('saas.settings.roles');
         });
 
         require __DIR__ . '/auth.php';

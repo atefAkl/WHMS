@@ -103,7 +103,7 @@ export default function Topbar({ header }) {
                             <p className="text-xs text-text-muted">{user.email}</p>
                         </div>
                         <Dropdown.Link href={safeRoute(isCentral ? 'central.profile.edit' : 'profile.edit')}>
-                            <Settings className={cn("inline h-4 w-4", lang === 'ar' ? 'ms-2' : 'me-2')} />
+                            <User className={cn("inline h-4 w-4", lang === 'ar' ? 'ms-2' : 'me-2')} />
                             {lang === 'ar' ? 'الملف الشخصي' : 'Profile'}
                         </Dropdown.Link>
                         <Dropdown.Link href={safeRoute('logout')} method="post" as="button">

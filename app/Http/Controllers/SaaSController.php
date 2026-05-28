@@ -24,9 +24,10 @@ class SaaSController extends Controller
         return config('tenancy.database.central_connection', config('database.default'));
     }
 
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
         $this->ensureCentralContext();
+        $activeTab = request()->routeIs('saas.tenants.requests') ? 'requests' : $request->query('tab', 'tenants');
 
         $settings = [];
         try {
@@ -123,7 +124,7 @@ class SaaSController extends Controller
             ->latest()
             ->get();
 
-        return Inertia::render('SaaS/Tenants', compact('tenants', 'kpis', 'settings', 'requests'));
+        return Inertia::render('SaaS/Tenants', compact('tenants', 'kpis', 'settings', 'requests', 'activeTab'));
     }
 
     public function approveRequest(TenantRequest $tenantRequest)
@@ -165,10 +166,14 @@ class SaaSController extends Controller
             // ③ تشغيل المايجريشن (ينشئ قاعدة بيانات التينانت)
             Artisan::call('tenants:migrate', ['--tenants' => [$tenant->id]]);
 
+            // Fetch central global terms
+            $globalTermsSetting = \App\Models\AdminSetting::where('key', 'global_terms')->value('value');
+            $globalTerms = $globalTermsSetting ? json_decode($globalTermsSetting, true) : [];
+
             // ④ زرع بيانات المستخدم الأولي والإعدادات
             $setupToken = \Illuminate\Support\Str::random(40);
 
-            $tenant->run(function () use ($tenantRequest, $setupToken) {
+            $tenant->run(function () use ($tenantRequest, $setupToken, $globalTerms) {
                 \App\Models\User::updateOrCreate(
                     ['email' => $tenantRequest->email],
                     [
@@ -188,6 +193,19 @@ class SaaSController extends Controller
                         ['key' => $key],
                         ['value' => $value ?? '']
                     );
+                }
+
+                // Copy central global terms to new tenant terms table
+                if (!empty($globalTerms)) {
+                    foreach ($globalTerms as $index => $termText) {
+                        \App\Models\Term::create([
+                            'text_ar'       => $termText,
+                            'text_en'       => null,
+                            'is_active'     => true,
+                            'has_variables' => str_contains($termText, '{$'),
+                            'sort_order'    => $index,
+                        ]);
+                    }
                 }
             });
 

@@ -26,4 +26,9 @@ class Season extends Model
     {
         return $this->hasMany(ContractSetting::class);
     }
+
+    public function blocks()
+    {
+        return $this->hasMany(ContractBlock::class)->orderBy('sort_order');
+    }
 }

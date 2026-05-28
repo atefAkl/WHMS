@@ -1,14 +1,16 @@
-import React from 'react';
+import React from "react";
 
 export default function PageHeader({
     icon: Icon,
     title,
     description,
     actions,
-    className = '',
+    className = "",
 }) {
     return (
-        <div className={`rounded-xl border border-border bg-surface shadow-sm p-2.5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2 transition-shadow hover:shadow-md ${className}`}>
+        <div
+            className={`rounded-xl border border-border bg-surface shadow-sm p-2.5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2 transition-shadow hover:shadow-md ${className}`}
+        >
             <div className="flex items-center gap-2">
                 {Icon && (
                     <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary shadow-inner shrink-0 hover:bg-primary/20 hover:scale-105 transition-all cursor-pointer">
@@ -17,7 +19,7 @@ export default function PageHeader({
                 )}
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        {typeof title === 'string' ? (
+                        {typeof title === "string" ? (
                             <h1 className="text-lg font-extrabold text-text leading-tight">
                                 {title}
                             </h1>
@@ -25,11 +27,7 @@ export default function PageHeader({
                             title
                         )}
                     </div>
-                    {description && (
-                        <div className="mt-1">
-                            {description}
-                        </div>
-                    )}
+                    {description && <div className="mt-1">{description}</div>}
                 </div>
             </div>
 

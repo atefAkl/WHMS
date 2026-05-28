@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { Globe, Layers, Settings as SettingsIcon, ChevronRight, Home, Shield, Database, Bell, Box, FileText, Calendar } from 'lucide-react';
+import { Globe, Layers, Settings as SettingsIcon, ChevronRight, Home, Shield, Database, Bell, Box, FileText, Calendar, FolderTree } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -39,6 +39,20 @@ export default function Index() {
                 route: route('settings.storage-items.index'),
                 color: 'text-sky-500',
                 bg: 'bg-sky-500/10'
+            },
+            {
+                title:
+                    lang === "ar"
+                        ? "فئات الأصناف المخزنية"
+                        : "Inventory Categories",
+                desc:
+                    lang === "ar"
+                        ? "إدارة تصنيفات وفئات السلع والبضائع"
+                        : "Manage categories of storage items",
+                icon: FolderTree,
+                route: route("settings.inventory-categories.index"),
+                color: "text-indigo-500",
+                bg: "bg-indigo-500/10",
             },
             {
                 title: lang === 'ar' ? 'تصنيفات العملاء' : 'Customer Categories',

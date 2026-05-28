@@ -40,6 +40,8 @@ Route::middleware([
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::post('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences');
+        Route::post('/profile/secure-password', [ProfileController::class, 'updateSecurePassword'])->name('profile.secure-password.update');
 
         // Tenant Onboarding / Setup
         Route::get('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'create'])->name('tenant.setup');
@@ -63,6 +65,7 @@ Route::middleware([
 
                 Route::get('/pallets', [\App\Http\Controllers\PalletController::class, 'index'])->name('pallets.index');
                 Route::resource('customers', \App\Http\Controllers\CustomerController::class)->except(['create', 'edit']);
+                Route::resource('inventory-items', \App\Http\Controllers\InventoryItemController::class)->parameters(['inventory-items' => 'inventory_item'])->except(['create', 'edit']);
                 Route::post('customers/{customer}/contacts', [\App\Http\Controllers\ContactController::class, 'store'])->name('customers.contacts.store');
                 Route::put('customers/{customer}/contacts/{contact}', [\App\Http\Controllers\ContactController::class, 'update'])->name('customers.contacts.update');
                 Route::delete('customers/{customer}/contacts/{contact}', [\App\Http\Controllers\ContactController::class, 'destroy'])->name('customers.contacts.destroy');
@@ -107,10 +110,13 @@ Route::middleware([
                     Route::post('countries/seed', [\App\Http\Controllers\Settings\CountryController::class, 'seed'])->name('countries.seed');
                     Route::resource('countries', \App\Http\Controllers\Settings\CountryController::class)->except(['show', 'create', 'edit']);
                     Route::resource('categories', \App\Http\Controllers\Settings\CustomerCategoryController::class)->except(['show', 'create', 'edit']);
+                    Route::resource('inventory-categories', \App\Http\Controllers\Settings\InventoryCategoryController::class)->parameters(['inventory-categories' => 'inventory_category'])->except(['show', 'create', 'edit']);
                     Route::resource('storage-items', \App\Http\Controllers\Settings\StorageItemController::class)->parameters(['storage-items' => 'storage_item'])->except(['show', 'create', 'edit']);
                     Route::post('terms/settings', [\App\Http\Controllers\Settings\TermController::class, 'updateSettings'])->name('terms.settings.update');
                     Route::resource('terms', \App\Http\Controllers\Settings\TermController::class)->except(['show', 'create', 'edit']);
+                    Route::put('terms/blocks/{block}', [\App\Http\Controllers\Settings\TermController::class, 'updateBlock'])->name('terms.blocks.update');
                     Route::resource('seasons', \App\Http\Controllers\Settings\SeasonController::class)->except(['create', 'edit']);
+                    Route::put('seasons/{season}/blocks/{block}', [\App\Http\Controllers\Settings\SeasonController::class, 'updateBlock'])->name('seasons.blocks.update');
                 });
             });
         });

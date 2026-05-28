@@ -60,4 +60,37 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    /**
+     * Update the user's UI preferences.
+     */
+    public function updatePreferences(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'preferences' => 'required|array',
+        ]);
+
+        $user = $request->user();
+        $current = $user->preferences ?? [];
+        $user->preferences = array_merge($current, $validated['preferences']);
+        $user->save();
+
+        return back();
+    }
+
+    /**
+     * Update the user's secure deletion password.
+     */
+    public function updateSecurePassword(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'secure_password' => 'required|string|min:4|confirmed',
+        ]);
+
+        $user = $request->user();
+        $user->secure_password = \Hash::make($validated['secure_password']);
+        $user->save();
+
+        return Redirect::route('profile.edit')->with('status', 'secure-password-updated');
+    }
 }
