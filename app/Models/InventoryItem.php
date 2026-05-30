@@ -22,6 +22,11 @@ class InventoryItem extends Model
         return $this->hasMany(InventoryItemVariant::class);
     }
 
+    public function inventoryEntries()
+    {
+        return $this->hasMany(InventoryEntry::class, 'inventory_item_id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

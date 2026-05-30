@@ -63,9 +63,12 @@ Route::middleware([
                     return Inertia::render('Dashboard');
                 })->name('dashboard');
 
-                Route::get('/pallets', [\App\Http\Controllers\PalletController::class, 'index'])->name('pallets.index');
+                Route::resource('pallets', \App\Http\Controllers\PalletController::class)->except(['create', 'edit']);
                 Route::resource('customers', \App\Http\Controllers\CustomerController::class)->except(['create', 'edit']);
                 Route::resource('inventory-items', \App\Http\Controllers\InventoryItemController::class)->parameters(['inventory-items' => 'inventory_item'])->except(['create', 'edit']);
+                Route::put('inventory-item-variants/{variant}', [\App\Http\Controllers\InventoryItemController::class, 'updateVariant'])->name('inventory-item-variants.update');
+                Route::get('api/pallets/lookup', [\App\Http\Controllers\PalletController::class, 'lookup'])->name('api.pallets.lookup');
+                Route::get('api/contracts/{contract}/occupancy-stats', [\App\Http\Controllers\ReceptionController::class, 'getOccupancyStats'])->name('api.contracts.occupancy-stats');
                 Route::post('customers/{customer}/contacts', [\App\Http\Controllers\ContactController::class, 'store'])->name('customers.contacts.store');
                 Route::put('customers/{customer}/contacts/{contact}', [\App\Http\Controllers\ContactController::class, 'update'])->name('customers.contacts.update');
                 Route::delete('customers/{customer}/contacts/{contact}', [\App\Http\Controllers\ContactController::class, 'destroy'])->name('customers.contacts.destroy');
@@ -88,6 +91,12 @@ Route::middleware([
 
                 Route::post('contracts/{contract}/invoices', [\App\Http\Controllers\ContractController::class, 'storeInvoice'])->name('contracts.invoices.store');
                 Route::post('contracts/{contract}/payments', [\App\Http\Controllers\ContractController::class, 'storePayment'])->name('contracts.payments.store');
+                Route::get('contracts/{contract}/vouchers', [\App\Http\Controllers\ContractController::class, 'getVouchers'])->name('contracts.vouchers');
+                Route::post('contracts/{contract}/vouchers/bulk-approve', [\App\Http\Controllers\ContractController::class, 'bulkApproveVouchers'])->name('contracts.vouchers.bulk-approve');
+                Route::post('contracts/{contract}/vouchers/bulk-reopen', [\App\Http\Controllers\ContractController::class, 'bulkReopenVouchers'])->name('contracts.vouchers.bulk-reopen');
+                Route::get('contracts/{contract}/vouchers/bulk-print', [\App\Http\Controllers\ContractController::class, 'bulkPrintVouchers'])->name('contracts.vouchers.bulk-print');
+                Route::get('contracts/{contract}/pallets', [\App\Http\Controllers\ContractController::class, 'getPallets'])->name('contracts.pallets');
+                Route::get('contracts/{contract}/stored-items', [\App\Http\Controllers\ContractController::class, 'getStoredItems'])->name('contracts.stored-items');
 
                 // Agents
                 Route::get('agents', [\App\Http\Controllers\AgentController::class, 'index'])->name('agents.index');
@@ -97,6 +106,29 @@ Route::middleware([
                 Route::get('seasons/{season}/terms', [\App\Http\Controllers\TermController::class, 'seasonTerms'])->name('seasons.terms.index');
                 Route::post('seasons/{season}/terms/sync', [\App\Http\Controllers\TermController::class, 'syncSeasonTerms'])->name('seasons.terms.sync');
                 Route::post('seasons/{season}/terms/reorder', [\App\Http\Controllers\TermController::class, 'reorderSeasonTerms'])->name('seasons.terms.reorder');
+                // Drivers API
+                Route::get('api/drivers', [\App\Http\Controllers\DriverController::class, 'index'])->name('api.drivers.index');
+                Route::post('api/drivers', [\App\Http\Controllers\DriverController::class, 'store'])->name('api.drivers.store');
+
+                // Receptions Vouchers
+                Route::post('receptions/{reception}/approve', [\App\Http\Controllers\ReceptionController::class, 'approve'])->name('receptions.approve');
+                Route::post('receptions/{reception}/reopen', [\App\Http\Controllers\ReceptionController::class, 'reopen'])->name('receptions.reopen');
+                Route::get('receptions/{reception}/print', [\App\Http\Controllers\ReceptionController::class, 'print'])->name('receptions.print');
+                Route::resource('receptions', \App\Http\Controllers\ReceptionController::class);
+
+                // Exit Authorizations
+                Route::resource('exit-authorizations', \App\Http\Controllers\ExitAuthorizationController::class);
+
+                // Deliveries
+                Route::post('deliveries/{delivery}/approve', [\App\Http\Controllers\DeliveryController::class, 'approve'])->name('deliveries.approve');
+                Route::post('deliveries/{delivery}/reopen', [\App\Http\Controllers\DeliveryController::class, 'reopen'])->name('deliveries.reopen');
+                Route::get('deliveries/{delivery}/print', [\App\Http\Controllers\DeliveryController::class, 'print'])->name('deliveries.print');
+                Route::resource('deliveries', \App\Http\Controllers\DeliveryController::class);
+
+                // Progressive Loading API routes for Deliveries
+                Route::get('api/contracts/{contract}/pallets', [\App\Http\Controllers\DeliveryController::class, 'getContractPallets'])->name('api.contracts.pallets');
+                Route::get('api/contracts/{contract}/pallets/{pallet}/items', [\App\Http\Controllers\DeliveryController::class, 'getPalletItems'])->name('api.contracts.pallets.items');
+                Route::get('api/contracts/{contract}/pallets/{pallet}/items/{item}/variants', [\App\Http\Controllers\DeliveryController::class, 'getItemVariants'])->name('api.contracts.pallets.items.variants');
 
                 // Settings Sub-module
                 Route::prefix('settings')->name('settings.')->group(function () {

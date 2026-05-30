@@ -550,4 +550,466 @@ class ContractController extends Controller
 
         return back()->with('success', app()->getLocale() === 'ar' ? 'تم تحديث العقد بنجاح.' : 'Contract updated successfully.');
     }
+
+    public function getVouchers(Request $request, Contract $contract)
+    {
+        $activeSeasonId = session('active_season_id');
+        
+        $receptionsQuery = \App\Models\Reception::query()
+            ->where('contract_id', $contract->id)
+            ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+
+        $deliveriesQuery = \App\Models\Delivery::query()
+            ->where('contract_id', $contract->id)
+            ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+
+        // Filters:
+        // 1. Search serial
+        if ($request->filled('search_serial')) {
+            $serial = $request->input('search_serial');
+            $receptionsQuery->where('serial_number', 'like', "%{$serial}%");
+            $deliveriesQuery->where('serial_number', 'like', "%{$serial}%");
+        }
+
+        // 2. Billing Period
+        if ($request->filled('period_id')) {
+            $periodId = $request->input('period_id');
+            $receptionsQuery->where('period_id', $periodId);
+            $deliveriesQuery->where('period_id', $periodId);
+        }
+
+        // 3. Date range
+        if ($request->filled('start_date')) {
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $receptionsQuery->where('reception_date', '>=', $startDate);
+            $deliveriesQuery->where('delivery_date', '>=', $startDate);
+        }
+        if ($request->filled('end_date')) {
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+            $receptionsQuery->where('reception_date', '<=', $endDate);
+            $deliveriesQuery->where('delivery_date', '<=', $endDate);
+        }
+
+        // 4. Pallet Number
+        if ($request->filled('search_pallet')) {
+            $pallet = $request->input('search_pallet');
+            $receptionsQuery->whereHas('inventoryEntries.pallet', function ($q) use ($pallet) {
+                $q->where('pallet_number', 'like', "%{$pallet}%")
+                  ->orWhere('pallet_code', 'like', "%{$pallet}%");
+            });
+            $deliveriesQuery->whereHas('inventoryEntries.pallet', function ($q) use ($pallet) {
+                $q->where('pallet_number', 'like', "%{$pallet}%")
+                  ->orWhere('pallet_code', 'like', "%{$pallet}%");
+            });
+        }
+
+        // 5. Status
+        if ($request->filled('status')) {
+            $status = $request->input('status');
+            $receptionsQuery->where('status', $status);
+            $deliveriesQuery->where('status', $status);
+        }
+
+        // 6. Goods Type (Item)
+        if ($request->filled('goods_type')) {
+            $goodsType = $request->input('goods_type');
+            $receptionsQuery->whereHas('inventoryEntries', function ($q) use ($goodsType) {
+                $q->where('inventory_item_id', $goodsType);
+            });
+            $deliveriesQuery->whereHas('inventoryEntries', function ($q) use ($goodsType) {
+                $q->where('inventory_item_id', $goodsType);
+            });
+        }
+
+        // Fetch
+        $vouchers = collect();
+
+        $typeFilter = $request->input('type');
+        if (empty($typeFilter) || $typeFilter === 'reception') {
+            $receptions = $receptionsQuery->get()->map(function ($item) {
+                $item->voucher_type = 'reception';
+                $item->date = $item->reception_date;
+                return $item;
+            });
+            $vouchers = $vouchers->concat($receptions);
+        }
+
+        if (empty($typeFilter) || $typeFilter === 'delivery') {
+            $deliveries = $deliveriesQuery->get()->map(function ($item) {
+                $item->voucher_type = 'delivery';
+                $item->date = $item->delivery_date;
+                return $item;
+            });
+            $vouchers = $vouchers->concat($deliveries);
+        }
+
+        // Sort descending by date
+        $vouchers = $vouchers->sortByDesc('date')->values();
+
+        // Calculate card content metrics dynamically
+        foreach ($vouchers as $voucher) {
+            $entries = $voucher->inventoryEntries;
+            $voucher->pallet_count = $entries->pluck('pallet_id')->filter()->unique()->count();
+            $voucher->item_count = $entries->pluck('inventory_item_id')->filter()->unique()->count();
+            $voucher->variant_count = $entries->pluck('inventory_item_variant_id')->filter()->unique()->count();
+            $voucher->package_count = $voucher->voucher_type === 'reception' 
+                ? (float) $entries->sum('quantity_in') 
+                : (float) $entries->sum('quantity_out');
+        }
+
+        // Goods types list for dropdown (distinct items)
+        $goodsTypes = \App\Models\InventoryItem::whereHas('inventoryEntries', function ($q) use ($contract) {
+            $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                $query->where('contract_id', $contract->id);
+            });
+        })->get(['id', 'name']);
+
+        // Paginate
+        $perPage = 24;
+        $page = (int) $request->input('page', 1);
+        $total = $vouchers->count();
+        $paginatedItems = $vouchers->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return response()->json([
+            'vouchers' => $paginatedItems,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+            'goods_types' => $goodsTypes,
+        ]);
+    }
+
+    public function bulkApproveVouchers(Request $request, Contract $contract)
+    {
+        $request->validate([
+            'password' => 'required|string',
+            'ids' => 'required|array',
+            'ids.*.id' => 'required|integer',
+            'ids.*.type' => 'required|string|in:reception,delivery',
+        ]);
+
+        $user = auth()->user();
+        if (empty($user->secure_password)) {
+            return response()->json(['error' => app()->getLocale() === 'ar' ? 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.' : 'Please set your secure password first in your profile.'], 403);
+        }
+
+        if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->secure_password)) {
+            return response()->json(['error' => app()->getLocale() === 'ar' ? 'كلمة المرور الآمنة غير صحيحة.' : 'Incorrect secure password.'], 403);
+        }
+
+        $approvedCount = 0;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $contract, &$approvedCount) {
+            foreach ($request->input('ids') as $item) {
+                if ($item['type'] === 'reception') {
+                    $reception = \App\Models\Reception::where('contract_id', $contract->id)->find($item['id']);
+                    if ($reception && $reception->status === 'draft') {
+                        $reception->update([
+                            'status' => 'approved',
+                            'updated_by' => auth()->id(),
+                        ]);
+                        $approvedCount++;
+                    }
+                } elseif ($item['type'] === 'delivery') {
+                    $delivery = \App\Models\Delivery::where('contract_id', $contract->id)->find($item['id']);
+                    if ($delivery && $delivery->status === 'draft') {
+                        $delivery->update([
+                            'status' => 'approved',
+                            'updated_by' => auth()->id(),
+                        ]);
+                        $approvedCount++;
+                    }
+                }
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => app()->getLocale() === 'ar' 
+                ? "تم اعتماد {$approvedCount} من السندات بنجاح." 
+                : "Successfully approved {$approvedCount} vouchers."
+        ]);
+    }
+
+    public function bulkReopenVouchers(Request $request, Contract $contract)
+    {
+        $request->validate([
+            'password' => 'required|string',
+            'reason' => 'required|string|max:500',
+            'ids' => 'required|array',
+            'ids.*.id' => 'required|integer',
+            'ids.*.type' => 'required|string|in:reception,delivery',
+        ]);
+
+        $user = auth()->user();
+        if (empty($user->secure_password)) {
+            return response()->json(['error' => app()->getLocale() === 'ar' ? 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.' : 'Please set your secure password first in your profile.'], 403);
+        }
+
+        if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->secure_password)) {
+            return response()->json(['error' => app()->getLocale() === 'ar' ? 'كلمة المرور الآمنة غير صحيحة.' : 'Incorrect secure password.'], 403);
+        }
+
+        $reopenedCount = 0;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $contract, &$reopenedCount) {
+            foreach ($request->input('ids') as $item) {
+                if ($item['type'] === 'reception') {
+                    $reception = \App\Models\Reception::where('contract_id', $contract->id)->find($item['id']);
+                    if ($reception && $reception->status === 'approved') {
+                        $history = $reception->history ?: [];
+                        $history[] = [
+                            'date' => now()->toDateTimeString(),
+                            'user' => auth()->user()->name,
+                            'reason' => 'إعادة الفتح بالتحديد المجمع: ' . $request->reason,
+                        ];
+                        $reception->update([
+                            'status' => 'draft',
+                            'history' => $history,
+                            'updated_by' => auth()->id(),
+                        ]);
+                        $reopenedCount++;
+                    }
+                } elseif ($item['type'] === 'delivery') {
+                    $delivery = \App\Models\Delivery::where('contract_id', $contract->id)->find($item['id']);
+                    if ($delivery && $delivery->status === 'approved') {
+                        $history = $delivery->history ?: [];
+                        $history[] = [
+                            'date' => now()->toDateTimeString(),
+                            'user' => auth()->user()->name,
+                            'reason' => 'إعادة الفتح بالتحديد المجمع: ' . $request->reason,
+                        ];
+                        $delivery->update([
+                            'status' => 'draft',
+                            'history' => $history,
+                            'updated_by' => auth()->id(),
+                        ]);
+                        $reopenedCount++;
+                    }
+                }
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => app()->getLocale() === 'ar' 
+                ? "تم إعادة فتح {$reopenedCount} من السندات للتعديل بنجاح." 
+                : "Successfully reopened {$reopenedCount} vouchers to draft."
+        ]);
+    }
+
+    public function bulkPrintVouchers(Request $request, Contract $contract)
+    {
+        $request->validate([
+            'ids' => 'required|string',
+        ]);
+
+        $items = explode(',', $request->input('ids'));
+        $vouchers = collect();
+
+        foreach ($items as $item) {
+            $parts = explode('-', $item);
+            if (count($parts) !== 2) continue;
+            $type = $parts[0];
+            $id = (int) $parts[1];
+
+            if ($type === 'reception') {
+                $reception = \App\Models\Reception::where('contract_id', $contract->id)
+                    ->with([
+                        'customer', 'contract', 'driver', 'representative', 'period',
+                        'inventoryEntries.inventoryItem', 'inventoryEntries.variant', 'inventoryEntries.pallet'
+                    ])->find($id);
+                if ($reception) {
+                    $reception->voucher_type = 'reception';
+                    $vouchers->push($reception);
+                }
+            } elseif ($type === 'delivery') {
+                $delivery = \App\Models\Delivery::where('contract_id', $contract->id)
+                    ->with([
+                        'customer', 'contract', 'driver', 'representative', 'period',
+                        'inventoryEntries.inventoryItem', 'inventoryEntries.variant', 'inventoryEntries.pallet'
+                    ])->find($id);
+                if ($delivery) {
+                    $delivery->voucher_type = 'delivery';
+                    $vouchers->push($delivery);
+                }
+            }
+        }
+
+        return Inertia::render('Warehouse/Vouchers/BulkPrint', [
+            'vouchers' => $vouchers,
+            'contract' => $contract
+        ]);
+    }
+
+    public function getPallets(Request $request, Contract $contract)
+    {
+        $query = \App\Models\Pallet::query()
+            ->whereHas('inventoryEntries', function ($q) use ($contract) {
+                $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                    $query->where('contract_id', $contract->id);
+                });
+            });
+
+        // Filter: search by code or number
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('pallet_number', 'like', "%{$search}%")
+                  ->orWhere('pallet_code', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter: size
+        if ($request->filled('size')) {
+            $query->where('size', $request->input('size'));
+        }
+
+        // Fetch all matching pallets
+        $allPallets = $query->orderBy('pallet_number', 'asc')->get();
+
+        // Calculate contents for all of them
+        $entries = \App\Models\InventoryEntry::whereIn('pallet_id', $allPallets->pluck('id'))
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                $query->where('contract_id', $contract->id);
+            })
+            ->with(['inventoryItem', 'variant'])
+            ->get();
+
+        $entriesByPallet = $entries->groupBy('pallet_id');
+        $filteredPallets = collect();
+
+        foreach ($allPallets as $pallet) {
+            $palletEntries = $entriesByPallet->get($pallet->id, collect());
+            $contents = [];
+            $grouped = $palletEntries->groupBy(function ($entry) {
+                return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
+            });
+            foreach ($grouped as $group) {
+                $first = $group->first();
+                $qtyIn = $group->sum('quantity_in');
+                $qtyOut = $group->sum('quantity_out');
+                $balance = $qtyIn - $qtyOut;
+                if ($balance > 0) {
+                    $contents[] = [
+                        'item_id' => $first->inventory_item_id,
+                        'item_name' => $first->inventoryItem->name,
+                        'variant_id' => $first->inventory_item_variant_id,
+                        'variant_name' => $first->variant?->name,
+                        'quality' => $first->variant?->quality,
+                        'quantity' => $balance,
+                    ];
+                }
+            }
+
+            // A pallet is active if it has items currently on it (balance > 0)
+            if (count($contents) > 0) {
+                $pallet->contents = $contents;
+                $pallet->total_packages = array_sum(array_column($contents, 'quantity'));
+                
+                // If filter item_id is specified, verify if it is in contents
+                if ($request->filled('item_id')) {
+                    $itemId = (int) $request->input('item_id');
+                    $hasItem = false;
+                    foreach ($contents as $c) {
+                        if ($c['item_id'] === $itemId) {
+                            $hasItem = true;
+                            break;
+                        }
+                    }
+                    if ($hasItem) {
+                        $filteredPallets->push($pallet);
+                    }
+                } else {
+                    $filteredPallets->push($pallet);
+                }
+            }
+        }
+
+        // Get list of all sizes available for contract pallets (only active ones)
+        $allSizes = $filteredPallets->pluck('size')->filter()->unique()->values();
+
+        // Get list of distinct items stored for filter dropdown (only active ones)
+        $activeItemIds = [];
+        foreach ($filteredPallets as $p) {
+            foreach ($p->contents as $c) {
+                $activeItemIds[] = $c['item_id'];
+            }
+        }
+        $allItems = \App\Models\InventoryItem::whereIn('id', array_unique($activeItemIds))->get(['id', 'name']);
+
+        // Paginate in PHP
+        $perPage = 24;
+        $page = (int) $request->input('page', 1);
+        $total = $filteredPallets->count();
+        $paginatedPallets = $filteredPallets->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return response()->json([
+            'pallets' => $paginatedPallets,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+            'sizes' => $allSizes,
+            'items' => $allItems,
+        ]);
+    }
+
+    public function getStoredItems(Request $request, Contract $contract)
+    {
+        // Fetch distinct items and variants stored under the contract
+        $entriesQuery = \App\Models\InventoryEntry::query()
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                $query->where('contract_id', $contract->id);
+            });
+
+        // Search: item name or code
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $entriesQuery->whereHas('inventoryItem', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        // Get aggregate records
+        $aggregates = $entriesQuery
+            ->selectRaw('inventory_item_id, inventory_item_variant_id, sum(quantity_in) as total_in, sum(quantity_out) as total_out, count(distinct pallet_id) as pallets_count')
+            ->groupBy('inventory_item_id', 'inventory_item_variant_id')
+            ->with(['inventoryItem', 'variant'])
+            ->get();
+
+        // Calculate balance for each item-variant
+        $items = collect();
+        foreach ($aggregates as $agg) {
+            $balance = (float) $agg->total_in - (float) $agg->total_out;
+            if ($balance > 0) {
+                $items->push([
+                    'item_id' => $agg->inventory_item_id,
+                    'item_name' => $agg->inventoryItem->name,
+                    'item_code' => $agg->inventoryItem->code,
+                    'variant_id' => $agg->inventory_item_variant_id,
+                    'variant_name' => $agg->variant?->name,
+                    'quality' => $agg->variant?->quality,
+                    'total_in' => (float) $agg->total_in,
+                    'total_out' => (float) $agg->total_out,
+                    'balance' => $balance,
+                    'pallets_count' => $agg->pallets_count,
+                ]);
+            }
+        }
+
+        // Paginate items collection
+        $perPage = 24;
+        $page = (int) $request->input('page', 1);
+        $total = $items->count();
+        $paginatedItems = $items->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return response()->json([
+            'items' => $paginatedItems,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+        ]);
+    }
 }

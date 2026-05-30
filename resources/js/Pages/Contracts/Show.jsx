@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Head, router, useForm } from "@inertiajs/react";
+import { Head, router, useForm, usePage } from "@inertiajs/react";
+import axios from "axios";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { useLang } from "@/Contexts/LanguageContext";
 import {
@@ -31,6 +32,14 @@ import {
     DollarSign,
     ArrowUp,
     ArrowDown,
+    Grid,
+    List,
+    Lock,
+    Unlock,
+    Search,
+    Filter,
+    Eye,
+    RefreshCw,
 } from "lucide-react";
 import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
@@ -79,7 +88,305 @@ export default function Show({
     tableColumns = [],
 }) {
     const { lang } = useLang();
+    const displayBilingual = (rawName) => {
+        if (!rawName) return "";
+        const chunks = rawName.split("|").map(s => s.trim()).filter(Boolean);
+        if (chunks.length === 0) return rawName;
+        return lang === "ar" ? chunks[0] : (chunks[1] || chunks[0]);
+    };
     const [activeTab, setActiveTab] = useState("view");
+    const { auth } = usePage().props;
+    const showButtonText = auth?.user?.preferences?.show_button_text ?? false;
+
+    // Vouchers Tab states
+    const [vouchers, setVouchers] = useState([]);
+    const [vouchersTotal, setVouchersTotal] = useState(0);
+    const [vouchersPage, setVouchersPage] = useState(1);
+    const [vouchersLastPage, setVouchersLastPage] = useState(1);
+    const [vouchersLoading, setVouchersLoading] = useState(false);
+    const [vouchersGoodsTypes, setVouchersGoodsTypes] = useState([]);
+
+    // Pallets Tab states
+    const [pallets, setPallets] = useState([]);
+    const [palletsTotal, setPalletsTotal] = useState(0);
+    const [palletsPage, setPalletsPage] = useState(1);
+    const [palletsLastPage, setPalletsLastPage] = useState(1);
+    const [palletsLoading, setPalletsLoading] = useState(false);
+    const [palletsSizes, setPalletsSizes] = useState([]);
+    const [palletsItems, setPalletsItems] = useState([]);
+    const [filterPalletSearch, setFilterPalletSearch] = useState("");
+    const [filterPalletSize, setFilterPalletSize] = useState("");
+    const [filterPalletItemId, setFilterPalletItemId] = useState("");
+    const [palletViewMode, setPalletViewMode] = useState("grid");
+
+    // Stored Items Tab states
+    const [storedItems, setStoredItems] = useState([]);
+    const [storedItemsTotal, setStoredItemsTotal] = useState(0);
+    const [storedItemsPage, setStoredItemsPage] = useState(1);
+    const [storedItemsLastPage, setStoredItemsLastPage] = useState(1);
+    const [storedItemsLoading, setStoredItemsLoading] = useState(false);
+    const [filterItemSearch, setFilterItemSearch] = useState("");
+    const [itemViewMode, setItemViewMode] = useState("list");
+
+    // Fetch Pallets function
+    const fetchPallets = () => {
+        if (activeTab !== "pallets") return;
+        setPalletsLoading(true);
+        axios.get(route("contracts.pallets", contract.id), {
+            params: {
+                page: palletsPage,
+                search: filterPalletSearch,
+                size: filterPalletSize,
+                item_id: filterPalletItemId,
+            }
+        }).then(response => {
+            setPallets(response.data.pallets);
+            setPalletsTotal(response.data.total);
+            setPalletsLastPage(response.data.last_page);
+            setPalletsSizes(response.data.sizes || []);
+            setPalletsItems(response.data.items || []);
+            setPalletsLoading(false);
+        }).catch(err => {
+            console.error("Error fetching pallets:", err);
+            setPalletsLoading(false);
+        });
+    };
+
+    // Fetch Stored Items function
+    const fetchStoredItems = () => {
+        if (activeTab !== "items") return;
+        setStoredItemsLoading(true);
+        axios.get(route("contracts.stored-items", contract.id), {
+            params: {
+                page: storedItemsPage,
+                search: filterItemSearch,
+            }
+        }).then(response => {
+            setStoredItems(response.data.items);
+            setStoredItemsTotal(response.data.total);
+            setStoredItemsLastPage(response.data.last_page);
+            setStoredItemsLoading(false);
+        }).catch(err => {
+            console.error("Error fetching stored items:", err);
+            setStoredItemsLoading(false);
+        });
+    };
+
+    // Trigger Pallets fetch
+    useEffect(() => {
+        if (activeTab === "pallets") {
+            fetchPallets();
+        }
+    }, [activeTab, palletsPage, filterPalletSearch, filterPalletSize, filterPalletItemId]);
+
+    // Reset Pallets page on filter change
+    useEffect(() => {
+        setPalletsPage(1);
+    }, [filterPalletSearch, filterPalletSize, filterPalletItemId]);
+
+    // Trigger Stored Items fetch
+    useEffect(() => {
+        if (activeTab === "items") {
+            fetchStoredItems();
+        }
+    }, [activeTab, storedItemsPage, filterItemSearch]);
+
+    // Reset Stored Items page on filter change
+    useEffect(() => {
+        setStoredItemsPage(1);
+    }, [filterItemSearch]);
+
+    // Filters state
+    const [filterSerial, setFilterSerial] = useState("");
+    const [filterPallet, setFilterPallet] = useState("");
+    const [filterPeriodId, setFilterPeriodId] = useState("");
+    const [filterStatus, setFilterStatus] = useState("");
+    const [filterType, setFilterType] = useState("");
+    const [filterGoodsType, setFilterGoodsType] = useState("");
+    const [filterStartDate, setFilterStartDate] = useState("");
+    const [filterEndDate, setFilterEndDate] = useState("");
+
+    // Selection
+    const [selectedVouchers, setSelectedVouchers] = useState([]); // Array of { id, type }
+
+    // View Mode
+    const [viewMode, setViewMode] = useState("grid"); // grid vs list
+
+    // Bulk Modals
+    const [showBulkApproveModal, setShowBulkApproveModal] = useState(false);
+    const [showBulkReopenModal, setShowBulkReopenModal] = useState(false);
+    const [bulkPassword, setBulkPassword] = useState("");
+    const [bulkReopenReason, setBulkReopenReason] = useState("");
+    const [bulkActionProcessing, setBulkActionProcessing] = useState(false);
+    const [bulkError, setBulkError] = useState("");
+
+    // Fetch Vouchers function
+    const fetchVouchers = () => {
+        if (activeTab !== "vouchers") return;
+        setVouchersLoading(true);
+        axios.get(route("contracts.vouchers", contract.id), {
+            params: {
+                page: vouchersPage,
+                search_serial: filterSerial,
+                search_pallet: filterPallet,
+                period_id: filterPeriodId,
+                status: filterStatus,
+                type: filterType,
+                goods_type: filterGoodsType,
+                start_date: filterStartDate,
+                end_date: filterEndDate,
+            }
+        }).then(response => {
+            setVouchers(response.data.vouchers);
+            setVouchersTotal(response.data.total);
+            setVouchersLastPage(response.data.last_page);
+            setVouchersGoodsTypes(response.data.goods_types || []);
+            setVouchersLoading(false);
+        }).catch(err => {
+            console.error("Error fetching vouchers:", err);
+            setVouchersLoading(false);
+        });
+    };
+
+    // Trigger fetch on tab or filter change
+    useEffect(() => {
+        if (activeTab === "vouchers") {
+            fetchVouchers();
+        }
+    }, [
+        activeTab,
+        vouchersPage,
+        filterSerial,
+        filterPallet,
+        filterPeriodId,
+        filterStatus,
+        filterType,
+        filterGoodsType,
+        filterStartDate,
+        filterEndDate
+    ]);
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setVouchersPage(1);
+    }, [
+        filterSerial,
+        filterPallet,
+        filterPeriodId,
+        filterStatus,
+        filterType,
+        filterGoodsType,
+        filterStartDate,
+        filterEndDate
+    ]);
+
+    // Selection handlers
+    const handleSelectVoucher = (id, type, checked) => {
+        if (checked) {
+            setSelectedVouchers(prev => [...prev, { id, type }]);
+        } else {
+            setSelectedVouchers(prev => prev.filter(item => !(item.id === id && item.type === type)));
+        }
+    };
+
+    const isVoucherSelected = (id, type) => {
+        return selectedVouchers.some(item => item.id === id && item.type === type);
+    };
+
+    const handleSelectAll = () => {
+        const pageItems = vouchers.map(v => ({ id: v.id, type: v.voucher_type }));
+        setSelectedVouchers(prev => {
+            const otherItems = prev.filter(item => !vouchers.some(v => v.id === item.id && v.voucher_type === item.type));
+            return [...otherItems, ...pageItems];
+        });
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedVouchers(prev => 
+            prev.filter(item => !vouchers.some(v => v.id === item.id && v.voucher_type === item.type))
+        );
+    };
+
+    const handleInvertSelection = () => {
+        setSelectedVouchers(prev => {
+            const pageSelected = prev.filter(item => vouchers.some(v => v.id === item.id && v.voucher_type === item.type));
+            const pageNotSelected = vouchers
+                .filter(v => !pageSelected.some(item => item.id === v.id && item.type === v.voucher_type))
+                .map(v => ({ id: v.id, type: v.voucher_type }));
+            const otherItems = prev.filter(item => !vouchers.some(v => v.id === item.id && v.voucher_type === item.type));
+            return [...otherItems, ...pageNotSelected];
+        });
+    };
+
+    // Bulk actions
+    const handleBulkApprove = () => {
+        if (selectedVouchers.length === 0) return;
+        setBulkActionProcessing(true);
+        setBulkError("");
+        axios.post(route("contracts.vouchers.bulk-approve", contract.id), {
+            password: bulkPassword,
+            ids: selectedVouchers,
+        }).then(response => {
+            setBulkActionProcessing(false);
+            setShowBulkApproveModal(false);
+            setBulkPassword("");
+            setSelectedVouchers([]);
+            fetchVouchers();
+            router.reload({ only: ['contract'] });
+        }).catch(err => {
+            setBulkActionProcessing(false);
+            setBulkError(err.response?.data?.error || "Error processing bulk approve");
+        });
+    };
+
+    const handleBulkReopen = () => {
+        if (selectedVouchers.length === 0) return;
+        setBulkActionProcessing(true);
+        setBulkError("");
+        axios.post(route("contracts.vouchers.bulk-reopen", contract.id), {
+            password: bulkPassword,
+            reason: bulkReopenReason,
+            ids: selectedVouchers,
+        }).then(response => {
+            setBulkActionProcessing(false);
+            setShowBulkReopenModal(false);
+            setBulkPassword("");
+            setBulkReopenReason("");
+            setSelectedVouchers([]);
+            fetchVouchers();
+            router.reload({ only: ['contract'] });
+        }).catch(err => {
+            setBulkActionProcessing(false);
+            setBulkError(err.response?.data?.error || "Error processing bulk reopen");
+        });
+    };
+
+    const handleBulkPrint = () => {
+        if (selectedVouchers.length === 0) return;
+        const idsString = selectedVouchers.map(item => `${item.type}-${item.id}`).join(",");
+        const printUrl = route("contracts.vouchers.bulk-print", contract.id) + `?ids=${idsString}`;
+        window.open(printUrl, "_blank");
+    };
+
+    // Deep link tab handler
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab");
+        if (tab && tabs.some(t => t.id === tab)) {
+            setActiveTab(tab);
+        }
+    }, []);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (activeTab === "view") {
+            params.delete("tab");
+        } else {
+            params.set("tab", activeTab);
+        }
+        const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+    }, [activeTab]);
 
     const isBlockEnabled = (key) => {
         if (!contract.blocks || contract.blocks.length === 0) return true;
@@ -2154,7 +2461,7 @@ export default function Show({
                                                     <td className="px-4 py-3 text-xs text-text-muted italic">
                                                         {p.reference ||
                                                             p.notes ||
-                                                            "�"}
+                                                            ""}
                                                     </td>
                                                 </tr>
                                             ))
@@ -2166,58 +2473,1223 @@ export default function Show({
                     </div>
                 )}
 
-                {/* Tab Content 5: Vouchers (Placeholder) */}
+{/* Tab Content 5: Vouchers (Dynamic & Progressive) */}
                 {activeTab === "vouchers" && (
-                    <SectionCard
-                        title={t("show.vouchers_history")}
-                        icon={FileSpreadsheet}
-                    >
-                        <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
-                            <FileSpreadsheet className="h-12 w-12 text-primary/40 mb-3" />
-                            <p className="text-sm font-bold text-text mb-1">
-                                {t("show.vouchers_ready")}
-                            </p>
-                            <p className="text-xs text-text-muted max-w-md leading-relaxed">
-                                {t("show.vouchers_later")}
-                            </p>
-                        </div>
-                    </SectionCard>
+                    <div className="space-y-4 text-start">
+                        <SectionCard
+                            title={t("show.vouchers_history")}
+                            icon={FileSpreadsheet}
+                        >
+                            {/* Search & Filter Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-2 mb-4 bg-surface-muted/10 p-3 rounded-xl border border-border">
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "رقم السند" : "Voucher Serial"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={filterSerial}
+                                        onChange={(e) => setFilterSerial(e.target.value)}
+                                        placeholder={lang === "ar" ? "ابحث بالسيريال..." : "Search serial..."}
+                                        className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "رقم الطبلية" : "Pallet Number"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={filterPallet}
+                                        onChange={(e) => setFilterPallet(e.target.value)}
+                                        placeholder={lang === "ar" ? "رقم الطبلية..." : "Pallet number..."}
+                                        className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "الفترة المالية" : "Billing Period"}
+                                    </label>
+                                    <select
+                                        value={filterPeriodId}
+                                        onChange={(e) => setFilterPeriodId(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    >
+                                        <option value="">{lang === "ar" ? "كل الفترات" : "All Periods"}</option>
+                                        {contract.periods?.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {lang === "ar" ? `فترة ${p.period_number}` : `Period ${p.period_number}`}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "الحالة" : "Status"}
+                                    </label>
+                                    <select
+                                        value={filterStatus}
+                                        onChange={(e) => setFilterStatus(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    >
+                                        <option value="">{lang === "ar" ? "كل الحالات" : "All Statuses"}</option>
+                                        <option value="draft">{lang === "ar" ? "مسودة" : "Draft"}</option>
+                                        <option value="approved">{lang === "ar" ? "معتمد" : "Approved"}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "النوع" : "Type"}
+                                    </label>
+                                    <select
+                                        value={filterType}
+                                        onChange={(e) => setFilterType(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    >
+                                        <option value="">{lang === "ar" ? "كل الأنواع" : "All Types"}</option>
+                                        <option value="reception">{lang === "ar" ? "سند استلام" : "Reception"}</option>
+                                        <option value="delivery">{lang === "ar" ? "سند صرف" : "Delivery"}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "نوع البضاعة" : "Goods Type"}
+                                    </label>
+                                    <select
+                                        value={filterGoodsType}
+                                        onChange={(e) => setFilterGoodsType(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    >
+                                        <option value="">{lang === "ar" ? "كل الأصناف" : "All Items"}</option>
+                                        {vouchersGoodsTypes.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {displayBilingual(item.name)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "من تاريخ" : "From Date"}
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={filterStartDate}
+                                        onChange={(e) => setFilterStartDate(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "إلى تاريخ" : "To Date"}
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={filterEndDate}
+                                        onChange={(e) => setFilterEndDate(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* View Mode & Selection Controls */}
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-3">
+                                <div className="flex items-center gap-1.5 flex-wrap font-bold">
+                                    <Tooltip text={lang === "ar" ? "تحديد الكل" : "Select All"}>
+                                        <button
+                                            type="button"
+                                            onClick={handleSelectAll}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-2.5 text-xs font-bold bg-surface border border-border hover:bg-surface-muted rounded-lg hover:translate-y-[-2px] hover:shadow-sm transition-all duration-200"
+                                        >
+                                            <Check className="h-3.5 w-3.5 text-primary" />
+                                            {showButtonText && <span>{lang === "ar" ? "تحديد الكل" : "Select All"}</span>}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "إلغاء التحديد" : "Deselect All"}>
+                                        <button
+                                            type="button"
+                                            onClick={handleDeselectAll}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-2.5 text-xs font-bold bg-surface border border-border hover:bg-surface-muted rounded-lg hover:translate-y-[-2px] hover:shadow-sm transition-all duration-200"
+                                        >
+                                            <XCircle className="h-3.5 w-3.5 text-text-muted" />
+                                            {showButtonText && <span>{lang === "ar" ? "إلغاء" : "Deselect"}</span>}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "عكس التحديد" : "Invert Selection"}>
+                                        <button
+                                            type="button"
+                                            onClick={handleInvertSelection}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-2.5 text-xs font-bold bg-surface border border-border hover:bg-surface-muted rounded-lg hover:translate-y-[-2px] hover:shadow-sm transition-all duration-200"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5 text-text" />
+                                            {showButtonText && <span>{lang === "ar" ? "عكس" : "Invert"}</span>}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "إعادة تعيين الفلاتر" : "Reset Filters"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setFilterSerial("");
+                                                setFilterPallet("");
+                                                setFilterPeriodId("");
+                                                setFilterStatus("");
+                                                setFilterType("");
+                                                setFilterGoodsType("");
+                                                setFilterStartDate("");
+                                                setFilterEndDate("");
+                                            }}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-2.5 text-xs font-bold bg-surface border border-border hover:bg-surface-muted rounded-lg hover:translate-y-[-2px] hover:shadow-sm transition-all duration-200 text-danger"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            {showButtonText && <span>{lang === "ar" ? "إعادة ضبط" : "Reset"}</span>}
+                                        </button>
+                                    </Tooltip>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                    <Tooltip text={lang === "ar" ? "عرض شبكي" : "Grid View"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewMode("grid")}
+                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
+                                                viewMode === "grid"
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
+                                            }`}
+                                        >
+                                            <Grid className="h-4 w-4" />
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "عرض قائمة" : "List View"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setViewMode("list")}
+                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
+                                                viewMode === "list"
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
+                                            }`}
+                                        >
+                                            <List className="h-4 w-4" />
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+
+                            {/* Data Contents */}
+                            {vouchersLoading ? (
+                                <div className="flex flex-col items-center justify-center py-16 gap-2">
+                                    <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+                                    <span className="text-xs text-text-muted font-bold">
+                                        {lang === "ar" ? "جاري تحميل السندات..." : "Loading vouchers..."}
+                                    </span>
+                                </div>
+                            ) : vouchers.length === 0 ? (
+                                <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
+                                    <FileSpreadsheet className="h-12 w-12 text-primary/40 mb-3" />
+                                    <p className="text-sm font-bold text-text mb-1">
+                                        {lang === "ar" ? "لا توجد سندات مطابقة للبحث" : "No matching vouchers found"}
+                                    </p>
+                                    <p className="text-xs text-text-muted max-w-md leading-relaxed">
+                                        {lang === "ar" ? "تأكد من تعديل معايير البحث أو اختيار فترة مالية أخرى للبحث عن السندات المطلوبة." : "Adjust search criteria or select another period to find vouchers."}
+                                    </p>
+                                </div>
+                            ) : viewMode === "grid" ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {vouchers.map((voucher) => {
+                                        const isReception = voucher.voucher_type === "reception";
+                                        const isSelected = isVoucherSelected(voucher.id, voucher.voucher_type);
+                                        return (
+                                            <div 
+                                                key={`${voucher.voucher_type}-${voucher.id}`}
+                                                className={`rounded-xl border bg-surface shadow-sm overflow-hidden flex flex-col hover:translate-y-[-2px] hover:shadow-md transition-all duration-200 ${
+                                                    isSelected ? "border-primary ring-1 ring-primary" : "border-border"
+                                                }`}
+                                            >
+                                                {/* Card Header */}
+                                                <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-muted/30">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={(e) => handleSelectVoucher(voucher.id, voucher.voucher_type, e.target.checked)}
+                                                            className="h-3.5 w-3.5 rounded text-primary focus:ring-primary border-border"
+                                                        />
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                            isReception 
+                                                                ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
+                                                                : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                                                        }`}>
+                                                            {isReception ? (lang === "ar" ? "استلام" : "Reception") : (lang === "ar" ? "صرف" : "Delivery")}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[10px] text-text-muted font-mono font-bold">
+                                                        {lang === "ar" ? `فترة ${voucher.period?.period_number || "—"}` : `Period ${voucher.period?.period_number || "—"}`}
+                                                    </span>
+                                                </div>
+
+                                                {/* Card Body */}
+                                                <div className="p-3 flex-1 flex flex-col gap-2.5 text-start font-sans">
+                                                    <div>
+                                                        <a 
+                                                            href={isReception ? route("receptions.show", voucher.id) : route("deliveries.show", voucher.id)}
+                                                            className="text-xs font-black text-primary hover:underline font-mono"
+                                                        >
+                                                            {voucher.serial_number}
+                                                        </a>
+                                                        <p className="text-[10px] text-text-muted font-mono mt-0.5">
+                                                            {voucher.date ? new Date(voucher.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Contents Summary */}
+                                                    <div className="grid grid-cols-3 gap-1 py-1.5 px-2 rounded-lg bg-surface-muted/30 border border-border/50 text-center text-xs">
+                                                        <div>
+                                                            <p className="text-[9px] text-text-muted font-bold">{lang === "ar" ? "طبالي" : "Pallets"}</p>
+                                                            <p className="font-extrabold text-text font-mono mt-0.5">{voucher.pallet_count}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] text-text-muted font-bold">{lang === "ar" ? "عبوات" : "Packages"}</p>
+                                                            <p className="font-extrabold text-text font-mono mt-0.5">{Math.round(voucher.package_count || 0)}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] text-text-muted font-bold">{lang === "ar" ? "أصناف" : "Items"}</p>
+                                                            <p className="font-extrabold text-text font-mono mt-0.5">{voucher.item_count}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {voucher.notes && (
+                                                        <p className="text-[10px] text-text-muted line-clamp-1 italic">
+                                                            {voucher.notes}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Card Footer */}
+                                                <div className="px-3 py-2 border-t border-border bg-surface-muted/20 flex items-center justify-between">
+                                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                                        voucher.status === "approved"
+                                                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                                                            : "bg-gray-500/10 text-gray-600 border border-gray-500/20"
+                                                    }`}>
+                                                        {voucher.status === "approved" ? (lang === "ar" ? "معتمد" : "Approved") : (lang === "ar" ? "مسودة" : "Draft")}
+                                                    </span>
+
+                                                    <div className="flex items-center gap-1 font-bold">
+                                                        <Tooltip text={lang === "ar" ? "عرض التفاصيل" : "View details"}>
+                                                            <a
+                                                                href={isReception ? route("receptions.show", voucher.id) : route("deliveries.show", voucher.id)}
+                                                                className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                                                            >
+                                                                <Eye className="h-3.5 w-3.5" />
+                                                            </a>
+                                                        </Tooltip>
+
+                                                        {voucher.status === "draft" && (
+                                                            <Tooltip text={lang === "ar" ? "تعديل" : "Edit"}>
+                                                                <a
+                                                                    href={isReception ? route("receptions.edit", voucher.id) : route("deliveries.edit", voucher.id)}
+                                                                    className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                                                                >
+                                                                    <Edit3 className="h-3.5 w-3.5 text-primary" />
+                                                                </a>
+                                                            </Tooltip>
+                                                        )}
+
+                                                        <Tooltip text={lang === "ar" ? "طباعة" : "Print"}>
+                                                            <a
+                                                                href={isReception ? route("receptions.print", voucher.id) : route("deliveries.print", voucher.id)}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                                                            >
+                                                                <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                                                            </a>
+                                                        </Tooltip>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="border border-border rounded-xl overflow-hidden bg-surface shadow-sm font-sans">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs text-start border-collapse">
+                                            <thead>
+                                                <tr className="bg-surface-muted/40 border-b border-border text-text-muted font-bold text-[10px] uppercase">
+                                                    <th className="px-4 py-2.5 text-start w-10"></th>
+                                                    <th className="px-4 py-2.5 text-start w-12">{lang === "ar" ? "م" : "#"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "الرقم المسلسل" : "Serial Number"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "التاريخ" : "Date"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "النوع" : "Type"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "الفترة" : "Period"}</th>
+                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "طبالي" : "Pallets"}</th>
+                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "عبوات" : "Packages"}</th>
+                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "أصناف" : "Items"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "الحالة" : "Status"}</th>
+                                                    <th className="px-4 py-2.5 text-end w-28">{lang === "ar" ? "الإجراءات" : "Actions"}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border">
+                                                {vouchers.map((voucher, idx) => {
+                                                    const isReception = voucher.voucher_type === "reception";
+                                                    const isSelected = isVoucherSelected(voucher.id, voucher.voucher_type);
+                                                    return (
+                                                        <tr key={`${voucher.voucher_type}-${voucher.id}`} className={`hover:bg-surface-muted/30 text-start ${isSelected ? 'bg-primary/5' : ''}`}>
+                                                            <td className="px-4 py-2.5 text-start">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => handleSelectVoucher(voucher.id, voucher.voucher_type, e.target.checked)}
+                                                                    className="h-3.5 w-3.5 rounded text-primary focus:ring-primary border-border"
+                                                                />
+                                                            </td>
+                                                            <td className="px-4 py-2.5 font-mono text-text-muted">
+                                                                {(vouchersPage - 1) * 24 + idx + 1}
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <a 
+                                                                    href={isReception ? route("receptions.show", voucher.id) : route("deliveries.show", voucher.id)}
+                                                                    className="font-black text-primary hover:underline font-mono"
+                                                                >
+                                                                    {voucher.serial_number}
+                                                                </a>
+                                                            </td>
+                                                            <td className="px-4 py-2.5 font-mono text-text-muted">
+                                                                {voucher.date ? new Date(voucher.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                                    isReception 
+                                                                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
+                                                                        : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                                                                }`}>
+                                                                    {isReception ? (lang === "ar" ? "استلام" : "Reception") : (lang === "ar" ? "صرف بضاعة" : "Delivery")}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <span className="font-semibold text-text-muted">
+                                                                    {lang === "ar" ? `فترة ${voucher.period?.period_number || "—"}` : `Period ${voucher.period?.period_number || "—"}`}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-2.5 text-center font-mono font-bold text-text-muted">
+                                                                {voucher.pallet_count}
+                                                            </td>
+                                                            <td className="px-4 py-2.5 text-center font-mono font-bold text-text-muted">
+                                                                {Math.round(voucher.package_count || 0)}
+                                                            </td>
+                                                            <td className="px-4 py-2.5 text-center font-mono font-bold text-text-muted">
+                                                                {voucher.item_count}
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                                                    voucher.status === "approved"
+                                                                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                                                                        : "bg-gray-500/10 text-gray-600 border border-gray-500/20"
+                                                                }`}>
+                                                                    {voucher.status === "approved" ? (lang === "ar" ? "معتمد" : "Approved") : (lang === "ar" ? "مسودة" : "Draft")}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-2.5 text-end flex items-center justify-end gap-1 font-bold">
+                                                                <Tooltip text={lang === "ar" ? "عرض التفاصيل" : "View details"}>
+                                                                    <a
+                                                                        href={isReception ? route("receptions.show", voucher.id) : route("deliveries.show", voucher.id)}
+                                                                        className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                                                                    >
+                                                                        <Eye className="h-3.5 w-3.5" />
+                                                                    </a>
+                                                                </Tooltip>
+
+                                                                {voucher.status === "draft" && (
+                                                                    <Tooltip text={lang === "ar" ? "تعديل" : "Edit"}>
+                                                                        <a
+                                                                            href={isReception ? route("receptions.edit", voucher.id) : route("deliveries.edit", voucher.id)}
+                                                                            className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                                                                        >
+                                                                            <Edit3 className="h-3.5 w-3.5 text-primary" />
+                                                                        </a>
+                                                                    </Tooltip>
+                                                                )}
+
+                                                                <Tooltip text={lang === "ar" ? "طباعة" : "Print"}>
+                                                                    <a
+                                                                        href={isReception ? route("receptions.print", voucher.id) : route("deliveries.print", voucher.id)}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
+                                                                    >
+                                                                        <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                                                                    </a>
+                                                                </Tooltip>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pagination */}
+                            {!vouchersLoading && vouchersLastPage > 1 && (
+                                <div className="flex justify-between items-center gap-2 mt-4 px-2">
+                                    <span className="text-xs text-text-muted font-bold">
+                                        {lang === "ar" 
+                                            ? `عرض صفحة ${vouchersPage} من أصل ${vouchersLastPage} (إجمالي ${vouchersTotal} سجل)`
+                                            : `Showing page ${vouchersPage} of ${vouchersLastPage} (Total ${vouchersTotal} entries)`}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 font-bold">
+                                        <button
+                                            type="button"
+                                            disabled={vouchersPage === 1}
+                                            onClick={() => setVouchersPage(prev => Math.max(1, prev - 1))}
+                                            className="flex items-center justify-center h-[30px] px-3 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all"
+                                        >
+                                            {lang === "ar" ? "السابق" : "Prev"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={vouchersPage === vouchersLastPage}
+                                            onClick={() => setVouchersPage(prev => Math.min(vouchersLastPage, prev + 1))}
+                                            className="flex items-center justify-center h-[30px] px-3 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all"
+                                        >
+                                            {lang === "ar" ? "التالي" : "Next"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </SectionCard>
+
+                        {/* Bulk actions floating footer */}
+                        {selectedVouchers.length > 0 && (
+                            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-surface/90 backdrop-blur border border-primary/20 shadow-2xl rounded-2xl p-4 flex items-center justify-between gap-6 max-w-xl w-[90%] transition-all animate-bounce">
+                                <div className="flex items-center gap-2 text-start font-sans">
+                                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+                                    <div>
+                                        <p className="text-xs font-extrabold text-text">
+                                            {lang === "ar" 
+                                                ? `تم تحديد ${selectedVouchers.length} عنصر` 
+                                                : `${selectedVouchers.length} items selected`}
+                                        </p>
+                                        <p className="text-[10px] text-text-muted">
+                                            {lang === "ar" ? "اختر إجراء مجمع لتنفيذه:" : "Choose a bulk action:"}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 font-bold">
+                                    <Tooltip text={lang === "ar" ? "طباعة السندات المحددة" : "Print selected"}>
+                                        <button
+                                            type="button"
+                                            onClick={handleBulkPrint}
+                                            className="flex items-center justify-center gap-1.5 h-[30px] px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg hover:translate-y-[-2px] hover:shadow-md transition-all duration-200"
+                                        >
+                                            <Printer className="h-3.5 w-3.5" />
+                                            {showButtonText && <span>{lang === "ar" ? "طباعة" : "Print"}</span>}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "اعتماد السندات المحددة" : "Approve selected"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setBulkError("");
+                                                setBulkPassword("");
+                                                setShowBulkApproveModal(true);
+                                            }}
+                                            className="flex items-center justify-center gap-1.5 h-[30px] px-3 text-xs font-bold bg-primary hover:bg-primary/90 text-white rounded-lg hover:translate-y-[-2px] hover:shadow-md transition-all duration-200"
+                                        >
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                            {showButtonText && <span>{lang === "ar" ? "اعتماد" : "Approve"}</span>}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "إعادة السندات للتعديل" : "Reopen selected"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setBulkError("");
+                                                setBulkPassword("");
+                                                setBulkReopenReason("");
+                                                setShowBulkReopenModal(true);
+                                            }}
+                                            className="flex items-center justify-center gap-1.5 h-[30px] px-3 text-xs font-bold bg-warning hover:bg-warning/90 text-white rounded-lg hover:translate-y-[-2px] hover:shadow-md transition-all duration-200"
+                                        >
+                                            <Unlock className="h-3.5 w-3.5" />
+                                            {showButtonText && <span>{lang === "ar" ? "إعادة للتعديل" : "Reopen"}</span>}
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Bulk Approve Confirmation Modal */}
+                        <Modal
+                            show={showBulkApproveModal}
+                            onClose={() => setShowBulkApproveModal(false)}
+                            maxWidth="md"
+                        >
+                            <div className="p-5 text-start font-sans">
+                                <div className="flex items-center gap-2 text-primary border-b border-border pb-3 mb-4">
+                                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                                    <h2 className="text-sm font-extrabold text-text">
+                                        {lang === "ar" ? "تأكيد اعتماد السندات المحددة" : "Confirm Bulk Approve"}
+                                    </h2>
+                                </div>
+
+                                <p className="text-xs text-text-muted mb-4 leading-relaxed font-semibold">
+                                    {lang === "ar" 
+                                        ? `أنت على وشك اعتماد عدد (${selectedVouchers.length}) سند استلام/صرف دفعة واحدة. يرجى إدخال كلمة مرور التأكيد الآمنة للمتابعة وتثبيت الحركات على مخزون العقد:` 
+                                        : `You are about to approve (${selectedVouchers.length}) reception/delivery vouchers at once. Please enter your secure password to verify and post these movements to contract warehouse balance:`}
+                                </p>
+
+                                {bulkError && (
+                                    <div className="bg-danger/10 text-danger border border-danger/20 p-2.5 rounded-lg text-xs font-semibold mb-4 flex items-center gap-1.5">
+                                        <AlertCircle className="h-4 w-4 shrink-0" />
+                                        <span>{bulkError}</span>
+                                    </div>
+                                )}
+
+                                <div className="mb-5">
+                                    <InputLabel htmlFor="bulk_approve_password" value={lang === "ar" ? "كلمة المرور الآمنة للتأكيد" : "Secure Confirmation Password"} className="text-xs font-bold text-text-muted mb-1.5" />
+                                    <TextInput
+                                        id="bulk_approve_password"
+                                        type="password"
+                                        value={bulkPassword}
+                                        onChange={(e) => setBulkPassword(e.target.value)}
+                                        placeholder={lang === "ar" ? "أدخل كلمة مرور التأكيد الآمنة..." : "Enter secure password..."}
+                                        className="w-full text-xs"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-3 border-t border-border font-bold">
+                                    <Tooltip text={lang === "ar" ? "إلغاء التراجع" : "Cancel"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBulkApproveModal(false)}
+                                            disabled={bulkActionProcessing}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-3.5 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all duration-200"
+                                        >
+                                            <XCircle className="h-4 w-4 text-text-muted" />
+                                            {showButtonText && <span>{lang === "ar" ? "إلغاء" : "Cancel"}</span>}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "تأكيد الاعتماد المجمع" : "Confirm Bulk Approve"}>
+                                        <button
+                                            type="button"
+                                            onClick={handleBulkApprove}
+                                            disabled={bulkActionProcessing || !bulkPassword}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-3.5 text-xs font-bold bg-primary text-white hover:bg-primary/90 hover:translate-y-[-2px] hover:shadow-md disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none rounded-lg transition-all duration-200"
+                                        >
+                                            {bulkActionProcessing ? (
+                                                <RefreshCw className="h-4 w-4 animate-spin text-white" />
+                                            ) : (
+                                                <CheckCircle2 className="h-4 w-4 text-white" />
+                                            )}
+                                            {showButtonText && (
+                                                <span>
+                                                    {bulkActionProcessing 
+                                                        ? (lang === "ar" ? "جاري الاعتماد..." : "Approving...") 
+                                                        : (lang === "ar" ? "تأكيد الاعتماد" : "Confirm Approve")}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+                        </Modal>
+
+                        {/* Bulk Reopen Confirmation Modal */}
+                        <Modal
+                            show={showBulkReopenModal}
+                            onClose={() => setShowBulkReopenModal(false)}
+                            maxWidth="md"
+                        >
+                            <div className="p-5 text-start font-sans">
+                                <div className="flex items-center gap-2 text-warning border-b border-border pb-3 mb-4">
+                                    <Unlock className="h-5 w-5 text-warning" />
+                                    <h2 className="text-sm font-extrabold text-text">
+                                        {lang === "ar" ? "إعادة السندات المحددة للتعديل (مسودة)" : "Reopen Selected Vouchers (Draft)"}
+                                    </h2>
+                                </div>
+
+                                <p className="text-xs text-text-muted mb-4 leading-relaxed font-semibold">
+                                    {lang === "ar" 
+                                        ? `أنت على وشك إلغاء اعتماد عدد (${selectedVouchers.length}) سند وإعادتهم لحالة مسودة. يرجى إدخال سبب إعادة الفتح وكلمة المرور الآمنة للمتابعة:` 
+                                        : `You are about to cancel approval of (${selectedVouchers.length}) vouchers and revert them to Draft status. Please input the reason and your secure password:`}
+                                </p>
+
+                                {bulkError && (
+                                    <div className="bg-danger/10 text-danger border border-danger/20 p-2.5 rounded-lg text-xs font-semibold mb-4 flex items-center gap-1.5">
+                                        <AlertCircle className="h-4 w-4 shrink-0" />
+                                        <span>{bulkError}</span>
+                                    </div>
+                                )}
+
+                                <div className="mb-4 text-start">
+                                    <InputLabel htmlFor="bulk_reopen_reason" value={lang === "ar" ? "سبب إعادة الفتح للتعديل" : "Reason for Reopening"} className="text-xs font-bold text-text-muted mb-1.5" />
+                                    <textarea
+                                        id="bulk_reopen_reason"
+                                        rows="3"
+                                        value={bulkReopenReason}
+                                        onChange={(e) => setBulkReopenReason(e.target.value)}
+                                        placeholder={lang === "ar" ? "أدخل سبب إلغاء الاعتماد بالتفصيل (5 أحرف على الأقل)..." : "Explain why you are reopening these vouchers (at least 5 characters)..."}
+                                        className="w-full text-xs border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary p-2"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="mb-5">
+                                    <InputLabel htmlFor="bulk_reopen_password" value={lang === "ar" ? "كلمة المرور الآمنة للتأكيد" : "Secure Confirmation Password"} className="text-xs font-bold text-text-muted mb-1.5" />
+                                    <TextInput
+                                        id="bulk_reopen_password"
+                                        type="password"
+                                        value={bulkPassword}
+                                        onChange={(e) => setBulkPassword(e.target.value)}
+                                        placeholder={lang === "ar" ? "أدخل كلمة مرور التأكيد الآمنة..." : "Enter secure password..."}
+                                        className="w-full text-xs"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-3 border-t border-border font-bold">
+                                    <Tooltip text={lang === "ar" ? "إلغاء التراجع" : "Cancel"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBulkReopenModal(false)}
+                                            disabled={bulkActionProcessing}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-3.5 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all duration-200"
+                                        >
+                                            <XCircle className="h-4 w-4 text-text-muted" />
+                                            {showButtonText && <span>{lang === "ar" ? "إلغاء" : "Cancel"}</span>}
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "إعادة الفتح للتعديل" : "Reopen Selected Vouchers"}>
+                                        <button
+                                            type="button"
+                                            onClick={handleBulkReopen}
+                                            disabled={bulkActionProcessing || !bulkPassword || !bulkReopenReason || bulkReopenReason.length < 5}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-3.5 text-xs font-bold bg-warning text-white hover:bg-warning/90 hover:translate-y-[-2px] hover:shadow-md disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none rounded-lg transition-all duration-200"
+                                        >
+                                            {bulkActionProcessing ? (
+                                                <RefreshCw className="h-4 w-4 animate-spin text-white" />
+                                            ) : (
+                                                <Unlock className="h-4 w-4 text-white" />
+                                            )}
+                                            {showButtonText && (
+                                                <span>
+                                                    {bulkActionProcessing 
+                                                        ? (lang === "ar" ? "جاري الحفظ..." : "Processing...") 
+                                                        : (lang === "ar" ? "إعادة للتعديل" : "Confirm Reopen")}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+                        </Modal>
+                    </div>
                 )}
 
-                {/* Tab Content 6: Pallets (Placeholder) */}
+                {/* Tab Content 6: Pallets (Dynamic & Progressive) */}
                 {activeTab === "pallets" && (
-                    <SectionCard
-                        title={t("show.pallets_history")}
-                        icon={Layers}
-                    >
-                        <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
-                            <Layers className="h-12 w-12 text-primary/40 mb-3" />
-                            <p className="text-sm font-bold text-text mb-1">
-                                {t("show.pallets_ready")}
-                            </p>
-                            <p className="text-xs text-text-muted max-w-md leading-relaxed">
-                                {t("show.pallets_later")}
-                            </p>
-                        </div>
-                    </SectionCard>
+                    <div className="space-y-4 text-start">
+                        <SectionCard
+                            title={lang === "ar" ? "رصيد طبالي العقد" : "Contract Pallets Balance"}
+                            icon={Layers}
+                        >
+                            {/* Filters */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-4 bg-surface-muted/10 p-3 rounded-xl border border-border">
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "رقم أو كود الطبلية" : "Pallet Number / Code"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={filterPalletSearch}
+                                        onChange={(e) => setFilterPalletSearch(e.target.value)}
+                                        placeholder={lang === "ar" ? "ابحث بالرقم أو الكود..." : "Search number or code..."}
+                                        className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "حجم الطبلية" : "Pallet Size"}
+                                    </label>
+                                    <select
+                                        value={filterPalletSize}
+                                        onChange={(e) => setFilterPalletSize(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    >
+                                        <option value="">{lang === "ar" ? "كل الأحجام" : "All Sizes"}</option>
+                                        {palletsSizes.map((s) => (
+                                            <option key={s} value={s}>{s}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "صنف مخزن" : "Contains Stored Item"}
+                                    </label>
+                                    <select
+                                        value={filterPalletItemId}
+                                        onChange={(e) => setFilterPalletItemId(e.target.value)}
+                                        className="w-full text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    >
+                                        <option value="">{lang === "ar" ? "كل الأصناف" : "All Items"}</option>
+                                        {palletsItems.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex items-end gap-1.5 font-bold">
+                                    <Tooltip text={lang === "ar" ? "إعادة تعيين الفلاتر" : "Reset Filters"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setFilterPalletSearch("");
+                                                setFilterPalletSize("");
+                                                setFilterPalletItemId("");
+                                            }}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-2.5 text-xs font-bold bg-surface border border-border hover:bg-surface-muted rounded-lg hover:translate-y-[-2px] hover:shadow-sm transition-all duration-200 text-danger w-full sm:w-auto"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            {showButtonText && <span>{lang === "ar" ? "إعادة ضبط" : "Reset"}</span>}
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+
+                            {/* View toggle & details header */}
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-xs text-text-muted font-bold">
+                                    {lang === "ar"
+                                        ? `إجمالي الطبالي النشطة: ${palletsTotal}`
+                                        : `Total active pallets: ${palletsTotal}`}
+                                </span>
+
+                                <div className="flex items-center gap-1.5">
+                                    <Tooltip text={lang === "ar" ? "عرض شبكي" : "Grid View"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPalletViewMode("grid")}
+                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
+                                                palletViewMode === "grid"
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
+                                            }`}
+                                        >
+                                            <Grid className="h-4 w-4" />
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "عرض قائمة" : "List View"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPalletViewMode("list")}
+                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
+                                                palletViewMode === "list"
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
+                                            }`}
+                                        >
+                                            <List className="h-4 w-4" />
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+
+                            {/* Contents */}
+                            {palletsLoading ? (
+                                <div className="flex flex-col items-center justify-center py-16 gap-2">
+                                    <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+                                    <span className="text-xs text-text-muted font-bold">
+                                        {lang === "ar" ? "جاري تحميل الطبالي..." : "Loading pallets..."}
+                                    </span>
+                                </div>
+                            ) : pallets.length === 0 ? (
+                                <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
+                                    <Layers className="h-12 w-12 text-primary/40 mb-3" />
+                                    <p className="text-sm font-bold text-text mb-1">
+                                        {lang === "ar" ? "لا توجد طبالي نشطة حالياً" : "No active pallets found"}
+                                    </p>
+                                    <p className="text-xs text-text-muted max-w-md leading-relaxed">
+                                        {lang === "ar" 
+                                            ? "لم يتم تسجيل أي بضاعة على طبالي نشطة لهذا العقد، أو أن كافة الطبالي قد تم صرفها وتفريغها بالكامل." 
+                                            : "No goods are stored on active pallets for this contract, or all pallets have been completely discharged."}
+                                    </p>
+                                </div>
+                            ) : palletViewMode === "grid" ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {pallets.map((pallet) => (
+                                        <div 
+                                            key={pallet.id}
+                                            className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col hover:translate-y-[-2px] hover:shadow-md transition-all duration-200"
+                                        >
+                                            {/* Header */}
+                                            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-muted/30">
+                                                <span className="text-xs font-black text-primary font-mono">
+                                                    {pallet.pallet_code}
+                                                </span>
+                                                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
+                                                    {pallet.size}
+                                                </span>
+                                            </div>
+
+                                            {/* Body */}
+                                            <div className="p-3 flex-1 flex flex-col gap-2 text-start font-sans">
+                                                <div className="flex justify-between items-center text-[10px] text-text-muted font-bold border-b border-border/50 pb-1">
+                                                    <span>{lang === "ar" ? "الأصناف المخزنة" : "Stored Items"}</span>
+                                                    <span>{lang === "ar" ? "الكمية" : "Qty"}</span>
+                                                </div>
+
+                                                <div className="space-y-1.5 flex-1 min-h-[60px]">
+                                                    {pallet.contents?.map((c, idx) => (
+                                                        <div key={idx} className="flex justify-between items-start text-xs font-semibold gap-2 leading-tight">
+                                                            <div className="text-text font-medium truncate max-w-[150px]">
+                                                                {displayBilingual(c.item_name)}
+                                                                {c.variant_name && <span className="text-[10px] text-text-muted block">({c.variant_name})</span>}
+                                                            </div>
+                                                            <span className="text-primary font-bold font-mono shrink-0">{c.quantity}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Footer */}
+                                            <div className="px-3 py-2 border-t border-border bg-surface-muted/20 flex items-center justify-between text-xs font-bold">
+                                                <span className="text-text-muted text-[10px]">{lang === "ar" ? "إجمالي الطرود" : "Total Pkgs"}</span>
+                                                <span className="text-text font-mono">{pallet.total_packages}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="border border-border rounded-xl overflow-hidden bg-surface shadow-sm font-sans">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs text-start border-collapse">
+                                            <thead>
+                                                <tr className="bg-surface-muted/40 border-b border-border text-text-muted font-bold text-[10px] uppercase">
+                                                    <th className="px-4 py-2.5 text-start w-12">{lang === "ar" ? "م" : "#"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "كود الطبلية" : "Pallet Code"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "رقم الطبلية" : "Pallet Number"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "المقاس / الحجم" : "Size"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "المحتويات النشطة" : "Active Contents"}</th>
+                                                    <th className="px-4 py-2.5 text-end">{lang === "ar" ? "إجمالي الطرود" : "Total Packages"}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border">
+                                                {pallets.map((pallet, idx) => (
+                                                    <tr key={pallet.id} className="hover:bg-surface-muted/30 text-start">
+                                                        <td className="px-4 py-2.5 font-mono text-text-muted">
+                                                            {(palletsPage - 1) * 24 + idx + 1}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 font-bold text-primary font-mono">
+                                                            {pallet.pallet_code}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 font-mono">
+                                                            {pallet.pallet_number}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 font-semibold text-text-muted">
+                                                            {pallet.size}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 max-w-xs">
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {pallet.contents?.map((c, cIdx) => (
+                                                                    <span key={cIdx} className="bg-primary/5 text-primary text-[10px] px-1.5 py-0.5 rounded border border-primary/10 font-bold whitespace-nowrap">
+                                                                        {displayBilingual(c.item_name)}: {c.quantity}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-end font-mono font-bold text-text">
+                                                            {pallet.total_packages}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pagination */}
+                            {!palletsLoading && palletsLastPage > 1 && (
+                                <div className="flex justify-between items-center gap-2 mt-4 px-2">
+                                    <span className="text-xs text-text-muted font-bold">
+                                        {lang === "ar" 
+                                            ? `عرض صفحة ${palletsPage} من أصل ${palletsLastPage} (إجمالي ${palletsTotal} طبلية)`
+                                            : `Showing page ${palletsPage} of ${palletsLastPage} (Total ${palletsTotal} pallets)`}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 font-bold">
+                                        <button
+                                            type="button"
+                                            disabled={palletsPage === 1}
+                                            onClick={() => setPalletsPage(prev => Math.max(1, prev - 1))}
+                                            className="flex items-center justify-center h-[30px] px-3 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all"
+                                        >
+                                            {lang === "ar" ? "السابق" : "Prev"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={palletsPage === palletsLastPage}
+                                            onClick={() => setPalletsPage(prev => Math.min(palletsLastPage, prev + 1))}
+                                            className="flex items-center justify-center h-[30px] px-3 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all"
+                                        >
+                                            {lang === "ar" ? "التالي" : "Next"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </SectionCard>
+                    </div>
                 )}
 
-                {/* Tab Content 7: Stored Items (Placeholder) */}
+                {/* Tab Content 7: Stored Items (Dynamic & Progressive) */}
                 {activeTab === "items" && (
-                    <SectionCard
-                        title={t("show.stored_items_history")}
-                        icon={Package}
-                    >
-                        <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
-                            <Package className="h-12 w-12 text-primary/40 mb-3" />
-                            <p className="text-sm font-bold text-text mb-1">
-                                {t("show.stored_items_ready")}
-                            </p>
-                            <p className="text-xs text-text-muted max-w-md leading-relaxed">
-                                {t("show.stored_items_later")}
-                            </p>
-                        </div>
-                    </SectionCard>
+                    <div className="space-y-4 text-start">
+                        <SectionCard
+                            title={lang === "ar" ? "تقرير الأصناف والسلع المخزنة بالعقد" : "Stored Items & Goods Balance Report"}
+                            icon={Package}
+                        >
+                            {/* Filters */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-4 bg-surface-muted/10 p-3 rounded-xl border border-border">
+                                <div className="sm:col-span-2">
+                                    <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                        {lang === "ar" ? "اسم الصنف أو كود الصنف" : "Item Name / Code"}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={filterItemSearch}
+                                        onChange={(e) => setFilterItemSearch(e.target.value)}
+                                        placeholder={lang === "ar" ? "ابحث باسم أو كود الصنف..." : "Search item name or code..."}
+                                        className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+
+                                <div className="flex items-end gap-1.5 font-bold">
+                                    <Tooltip text={lang === "ar" ? "إعادة تعيين الفلاتر" : "Reset Filters"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setFilterItemSearch("");
+                                            }}
+                                            className="flex items-center justify-center gap-1 h-[30px] px-2.5 text-xs font-bold bg-surface border border-border hover:bg-surface-muted rounded-lg hover:translate-y-[-2px] hover:shadow-sm transition-all duration-200 text-danger w-full sm:w-auto"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            {showButtonText && <span>{lang === "ar" ? "إعادة ضبط" : "Reset"}</span>}
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+
+                            {/* View togglers */}
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-xs text-text-muted font-bold">
+                                    {lang === "ar"
+                                        ? `عدد السلع المستودعية: ${storedItemsTotal}`
+                                        : `Total warehouse items: ${storedItemsTotal}`}
+                                </span>
+
+                                <div className="flex items-center gap-1.5">
+                                    <Tooltip text={lang === "ar" ? "عرض شبكي" : "Grid View"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setItemViewMode("grid")}
+                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
+                                                itemViewMode === "grid"
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
+                                            }`}
+                                        >
+                                            <Grid className="h-4 w-4" />
+                                        </button>
+                                    </Tooltip>
+
+                                    <Tooltip text={lang === "ar" ? "عرض قائمة" : "List View"}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setItemViewMode("list")}
+                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
+                                                itemViewMode === "list"
+                                                    ? "bg-primary border-primary text-white"
+                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
+                                            }`}
+                                        >
+                                            <List className="h-4 w-4" />
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            </div>
+
+                            {/* Contents */}
+                            {storedItemsLoading ? (
+                                <div className="flex flex-col items-center justify-center py-16 gap-2">
+                                    <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+                                    <span className="text-xs text-text-muted font-bold">
+                                        {lang === "ar" ? "جاري تحميل الأصناف المخزنة..." : "Loading stored items..."}
+                                    </span>
+                                </div>
+                            ) : storedItems.length === 0 ? (
+                                <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
+                                    <Package className="h-12 w-12 text-primary/40 mb-3" />
+                                    <p className="text-sm font-bold text-text mb-1">
+                                        {lang === "ar" ? "لا توجد أصناف مخزنة حالياً" : "No stored items found"}
+                                    </p>
+                                    <p className="text-xs text-text-muted max-w-md leading-relaxed">
+                                        {lang === "ar" 
+                                            ? "لا توجد أصناف مخزنة برصيد إيجابي متبقي لهذا العقد حالياً." 
+                                            : "No items currently reside in active balance for this contract."}
+                                    </p>
+                                </div>
+                            ) : itemViewMode === "grid" ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {storedItems.map((item, idx) => (
+                                        <div 
+                                            key={idx}
+                                            className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col hover:translate-y-[-2px] hover:shadow-md transition-all duration-200"
+                                        >
+                                            {/* Header */}
+                                            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-muted/30">
+                                                <span className="text-xs font-black text-primary font-mono">
+                                                    {item.item_code}
+                                                </span>
+                                                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold font-mono">
+                                                    {lang === "ar" ? `${item.pallets_count} طبلية` : `${item.pallets_count} Pallets`}
+                                                </span>
+                                            </div>
+
+                                            {/* Body */}
+                                            <div className="p-3 flex-1 flex flex-col gap-2 text-start font-sans">
+                                                <h4 className="text-xs font-black text-text truncate">
+                                                    {displayBilingual(item.item_name)}
+                                                </h4>
+                                                {item.variant_name && (
+                                                    <span className="text-[10px] text-text-muted font-bold -mt-1 block">
+                                                        {item.variant_name} ({item.quality || "—"})
+                                                    </span>
+                                                )}
+
+                                                <div className="grid grid-cols-3 gap-1 py-1.5 px-2 rounded-lg bg-surface-muted/30 border border-border/50 text-center text-xs font-bold mt-2">
+                                                    <div>
+                                                        <p className="text-[9px] text-emerald-600">{lang === "ar" ? "الوارد" : "In"}</p>
+                                                        <p className="font-extrabold text-text font-mono mt-0.5">{item.total_in}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] text-rose-600">{lang === "ar" ? "المنصرف" : "Out"}</p>
+                                                        <p className="font-extrabold text-text font-mono mt-0.5">{item.total_out}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] text-primary">{lang === "ar" ? "الرصيد" : "Bal"}</p>
+                                                        <p className="font-extrabold text-primary font-mono mt-0.5">{item.balance}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="border border-border rounded-xl overflow-hidden bg-surface shadow-sm font-sans">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs text-start border-collapse">
+                                            <thead>
+                                                <tr className="bg-surface-muted/40 border-b border-border text-text-muted font-bold text-[10px] uppercase">
+                                                    <th className="px-4 py-2.5 text-start w-12">{lang === "ar" ? "م" : "#"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "كود الصنف" : "Item Code"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "اسم الصنف" : "Item Name"}</th>
+                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "الشكل (Variant)" : "Variant / Format"}</th>
+                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "إجمالي الوارد" : "Total Received"}</th>
+                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "إجمالي الصادر" : "Total Delivered"}</th>
+                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "الرصيد الحالي" : "Current Balance"}</th>
+                                                    <th className="px-4 py-2.5 text-end">{lang === "ar" ? "عدد الطبالي" : "Pallets Count"}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border">
+                                                {storedItems.map((item, idx) => (
+                                                    <tr key={idx} className="hover:bg-surface-muted/30 text-start">
+                                                        <td className="px-4 py-2.5 font-mono text-text-muted">
+                                                            {(storedItemsPage - 1) * 24 + idx + 1}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 font-mono font-bold text-primary">
+                                                            {item.item_code}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 font-bold text-text">
+                                                            {displayBilingual(item.item_name)}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 font-semibold text-text-muted">
+                                                            {item.variant_name ? `${item.variant_name} (${item.quality || "—"})` : "—"}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-center font-mono font-bold text-emerald-600">
+                                                            {item.total_in}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-center font-mono font-bold text-rose-600">
+                                                            {item.total_out}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-center font-mono font-black text-primary bg-primary/5">
+                                                            {item.balance}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-end font-mono font-bold text-text">
+                                                            {item.pallets_count}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pagination */}
+                            {!storedItemsLoading && storedItemsLastPage > 1 && (
+                                <div className="flex justify-between items-center gap-2 mt-4 px-2">
+                                    <span className="text-xs text-text-muted font-bold">
+                                        {lang === "ar" 
+                                            ? `عرض صفحة ${storedItemsPage} من أصل ${storedItemsLastPage} (إجمالي ${storedItemsTotal} صنف)`
+                                            : `Showing page ${storedItemsPage} of ${storedItemsLastPage} (Total ${storedItemsTotal} items)`}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 font-bold">
+                                        <button
+                                            type="button"
+                                            disabled={storedItemsPage === 1}
+                                            onClick={() => setStoredItemsPage(prev => Math.max(1, prev - 1))}
+                                            className="flex items-center justify-center h-[30px] px-3 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all"
+                                        >
+                                            {lang === "ar" ? "السابق" : "Prev"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={storedItemsPage === storedItemsLastPage}
+                                            onClick={() => setStoredItemsPage(prev => Math.min(storedItemsLastPage, prev + 1))}
+                                            className="flex items-center justify-center h-[30px] px-3 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-all"
+                                        >
+                                            {lang === "ar" ? "التالي" : "Next"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </SectionCard>
+                    </div>
                 )}
             </div>
 
