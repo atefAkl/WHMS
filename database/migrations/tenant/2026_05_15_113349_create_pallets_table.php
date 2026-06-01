@@ -13,14 +13,9 @@ return new class extends Migration
     {
         Schema::create('pallets', function (Blueprint $table) {
             $table->id();
-            $table->string('pallet_number')->unique();
-            $table->foreignId('customer_id')->constrained()->onDelete('cascade');
-            $table->foreignId('contract_id')->constrained()->onDelete('cascade');
-            $table->foreignId('location_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('status')->default('empty'); // empty, reserved, occupied, inspection, transit, ready_exit, exited, damaged
-            $table->text('content_description')->nullable();
-            $table->decimal('weight', 10, 2)->nullable();
-            $table->string('dimensions')->nullable();
+            $table->string('pallet_number');
+            $table->string('pallet_code')->unique();
+            $table->string('size'); // كبيرة، وسط، صغيرة، خشب، بلاستيك
             $table->timestamps();
         });
     }

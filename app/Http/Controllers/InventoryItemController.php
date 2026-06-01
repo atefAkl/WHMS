@@ -153,4 +153,18 @@ class InventoryItemController extends Controller
 
         return redirect()->back()->with('success', 'تم حذف الصنف المخزني بنجاح.');
     }
+
+    public function updateVariant(Request $request, \App\Models\InventoryItemVariant $variant)
+    {
+        $validated = $request->validate([
+            'name'          => 'required|string|max:255',
+            'quality'       => 'nullable|string|max:255',
+            'default_price' => 'required|numeric|min:0',
+            'is_active'     => 'required|boolean',
+        ]);
+
+        $variant->update($validated);
+
+        return redirect()->back()->with('success', 'تم تحديث الشكل بنجاح.');
+    }
 }

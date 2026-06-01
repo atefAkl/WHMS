@@ -98,8 +98,12 @@ const tenantNavItems = [
     {
         name: { ar: 'العمليات', en: 'Operations' },
         icon: Activity,
-        route: 'dashboard',
         active: 'operations.*',
+        children: [
+            { name: { ar: 'سندات الاستلام', en: 'Reception Vouchers' }, icon: FileText, route: 'receptions.index', active: 'receptions.*' },
+            { name: { ar: 'أذونات الخروج', en: 'Exit Permits' }, icon: FileText, route: 'exit-authorizations.index', active: 'exit-authorizations.*' },
+            { name: { ar: 'سندات التسليم', en: 'Delivery Notes' }, icon: FileText, route: 'deliveries.index', active: 'deliveries.*' }
+        ]
     },
     {
         name: { ar: 'الموارد البشرية', en: 'Human Resources' },

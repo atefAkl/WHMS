@@ -26,9 +26,12 @@ class DatabaseSeeder extends Seeder
         // Only run tenant seeders if tenancy is initialized
         if (function_exists('tenancy') && tenancy()->initialized) {
             $this->call([
+                SeasonSeeder::class,
                 CountrySeeder::class,
                 CustomerCategorySeeder::class,
                 PalletSeeder::class,
+                InventoryCategorySeeder::class,
+                InventoryItemSeeder::class,
             ]);
         }
     }

@@ -884,44 +884,45 @@ class ContractController extends Controller
             $grouped = $palletEntries->groupBy(function ($entry) {
                 return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
             });
+            $palletTotalIn = 0;
+            $palletTotalOut = 0;
             foreach ($grouped as $group) {
                 $first = $group->first();
                 $qtyIn = $group->sum('quantity_in');
                 $qtyOut = $group->sum('quantity_out');
                 $balance = $qtyIn - $qtyOut;
-                if ($balance > 0) {
-                    $contents[] = [
-                        'item_id' => $first->inventory_item_id,
-                        'item_name' => $first->inventoryItem->name,
-                        'variant_id' => $first->inventory_item_variant_id,
-                        'variant_name' => $first->variant?->name,
-                        'quality' => $first->variant?->quality,
-                        'quantity' => $balance,
-                    ];
-                }
+                $palletTotalIn += $qtyIn;
+                $palletTotalOut += $qtyOut;
+                $contents[] = [
+                    'item_id' => $first->inventory_item_id,
+                    'item_name' => $first->inventoryItem->name,
+                    'variant_id' => $first->inventory_item_variant_id,
+                    'variant_name' => $first->variant?->name,
+                    'quality' => $first->variant?->quality,
+                    'quantity' => $balance,
+                ];
             }
 
-            // A pallet is active if it has items currently on it (balance > 0)
-            if (count($contents) > 0) {
-                $pallet->contents = $contents;
-                $pallet->total_packages = array_sum(array_column($contents, 'quantity'));
-                
-                // If filter item_id is specified, verify if it is in contents
-                if ($request->filled('item_id')) {
-                    $itemId = (int) $request->input('item_id');
-                    $hasItem = false;
-                    foreach ($contents as $c) {
-                        if ($c['item_id'] === $itemId) {
-                            $hasItem = true;
-                            break;
-                        }
+            $pallet->contents = $contents;
+            $pallet->total_packages = array_sum(array_column($contents, 'quantity'));
+            $pallet->total_in = $palletTotalIn;
+            $pallet->total_out = $palletTotalOut;
+
+            // If filter item_id is specified, verify if it is in contents
+            if ($request->filled('item_id')) {
+                $itemId = (int) $request->input('item_id');
+                $hasItem = false;
+                foreach ($contents as $c) {
+                    if ($c['item_id'] === $itemId) {
+                        $hasItem = true;
+                        break;
                     }
-                    if ($hasItem) {
-                        $filteredPallets->push($pallet);
-                    }
-                } else {
+                }
+                if ($hasItem) {
                     $filteredPallets->push($pallet);
                 }
+            } else {
+                $filteredPallets->push($pallet);
             }
         }
 
@@ -982,20 +983,18 @@ class ContractController extends Controller
         $items = collect();
         foreach ($aggregates as $agg) {
             $balance = (float) $agg->total_in - (float) $agg->total_out;
-            if ($balance > 0) {
-                $items->push([
-                    'item_id' => $agg->inventory_item_id,
-                    'item_name' => $agg->inventoryItem->name,
-                    'item_code' => $agg->inventoryItem->code,
-                    'variant_id' => $agg->inventory_item_variant_id,
-                    'variant_name' => $agg->variant?->name,
-                    'quality' => $agg->variant?->quality,
-                    'total_in' => (float) $agg->total_in,
-                    'total_out' => (float) $agg->total_out,
-                    'balance' => $balance,
-                    'pallets_count' => $agg->pallets_count,
-                ]);
-            }
+            $items->push([
+                'item_id' => $agg->inventory_item_id,
+                'item_name' => $agg->inventoryItem->name,
+                'item_code' => $agg->inventoryItem->code,
+                'variant_id' => $agg->inventory_item_variant_id,
+                'variant_name' => $agg->variant?->name,
+                'quality' => $agg->variant?->quality,
+                'total_in' => (float) $agg->total_in,
+                'total_out' => (float) $agg->total_out,
+                'balance' => $balance,
+                'pallets_count' => $agg->pallets_count,
+            ]);
         }
 
         // Paginate items collection
@@ -1010,6 +1009,143 @@ class ContractController extends Controller
             'per_page' => $perPage,
             'current_page' => $page,
             'last_page' => ceil($total / $perPage),
+        ]);
+    }
+
+    public function getItemMovements(Request $request, Contract $contract)
+    {
+        $request->validate([
+            'item_id' => 'required|integer|exists:inventory_items,id',
+            'variant_id' => 'required|integer|exists:inventory_item_variants,id',
+        ]);
+
+        $itemId = (int) $request->input('item_id');
+        $variantId = (int) $request->input('variant_id');
+
+        $entries = \App\Models\InventoryEntry::query()
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                $query->where('contract_id', $contract->id);
+            })
+            ->where('inventory_item_id', $itemId)
+            ->where('inventory_item_variant_id', $variantId)
+            ->with(['voucher', 'inventoryItem', 'variant'])
+            ->orderBy('operation_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $item = \App\Models\InventoryItem::find($itemId);
+        $variant = \App\Models\InventoryItemVariant::find($variantId);
+
+        $movements = [];
+        $runningBalance = 0;
+        $totalIn = 0;
+        $totalOut = 0;
+
+        foreach ($entries as $entry) {
+            $voucher = $entry->voucher;
+            if (!$voucher) continue;
+
+            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : 'delivery';
+            $operationDate = $entry->operation_date
+                ?? ($voucherType === 'reception' ? $voucher->reception_date : $voucher->delivery_date);
+
+            $qtyIn = (float) $entry->quantity_in;
+            $qtyOut = (float) $entry->quantity_out;
+            $runningBalance += ($qtyIn - $qtyOut);
+            $totalIn += $qtyIn;
+            $totalOut += $qtyOut;
+
+            $movements[] = [
+                'serial_number' => $voucher->serial_number,
+                'operation_date' => $operationDate ? Carbon::parse($operationDate)->toDateString() : null,
+                'type' => $voucherType,
+                'quantity_in' => $qtyIn,
+                'quantity_out' => $qtyOut,
+                'running_balance' => $runningBalance,
+            ];
+        }
+
+        return response()->json([
+            'item_name' => $item?->name,
+            'variant_name' => $variant?->name,
+            'quality' => $variant?->quality,
+            'movements' => $movements,
+            'total_in' => $totalIn,
+            'total_out' => $totalOut,
+            'balance' => $totalIn - $totalOut,
+        ]);
+    }
+
+    public function getPalletMovements(Request $request, Contract $contract)
+    {
+        $request->validate([
+            'pallet_id' => 'required|integer|exists:pallets,id',
+        ]);
+
+        $palletId = (int) $request->input('pallet_id');
+        $pallet = \App\Models\Pallet::findOrFail($palletId);
+
+        $entries = \App\Models\InventoryEntry::query()
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                $query->where('contract_id', $contract->id);
+            })
+            ->where('pallet_id', $palletId)
+            ->with(['voucher', 'inventoryItem', 'variant'])
+            ->orderBy('operation_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // Build unique contents list
+        $contentsMap = [];
+        foreach ($entries as $entry) {
+            $key = $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
+            if (!isset($contentsMap[$key])) {
+                $contentsMap[$key] = [
+                    'item_name' => $entry->inventoryItem->name,
+                    'variant_name' => $entry->variant?->name,
+                    'quality' => $entry->variant?->quality,
+                ];
+            }
+        }
+
+        $movements = [];
+        $runningBalance = 0;
+        $totalIn = 0;
+        $totalOut = 0;
+
+        foreach ($entries as $entry) {
+            $voucher = $entry->voucher;
+            if (!$voucher) continue;
+
+            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : 'delivery';
+            $operationDate = $entry->operation_date
+                ?? ($voucherType === 'reception' ? $voucher->reception_date : $voucher->delivery_date);
+
+            $qtyIn = (float) $entry->quantity_in;
+            $qtyOut = (float) $entry->quantity_out;
+            $runningBalance += ($qtyIn - $qtyOut);
+            $totalIn += $qtyIn;
+            $totalOut += $qtyOut;
+
+            $movements[] = [
+                'serial_number' => $voucher->serial_number,
+                'operation_date' => $operationDate ? Carbon::parse($operationDate)->toDateString() : null,
+                'type' => $voucherType,
+                'quantity_in' => $qtyIn,
+                'quantity_out' => $qtyOut,
+                'running_balance' => $runningBalance,
+            ];
+        }
+
+        return response()->json([
+            'pallet_number' => $pallet->pallet_number,
+            'pallet_code' => $pallet->pallet_code,
+            'size' => $pallet->size,
+            'contents' => array_values($contentsMap),
+            'movements' => $movements,
+            'total_in' => $totalIn,
+            'total_out' => $totalOut,
+            'balance' => $totalIn - $totalOut,
         ]);
     }
 }

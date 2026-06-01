@@ -128,6 +128,12 @@ export default function Show({
     const [filterItemSearch, setFilterItemSearch] = useState("");
     const [itemViewMode, setItemViewMode] = useState("list");
 
+    // Movement Detail Modal states
+    const [showMovementModal, setShowMovementModal] = useState(false);
+    const [movementData, setMovementData] = useState(null);
+    const [movementLoading, setMovementLoading] = useState(false);
+    const [movementType, setMovementType] = useState(""); // "item" or "pallet"
+
     // Fetch Pallets function
     const fetchPallets = () => {
         if (activeTab !== "pallets") return;
@@ -169,6 +175,40 @@ export default function Show({
         }).catch(err => {
             console.error("Error fetching stored items:", err);
             setStoredItemsLoading(false);
+        });
+    };
+
+    // Fetch Item Movement History
+    const fetchItemMovements = (itemId, variantId) => {
+        setMovementType("item");
+        setMovementLoading(true);
+        setMovementData(null);
+        setShowMovementModal(true);
+        axios.get(route("contracts.item-movements", contract.id), {
+            params: { item_id: itemId, variant_id: variantId }
+        }).then(response => {
+            setMovementData(response.data);
+            setMovementLoading(false);
+        }).catch(err => {
+            console.error("Error fetching item movements:", err);
+            setMovementLoading(false);
+        });
+    };
+
+    // Fetch Pallet Movement History
+    const fetchPalletMovements = (palletId) => {
+        setMovementType("pallet");
+        setMovementLoading(true);
+        setMovementData(null);
+        setShowMovementModal(true);
+        axios.get(route("contracts.pallet-movements", contract.id), {
+            params: { pallet_id: palletId }
+        }).then(response => {
+            setMovementData(response.data);
+            setMovementLoading(false);
+        }).catch(err => {
+            console.error("Error fetching pallet movements:", err);
+            setMovementLoading(false);
         });
     };
 
@@ -3207,11 +3247,11 @@ export default function Show({
                     </div>
                 )}
 
-                {/* Tab Content 6: Pallets (Dynamic & Progressive) */}
+                {/* Tab Content 6: Pallets Balance Report */}
                 {activeTab === "pallets" && (
                     <div className="space-y-4 text-start">
                         <SectionCard
-                            title={lang === "ar" ? "رصيد طبالي العقد" : "Contract Pallets Balance"}
+                            title={lang === "ar" ? "تقرير رصيد الطبالي" : "Pallets Balance Report"}
                             icon={Layers}
                         >
                             {/* Filters */}
@@ -3281,46 +3321,16 @@ export default function Show({
                                 </div>
                             </div>
 
-                            {/* View toggle & details header */}
+                            {/* Summary */}
                             <div className="flex justify-between items-center mb-3">
                                 <span className="text-xs text-text-muted font-bold">
                                     {lang === "ar"
-                                        ? `إجمالي الطبالي النشطة: ${palletsTotal}`
-                                        : `Total active pallets: ${palletsTotal}`}
+                                        ? `إجمالي الطبالي: ${palletsTotal}`
+                                        : `Total pallets: ${palletsTotal}`}
                                 </span>
-
-                                <div className="flex items-center gap-1.5">
-                                    <Tooltip text={lang === "ar" ? "عرض شبكي" : "Grid View"}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPalletViewMode("grid")}
-                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
-                                                palletViewMode === "grid"
-                                                    ? "bg-primary border-primary text-white"
-                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
-                                            }`}
-                                        >
-                                            <Grid className="h-4 w-4" />
-                                        </button>
-                                    </Tooltip>
-
-                                    <Tooltip text={lang === "ar" ? "عرض قائمة" : "List View"}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPalletViewMode("list")}
-                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
-                                                palletViewMode === "list"
-                                                    ? "bg-primary border-primary text-white"
-                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
-                                            }`}
-                                        >
-                                            <List className="h-4 w-4" />
-                                        </button>
-                                    </Tooltip>
-                                </div>
                             </div>
 
-                            {/* Contents */}
+                            {/* Table Content */}
                             {palletsLoading ? (
                                 <div className="flex flex-col items-center justify-center py-16 gap-2">
                                     <RefreshCw className="h-8 w-8 text-primary animate-spin" />
@@ -3332,58 +3342,13 @@ export default function Show({
                                 <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
                                     <Layers className="h-12 w-12 text-primary/40 mb-3" />
                                     <p className="text-sm font-bold text-text mb-1">
-                                        {lang === "ar" ? "لا توجد طبالي نشطة حالياً" : "No active pallets found"}
+                                        {lang === "ar" ? "لا توجد طبالي مسجلة" : "No pallets found"}
                                     </p>
                                     <p className="text-xs text-text-muted max-w-md leading-relaxed">
                                         {lang === "ar" 
-                                            ? "لم يتم تسجيل أي بضاعة على طبالي نشطة لهذا العقد، أو أن كافة الطبالي قد تم صرفها وتفريغها بالكامل." 
-                                            : "No goods are stored on active pallets for this contract, or all pallets have been completely discharged."}
+                                            ? "لم يتم تسجيل أي بضاعة على طبالي لهذا العقد." 
+                                            : "No goods have been stored on pallets for this contract."}
                                     </p>
-                                </div>
-                            ) : palletViewMode === "grid" ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    {pallets.map((pallet) => (
-                                        <div 
-                                            key={pallet.id}
-                                            className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col hover:translate-y-[-2px] hover:shadow-md transition-all duration-200"
-                                        >
-                                            {/* Header */}
-                                            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-muted/30">
-                                                <span className="text-xs font-black text-primary font-mono">
-                                                    {pallet.pallet_code}
-                                                </span>
-                                                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
-                                                    {pallet.size}
-                                                </span>
-                                            </div>
-
-                                            {/* Body */}
-                                            <div className="p-3 flex-1 flex flex-col gap-2 text-start font-sans">
-                                                <div className="flex justify-between items-center text-[10px] text-text-muted font-bold border-b border-border/50 pb-1">
-                                                    <span>{lang === "ar" ? "الأصناف المخزنة" : "Stored Items"}</span>
-                                                    <span>{lang === "ar" ? "الكمية" : "Qty"}</span>
-                                                </div>
-
-                                                <div className="space-y-1.5 flex-1 min-h-[60px]">
-                                                    {pallet.contents?.map((c, idx) => (
-                                                        <div key={idx} className="flex justify-between items-start text-xs font-semibold gap-2 leading-tight">
-                                                            <div className="text-text font-medium truncate max-w-[150px]">
-                                                                {displayBilingual(c.item_name)}
-                                                                {c.variant_name && <span className="text-[10px] text-text-muted block">({c.variant_name})</span>}
-                                                            </div>
-                                                            <span className="text-primary font-bold font-mono shrink-0">{c.quantity}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Footer */}
-                                            <div className="px-3 py-2 border-t border-border bg-surface-muted/20 flex items-center justify-between text-xs font-bold">
-                                                <span className="text-text-muted text-[10px]">{lang === "ar" ? "إجمالي الطرود" : "Total Pkgs"}</span>
-                                                <span className="text-text font-mono">{pallet.total_packages}</span>
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             ) : (
                                 <div className="border border-border rounded-xl overflow-hidden bg-surface shadow-sm font-sans">
@@ -3391,43 +3356,62 @@ export default function Show({
                                         <table className="w-full text-xs text-start border-collapse">
                                             <thead>
                                                 <tr className="bg-surface-muted/40 border-b border-border text-text-muted font-bold text-[10px] uppercase">
-                                                    <th className="px-4 py-2.5 text-start w-12">{lang === "ar" ? "م" : "#"}</th>
-                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "كود الطبلية" : "Pallet Code"}</th>
-                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "رقم الطبلية" : "Pallet Number"}</th>
-                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "المقاس / الحجم" : "Size"}</th>
-                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "المحتويات النشطة" : "Active Contents"}</th>
-                                                    <th className="px-4 py-2.5 text-end">{lang === "ar" ? "إجمالي الطرود" : "Total Packages"}</th>
+                                                    <th className="px-3 py-2.5 text-start w-10">{lang === "ar" ? "م" : "#"}</th>
+                                                    <th className="px-3 py-2.5 text-start">{lang === "ar" ? "رقم الطبلية" : "Pallet No."}</th>
+                                                    <th className="px-3 py-2.5 text-start">{lang === "ar" ? "المحتويات" : "Contents"}</th>
+                                                    <th className="px-3 py-2.5 text-center">{lang === "ar" ? "مدخلات" : "In"}</th>
+                                                    <th className="px-3 py-2.5 text-center">{lang === "ar" ? "مخرجات" : "Out"}</th>
+                                                    <th className="px-3 py-2.5 text-center">{lang === "ar" ? "المتبقي" : "Remaining"}</th>
+                                                    <th className="px-3 py-2.5 text-center w-20">{lang === "ar" ? "إجراءات" : "Actions"}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border">
-                                                {pallets.map((pallet, idx) => (
-                                                    <tr key={pallet.id} className="hover:bg-surface-muted/30 text-start">
-                                                        <td className="px-4 py-2.5 font-mono text-text-muted">
-                                                            {(palletsPage - 1) * 24 + idx + 1}
-                                                        </td>
-                                                        <td className="px-4 py-2.5 font-bold text-primary font-mono">
-                                                            {pallet.pallet_code}
-                                                        </td>
-                                                        <td className="px-4 py-2.5 font-mono">
-                                                            {pallet.pallet_number}
-                                                        </td>
-                                                        <td className="px-4 py-2.5 font-semibold text-text-muted">
-                                                            {pallet.size}
-                                                        </td>
-                                                        <td className="px-4 py-2.5 max-w-xs">
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {pallet.contents?.map((c, cIdx) => (
-                                                                    <span key={cIdx} className="bg-primary/5 text-primary text-[10px] px-1.5 py-0.5 rounded border border-primary/10 font-bold whitespace-nowrap">
-                                                                        {displayBilingual(c.item_name)}: {c.quantity}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-2.5 text-end font-mono font-bold text-text">
-                                                            {pallet.total_packages}
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                {pallets.map((pallet, idx) => {
+                                                    const remaining = (pallet.total_in || 0) - (pallet.total_out || 0);
+                                                    return (
+                                                        <tr key={pallet.id} className={`hover:bg-surface-muted/30 text-start ${remaining === 0 ? 'opacity-50' : ''}`}>
+                                                            <td className="px-3 py-2.5 font-mono text-text-muted">
+                                                                {(palletsPage - 1) * 24 + idx + 1}
+                                                            </td>
+                                                            <td className="px-3 py-2.5">
+                                                                <div className="font-bold text-primary font-mono">{pallet.pallet_code}</div>
+                                                                <div className="text-[10px] text-text-muted">{pallet.size}</div>
+                                                            </td>
+                                                            <td className="px-3 py-2.5 max-w-xs">
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {pallet.contents?.length > 0 ? pallet.contents.map((c, cIdx) => (
+                                                                        <span key={cIdx} className="bg-primary/5 text-primary text-[10px] px-1.5 py-0.5 rounded border border-primary/10 font-bold whitespace-nowrap">
+                                                                            {displayBilingual(c.item_name)} {c.variant_name ? `(${c.variant_name})` : ""}
+                                                                        </span>
+                                                                    )) : (
+                                                                        <span className="text-[10px] text-text-muted italic">{lang === "ar" ? "فارغة" : "Empty"}</span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-center font-mono font-bold text-emerald-600">
+                                                                {pallet.total_in || 0}
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-center font-mono font-bold text-rose-600">
+                                                                {pallet.total_out || 0}
+                                                            </td>
+                                                            <td className={`px-3 py-2.5 text-center font-mono font-black ${remaining > 0 ? 'text-primary' : 'text-text-muted'}`}>
+                                                                {remaining}
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-center">
+                                                                <Tooltip text={lang === "ar" ? "سجل العمليات" : "Movement Log"}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => fetchPalletMovements(pallet.id)}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-primary bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:translate-y-[-1px] transition-all duration-200"
+                                                                    >
+                                                                        <Eye className="h-3 w-3" />
+                                                                        {lang === "ar" ? "المزيد" : "More"}
+                                                                    </button>
+                                                                </Tooltip>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>
@@ -3466,11 +3450,11 @@ export default function Show({
                     </div>
                 )}
 
-                {/* Tab Content 7: Stored Items (Dynamic & Progressive) */}
+                {/* Tab Content 7: Stored Items Balance Report */}
                 {activeTab === "items" && (
                     <div className="space-y-4 text-start">
                         <SectionCard
-                            title={lang === "ar" ? "تقرير الأصناف والسلع المخزنة بالعقد" : "Stored Items & Goods Balance Report"}
+                            title={lang === "ar" ? "تقرير رصيد الأصناف المخزنة" : "Stored Items Balance Report"}
                             icon={Package}
                         >
                             {/* Filters */}
@@ -3504,46 +3488,16 @@ export default function Show({
                                 </div>
                             </div>
 
-                            {/* View togglers */}
+                            {/* Summary */}
                             <div className="flex justify-between items-center mb-3">
                                 <span className="text-xs text-text-muted font-bold">
                                     {lang === "ar"
                                         ? `عدد السلع المستودعية: ${storedItemsTotal}`
                                         : `Total warehouse items: ${storedItemsTotal}`}
                                 </span>
-
-                                <div className="flex items-center gap-1.5">
-                                    <Tooltip text={lang === "ar" ? "عرض شبكي" : "Grid View"}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setItemViewMode("grid")}
-                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
-                                                itemViewMode === "grid"
-                                                    ? "bg-primary border-primary text-white"
-                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
-                                            }`}
-                                        >
-                                            <Grid className="h-4 w-4" />
-                                        </button>
-                                    </Tooltip>
-
-                                    <Tooltip text={lang === "ar" ? "عرض قائمة" : "List View"}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setItemViewMode("list")}
-                                            className={`flex items-center justify-center h-[30px] w-[30px] rounded-lg border transition-all duration-200 ${
-                                                itemViewMode === "list"
-                                                    ? "bg-primary border-primary text-white"
-                                                    : "bg-surface border-border text-text-muted hover:bg-surface-muted hover:translate-y-[-2px]"
-                                            }`}
-                                        >
-                                            <List className="h-4 w-4" />
-                                        </button>
-                                    </Tooltip>
-                                </div>
                             </div>
 
-                            {/* Contents */}
+                            {/* Table Content */}
                             {storedItemsLoading ? (
                                 <div className="flex flex-col items-center justify-center py-16 gap-2">
                                     <RefreshCw className="h-8 w-8 text-primary animate-spin" />
@@ -3555,59 +3509,13 @@ export default function Show({
                                 <div className="border border-dashed border-border rounded-xl p-12 text-center flex flex-col items-center justify-center bg-surface-muted/10">
                                     <Package className="h-12 w-12 text-primary/40 mb-3" />
                                     <p className="text-sm font-bold text-text mb-1">
-                                        {lang === "ar" ? "لا توجد أصناف مخزنة حالياً" : "No stored items found"}
+                                        {lang === "ar" ? "لا توجد أصناف مخزنة" : "No stored items found"}
                                     </p>
                                     <p className="text-xs text-text-muted max-w-md leading-relaxed">
                                         {lang === "ar" 
-                                            ? "لا توجد أصناف مخزنة برصيد إيجابي متبقي لهذا العقد حالياً." 
-                                            : "No items currently reside in active balance for this contract."}
+                                            ? "لا توجد أصناف مسجلة لهذا العقد." 
+                                            : "No items have been recorded for this contract."}
                                     </p>
-                                </div>
-                            ) : itemViewMode === "grid" ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    {storedItems.map((item, idx) => (
-                                        <div 
-                                            key={idx}
-                                            className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col hover:translate-y-[-2px] hover:shadow-md transition-all duration-200"
-                                        >
-                                            {/* Header */}
-                                            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-muted/30">
-                                                <span className="text-xs font-black text-primary font-mono">
-                                                    {item.item_code}
-                                                </span>
-                                                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold font-mono">
-                                                    {lang === "ar" ? `${item.pallets_count} طبلية` : `${item.pallets_count} Pallets`}
-                                                </span>
-                                            </div>
-
-                                            {/* Body */}
-                                            <div className="p-3 flex-1 flex flex-col gap-2 text-start font-sans">
-                                                <h4 className="text-xs font-black text-text truncate">
-                                                    {displayBilingual(item.item_name)}
-                                                </h4>
-                                                {item.variant_name && (
-                                                    <span className="text-[10px] text-text-muted font-bold -mt-1 block">
-                                                        {item.variant_name} ({item.quality || "—"})
-                                                    </span>
-                                                )}
-
-                                                <div className="grid grid-cols-3 gap-1 py-1.5 px-2 rounded-lg bg-surface-muted/30 border border-border/50 text-center text-xs font-bold mt-2">
-                                                    <div>
-                                                        <p className="text-[9px] text-emerald-600">{lang === "ar" ? "الوارد" : "In"}</p>
-                                                        <p className="font-extrabold text-text font-mono mt-0.5">{item.total_in}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[9px] text-rose-600">{lang === "ar" ? "المنصرف" : "Out"}</p>
-                                                        <p className="font-extrabold text-text font-mono mt-0.5">{item.total_out}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[9px] text-primary">{lang === "ar" ? "الرصيد" : "Bal"}</p>
-                                                        <p className="font-extrabold text-primary font-mono mt-0.5">{item.balance}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             ) : (
                                 <div className="border border-border rounded-xl overflow-hidden bg-surface shadow-sm font-sans">
@@ -3615,42 +3523,47 @@ export default function Show({
                                         <table className="w-full text-xs text-start border-collapse">
                                             <thead>
                                                 <tr className="bg-surface-muted/40 border-b border-border text-text-muted font-bold text-[10px] uppercase">
-                                                    <th className="px-4 py-2.5 text-start w-12">{lang === "ar" ? "م" : "#"}</th>
-                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "كود الصنف" : "Item Code"}</th>
-                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "اسم الصنف" : "Item Name"}</th>
-                                                    <th className="px-4 py-2.5 text-start">{lang === "ar" ? "الشكل (Variant)" : "Variant / Format"}</th>
-                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "إجمالي الوارد" : "Total Received"}</th>
-                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "إجمالي الصادر" : "Total Delivered"}</th>
-                                                    <th className="px-4 py-2.5 text-center">{lang === "ar" ? "الرصيد الحالي" : "Current Balance"}</th>
-                                                    <th className="px-4 py-2.5 text-end">{lang === "ar" ? "عدد الطبالي" : "Pallets Count"}</th>
+                                                    <th className="px-3 py-2.5 text-start w-10">{lang === "ar" ? "م" : "#"}</th>
+                                                    <th className="px-3 py-2.5 text-start">{lang === "ar" ? "الصنف" : "Item"}</th>
+                                                    <th className="px-3 py-2.5 text-start">{lang === "ar" ? "الجودة / الحجم" : "Quality / Size"}</th>
+                                                    <th className="px-3 py-2.5 text-center">{lang === "ar" ? "مدخلات" : "In"}</th>
+                                                    <th className="px-3 py-2.5 text-center">{lang === "ar" ? "مخرجات" : "Out"}</th>
+                                                    <th className="px-3 py-2.5 text-center">{lang === "ar" ? "الرصيد" : "Balance"}</th>
+                                                    <th className="px-3 py-2.5 text-center w-20">{lang === "ar" ? "إجراءات" : "Actions"}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border">
                                                 {storedItems.map((item, idx) => (
-                                                    <tr key={idx} className="hover:bg-surface-muted/30 text-start">
-                                                        <td className="px-4 py-2.5 font-mono text-text-muted">
+                                                    <tr key={idx} className={`hover:bg-surface-muted/30 text-start ${item.balance === 0 ? 'opacity-50' : ''}`}>
+                                                        <td className="px-3 py-2.5 font-mono text-text-muted">
                                                             {(storedItemsPage - 1) * 24 + idx + 1}
                                                         </td>
-                                                        <td className="px-4 py-2.5 font-mono font-bold text-primary">
-                                                            {item.item_code}
-                                                        </td>
-                                                        <td className="px-4 py-2.5 font-bold text-text">
+                                                        <td className="px-3 py-2.5 font-bold text-text">
                                                             {displayBilingual(item.item_name)}
                                                         </td>
-                                                        <td className="px-4 py-2.5 font-semibold text-text-muted">
-                                                            {item.variant_name ? `${item.variant_name} (${item.quality || "—"})` : "—"}
+                                                        <td className="px-3 py-2.5 font-semibold text-text-muted">
+                                                            {item.quality || "—"} / {item.variant_name || "—"}
                                                         </td>
-                                                        <td className="px-4 py-2.5 text-center font-mono font-bold text-emerald-600">
+                                                        <td className="px-3 py-2.5 text-center font-mono font-bold text-emerald-600">
                                                             {item.total_in}
                                                         </td>
-                                                        <td className="px-4 py-2.5 text-center font-mono font-bold text-rose-600">
+                                                        <td className="px-3 py-2.5 text-center font-mono font-bold text-rose-600">
                                                             {item.total_out}
                                                         </td>
-                                                        <td className="px-4 py-2.5 text-center font-mono font-black text-primary bg-primary/5">
+                                                        <td className={`px-3 py-2.5 text-center font-mono font-black ${item.balance > 0 ? 'text-primary' : 'text-text-muted'}`}>
                                                             {item.balance}
                                                         </td>
-                                                        <td className="px-4 py-2.5 text-end font-mono font-bold text-text">
-                                                            {item.pallets_count}
+                                                        <td className="px-3 py-2.5 text-center">
+                                                            <Tooltip text={lang === "ar" ? "سجل العمليات" : "Movement Log"}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => fetchItemMovements(item.item_id, item.variant_id)}
+                                                                    className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-primary bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:translate-y-[-1px] transition-all duration-200"
+                                                                >
+                                                                    <Eye className="h-3 w-3" />
+                                                                    {lang === "ar" ? "المزيد" : "More"}
+                                                                </button>
+                                                            </Tooltip>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -3691,7 +3604,163 @@ export default function Show({
                         </SectionCard>
                     </div>
                 )}
+
+                {/* Movement History Modal (shared by Items and Pallets) */}
+                <Modal
+                    show={showMovementModal}
+                    onClose={() => { setShowMovementModal(false); setMovementData(null); }}
+                    maxWidth="3xl"
+                >
+                    <div className="p-5 text-start" dir={lang === "ar" ? "rtl" : "ltr"}>
+                        {/* Modal Header */}
+                        <div className="flex items-start justify-between mb-4 border-b border-border pb-3">
+                            <div>
+                                <h3 className="text-sm font-black text-text">
+                                    {movementType === "item"
+                                        ? (lang === "ar" ? `رصيد الصنف في ${new Date().toLocaleDateString('ar-EG')}` : `Item Balance as of ${new Date().toLocaleDateString('en-GB')}`)
+                                        : (lang === "ar" ? `رصيد الطبلية في ${new Date().toLocaleDateString('ar-EG')}` : `Pallet Balance as of ${new Date().toLocaleDateString('en-GB')}`)}
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setShowMovementModal(false); setMovementData(null); }}
+                                className="text-text-muted hover:text-text transition-colors p-1"
+                            >
+                                <XCircle className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {movementLoading ? (
+                            <div className="flex flex-col items-center justify-center py-16 gap-2">
+                                <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+                                <span className="text-xs text-text-muted font-bold">
+                                    {lang === "ar" ? "جاري تحميل سجل العمليات..." : "Loading movement log..."}
+                                </span>
+                            </div>
+                        ) : movementData ? (
+                            <div className="space-y-4">
+                                {/* Info Header */}
+                                <div className="bg-surface-muted/20 border border-border rounded-xl p-3 text-xs space-y-1">
+                                    {movementType === "item" ? (
+                                        <>
+                                            <div className="flex gap-4 flex-wrap">
+                                                <span><strong className="text-text">{lang === "ar" ? "الصنف:" : "Item:"}</strong> {movementData.item_name ? displayBilingual(movementData.item_name) : "—"}</span>
+                                                <span><strong className="text-text">{lang === "ar" ? "الجودة:" : "Quality:"}</strong> {movementData.quality || "—"}</span>
+                                                <span><strong className="text-text">{lang === "ar" ? "الحجم:" : "Size:"}</strong> {movementData.variant_name || "—"}</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex gap-4 flex-wrap">
+                                                <span><strong className="text-text">{lang === "ar" ? "رقم الطبلية:" : "Pallet No:"}</strong> <span className="font-mono">{movementData.pallet_number}</span></span>
+                                                <span><strong className="text-text">{lang === "ar" ? "الكود:" : "Code:"}</strong> <span className="font-mono">{movementData.pallet_code}</span></span>
+                                                <span><strong className="text-text">{lang === "ar" ? "الحجم:" : "Size:"}</strong> {movementData.size}</span>
+                                            </div>
+                                            {movementData.contents && movementData.contents.length > 0 && (
+                                                <div className="mt-1">
+                                                    <strong className="text-text">{lang === "ar" ? "الأصناف:" : "Items:"}</strong>{" "}
+                                                    {movementData.contents.map((c, i) => (
+                                                        <span key={i} className="bg-primary/5 text-primary text-[10px] px-1.5 py-0.5 rounded border border-primary/10 font-bold mx-0.5">
+                                                            {c}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Movements Table */}
+                                {movementData.movements && movementData.movements.length > 0 ? (
+                                    <div className="border border-border rounded-xl overflow-hidden shadow-sm">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs border-collapse">
+                                                <thead>
+                                                    <tr className="bg-surface-muted/40 border-b border-border text-text-muted font-bold text-[10px] uppercase">
+                                                        <th className="px-3 py-2.5 text-start w-10">{lang === "ar" ? "م" : "#"}</th>
+                                                        <th className="px-3 py-2.5 text-start">{lang === "ar" ? "سند رقم" : "Voucher No."}</th>
+                                                        <th className="px-3 py-2.5 text-start">{lang === "ar" ? "تاريخ العملية" : "Date"}</th>
+                                                        <th className="px-3 py-2.5 text-start">{lang === "ar" ? "نوع العملية" : "Type"}</th>
+                                                        <th className="px-3 py-2.5 text-center">{lang === "ar" ? "مدخلات" : "In"}</th>
+                                                        <th className="px-3 py-2.5 text-center">{lang === "ar" ? "مخرجات" : "Out"}</th>
+                                                        <th className="px-3 py-2.5 text-center">{lang === "ar" ? "رصيد" : "Balance"}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border">
+                                                    {movementData.movements.map((mov, idx) => (
+                                                        <tr key={idx} className="hover:bg-surface-muted/20">
+                                                            <td className="px-3 py-2 font-mono text-text-muted">{idx + 1}</td>
+                                                            <td className="px-3 py-2 font-mono font-bold text-primary">{mov.serial_number}</td>
+                                                            <td className="px-3 py-2 font-mono text-text" dir="ltr">
+                                                                {mov.operation_date ? new Date(mov.operation_date).toLocaleDateString('en-GB') : "—"}
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                    mov.type === 'reception'
+                                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                        : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                                                }`}>
+                                                                    {mov.type === 'reception'
+                                                                        ? (lang === "ar" ? "استقبال" : "Reception")
+                                                                        : (lang === "ar" ? "إخراج" : "Delivery")}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-3 py-2 text-center font-mono font-bold text-emerald-600">
+                                                                {mov.quantity_in > 0 ? mov.quantity_in : "——"}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-center font-mono font-bold text-rose-600">
+                                                                {mov.quantity_out > 0 ? mov.quantity_out : "——"}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-center font-mono font-black text-primary">
+                                                                {mov.running_balance}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr className="bg-surface-muted/40 border-t-2 border-border font-bold">
+                                                        <td colSpan={4} className="px-3 py-2.5 text-end text-[10px] uppercase text-text-muted">
+                                                            {lang === "ar" ? "الإجمالي" : "Total"}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center font-mono font-black text-emerald-700">
+                                                            {movementData.total_in}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center font-mono font-black text-rose-700">
+                                                            {movementData.total_out}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-center font-mono font-black text-primary text-sm">
+                                                            {movementData.balance}
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-text-muted text-xs font-bold">
+                                        {lang === "ar" ? "لا توجد حركات مسجلة" : "No movements recorded"}
+                                    </div>
+                                )}
+
+                                {/* Close Button */}
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowMovementModal(false); setMovementData(null); }}
+                                        className="flex items-center justify-center h-[30px] px-4 text-xs font-bold bg-surface border border-border text-text hover:bg-surface-muted rounded-lg transition-all"
+                                    >
+                                        {lang === "ar" ? "إغلاق" : "Close"}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : null}
+                    </div>
+                </Modal>
             </div>
+
+
+
+
 
             {/* Modal: Edit Contract */}
             <Modal

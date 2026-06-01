@@ -21,6 +21,8 @@ class SeasonSeeder extends Seeder
     public function run(): void
     {
         $season = Season::firstOrCreate([
+            'code' => 'DTS26',
+        ], [
             'name_ar' => 'موسم 2026-2027',
             'name_en' => 'DTS2026-2027',
             'start_date' => '2026-10-01',

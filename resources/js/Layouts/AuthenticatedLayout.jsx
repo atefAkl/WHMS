@@ -1,5 +1,6 @@
 import Sidebar from '@/Components/Sidebar';
 import Topbar from '@/Components/Topbar';
+import Toast from '@/Components/Toast';
 import { useEffect } from 'react';
 import { usePage } from '@inertiajs/react';
 
@@ -18,6 +19,9 @@ export default function AuthenticatedLayout({ header, children }) {
 
     return (
         <div className="flex h-screen print:h-auto bg-background text-text print:bg-white print:text-black">
+            {/* Toast Notifications */}
+            <Toast />
+
             {/* Sidebar */}
             <div className="print:hidden shrink-0">
                 <Sidebar />

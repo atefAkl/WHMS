@@ -99,4 +99,10 @@ class Contract extends Model
     public function invoices()   { return $this->hasMany(ContractInvoice::class); }
     public function season()     { return $this->belongsTo(Season::class); }
     public function blocks()     { return $this->hasMany(ContractBlock::class)->orderBy('sort_order'); }
+    public function receptions() { return $this->hasMany(Reception::class); }
+
+    public function getTotalCapacityAttribute($value)
+    {
+        return $value ?: (int) $this->items()->sum('unit_count');
+    }
 }

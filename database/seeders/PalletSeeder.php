@@ -79,32 +79,76 @@ class PalletSeeder extends Seeder
             // 4. Create Contract for each customer
             $contract = Contract::create([
                 'customer_id' => $customer->id,
-                'contract_number' => "CNT-2026-" . str_pad($customer->id, 3, '0', STR_PAD_LEFT),
+                'contract_number' => "CNT-2026-" . str_pad((string)$customer->id, 3, '0', STR_PAD_LEFT),
                 'start_date' => Carbon::now()->subMonths(2),
                 'end_date' => Carbon::now()->addYear(),
                 'status' => 'active',
                 'total_capacity' => 500,
             ]);
+        }
 
-            // 5. Create Pallets for each customer
-            for ($i = 1; $i <= 10; $i++) {
-                $location = Location::where('status', 'available')->inRandomOrder()->first();
-                
-                if ($location) {
-                    $pallet = Pallet::create([
-                        'pallet_number' => "PAL-" . strtoupper(bin2hex(random_bytes(3))),
-                        'customer_id' => $customer->id,
-                        'contract_id' => $contract->id,
-                        'location_id' => $location->id,
-                        'status' => 'occupied',
-                        'content_description' => 'بضائع متنوعة للعميل ' . $customer->name,
-                        'weight' => rand(100, 1000),
-                        'dimensions' => '120x100x150',
-                    ]);
+        // 5. Create Standalone Pallets
+        // First delete existing pallets
+        Pallet::query()->delete();
 
-                    $location->update(['status' => 'occupied']);
-                }
+        $palletsData = [];
+
+        // 2000 small (صغيرة) with numbers < 3000 -> loop 1 to 2000
+        for ($i = 1; $i <= 2000; $i++) {
+            $palletsData[] = [
+                'pallet_number' => (string)$i,
+                'size' => 'صغيرة',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // 2000 large (كبيرة) with numbers >= 3001 and < 13000 -> loop 3001 to 5000
+        for ($i = 3001; $i <= 5000; $i++) {
+            $palletsData[] = [
+                'pallet_number' => (string)$i,
+                'size' => 'كبيرة',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // 500 wood (خشب) with numbers >= 13001 and < 15000 -> loop 13001 to 13500
+        for ($i = 13001; $i <= 13500; $i++) {
+            $palletsData[] = [
+                'pallet_number' => (string)$i,
+                'size' => 'خشب',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // 500 plastic (بلاستيك) with numbers >= 15001 and < 20000 -> loop 15001 to 15500
+        for ($i = 15001; $i <= 15500; $i++) {
+            $palletsData[] = [
+                'pallet_number' => (string)$i,
+                'size' => 'بلاستيك',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        // Insert in chunks for performance
+        $chunks = array_chunk($palletsData, 500);
+        foreach ($chunks as $chunk) {
+            $sizeCodes = [
+                'كبيرة' => '01',
+                'وسط' => '02',
+                'صغيرة' => '03',
+                'خشب' => '04',
+                'بلاستيك' => '05',
+            ];
+            foreach ($chunk as &$pallet) {
+                $code = $sizeCodes[$pallet['size']] ?? '02';
+                $num = str_pad($pallet['pallet_number'], 5, '0', STR_PAD_LEFT);
+                $pallet['pallet_code'] = 'PAL' . $code . $num;
             }
+            Pallet::insert($chunk);
         }
     }
 }

@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
 import {
     Box,
@@ -8,11 +8,22 @@ import {
     ChevronRight,
     Tags,
     Image as ImageIcon,
+    Edit,
+    CheckCircle2,
+    AlertCircle
 } from "lucide-react";
 import PageHeader from "@/Components/PageHeader";
+import Modal from "@/Components/Modal";
+import TextInput from "@/Components/TextInput";
+import InputLabel from "@/Components/InputLabel";
+import InputError from "@/Components/InputError";
+import PrimaryButton from "@/Components/PrimaryButton";
+import SecondaryButton from "@/Components/SecondaryButton";
+import Tooltip from "@/Components/Tooltip";
 
 export default function Show({ item }) {
     const { lang } = useLang();
+    const { flash } = usePage().props;
 
     const t = {
         title: lang === "ar" ? "تفاصيل الصنف المخزني" : "Inventory Item Details",
@@ -30,11 +41,56 @@ export default function Show({ item }) {
         vQuality: lang === "ar" ? "الجودة" : "Quality",
         vPrice: lang === "ar" ? "السعر الافتراضي" : "Default Price",
         vStatus: lang === "ar" ? "الحالة" : "Status",
+        actions: lang === "ar" ? "الإجراءات" : "Actions",
+        editVariant: lang === "ar" ? "تعديل الشكل / الحجم" : "Edit Shape / Variant",
+    };
+
+    // State for Variant Edit Modal
+    const [selectedVariant, setSelectedVariant] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Form setup for variant edit
+    const { data, setData, put, processing, errors, reset, clearErrors } = useForm({
+        name: "",
+        quality: "",
+        default_price: "",
+        is_active: true,
+    });
+
+    const openEditModal = (variant) => {
+        setSelectedVariant(variant);
+        clearErrors();
+        setData({
+            name: variant.name,
+            quality: variant.quality || "",
+            default_price: variant.default_price,
+            is_active: variant.is_active,
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
+        put(route("inventory-item-variants.update", selectedVariant.id), {
+            onSuccess: () => {
+                setIsEditModalOpen(false);
+                reset();
+            }
+        });
+    };
+
+    const displayBilingual = (rawText) => {
+        if (!rawText) return "";
+        const parts = rawText.split("|").map((s) => s.trim());
+        if (parts.length > 1) {
+            return lang === "ar" ? parts[0] : parts[1];
+        }
+        return rawText;
     };
 
     const getCategoryPath = (cat) => {
         if (!cat) return "—";
-        return cat.name;
+        return displayBilingual(cat.name);
     };
 
     const breadcrumbs = (
@@ -64,9 +120,23 @@ export default function Show({ item }) {
                 className="max-w-5xl mx-auto pb-8 main-stack-y"
                 dir={lang === "ar" ? "rtl" : "ltr"}
             >
+                {/* Session Alerts */}
+                {flash?.success && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 p-3 rounded-none text-xs font-bold flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        <span>{flash.success}</span>
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="bg-danger/10 border border-danger/30 text-danger p-3 rounded-none text-xs font-bold flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>{flash.error}</span>
+                    </div>
+                )}
+
                 <PageHeader
                     icon={Box}
-                    title={item.name}
+                    title={displayBilingual(item.name)}
                     description={
                         <div className="flex items-center gap-2 mt-0.5 text-xs text-text-muted">
                             <span className="font-mono bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-none text-slate-700 font-bold">
@@ -104,7 +174,7 @@ export default function Show({ item }) {
                                     {t.name}
                                 </span>
                                 <span className="text-text font-semibold text-[13px]">
-                                    {item.name}
+                                    {displayBilingual(item.name)}
                                 </span>
                             </div>
 
@@ -134,21 +204,22 @@ export default function Show({ item }) {
                                             <th className="px-3 py-2 text-start">{t.vQuality}</th>
                                             <th className="px-3 py-2 text-start">{t.vPrice}</th>
                                             <th className="px-3 py-2 text-center w-20">{t.vStatus}</th>
+                                            <th className="px-3 py-2 text-end w-20">{t.actions}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {!item.variants || item.variants.length === 0 ? (
                                             <tr>
-                                                <td colSpan="5" className="px-3 py-4 text-center text-text-muted">
+                                                <td colSpan="6" className="px-3 py-4 text-center text-text-muted">
                                                     {lang === "ar" ? "لا توجد أشكال مضافة لهذا المنتج" : "No variants available for this product"}
                                                 </td>
                                             </tr>
                                         ) : (
                                             item.variants.map((v) => (
                                                 <tr key={v.id} className="hover:bg-surface-muted/30 transition-colors">
-                                                    <td className="px-3 py-2.5 font-bold text-text">{v.name}</td>
+                                                    <td className="px-3 py-2.5 font-bold text-text">{displayBilingual(v.name)}</td>
                                                     <td className="px-3 py-2.5 font-mono text-text-muted">{v.code}</td>
-                                                    <td className="px-3 py-2.5 text-text">{v.quality || "—"}</td>
+                                                    <td className="px-3 py-2.5 text-text">{displayBilingual(v.quality) || "—"}</td>
                                                     <td className="px-3 py-2.5 font-mono text-emerald-600 font-bold">
                                                         {parseFloat(v.default_price).toFixed(2)} {lang === "ar" ? "ر.س" : "SAR"}
                                                     </td>
@@ -162,6 +233,16 @@ export default function Show({ item }) {
                                                         >
                                                             {v.is_active ? t.active : t.inactive}
                                                         </span>
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-end">
+                                                        <Tooltip text={lang === "ar" ? "تعديل الشكل" : "Edit Variant"}>
+                                                            <button
+                                                                onClick={() => openEditModal(v)}
+                                                                className="p-1 text-text-muted hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all rounded-none inline-flex items-center"
+                                                            >
+                                                                <Edit className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </Tooltip>
                                                     </td>
                                                 </tr>
                                             ))
@@ -187,7 +268,7 @@ export default function Show({ item }) {
                             {item.image ? (
                                 <img
                                     src={item.image}
-                                    alt={item.name}
+                                    alt={displayBilingual(item.name)}
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
@@ -221,6 +302,97 @@ export default function Show({ item }) {
                     </div>
                 </div>
             </div>
+
+            {/* Modal: Edit Variant Form */}
+            <Modal show={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} maxWidth="sm">
+                <form onSubmit={handleFormSubmit} className="p-6 space-y-4 text-start" dir={lang === "ar" ? "rtl" : "ltr"}>
+                    <div className="flex items-center gap-2 border-b border-border pb-3">
+                        <Box className="h-6 w-6 text-primary" />
+                        <h3 className="font-bold text-lg text-text">
+                            {t.editVariant}
+                        </h3>
+                    </div>
+
+                    <div className="space-y-4">
+                        {/* Variant Code (ReadOnly) */}
+                        {selectedVariant && (
+                            <div>
+                                <InputLabel value={t.vCode} />
+                                <div className="mt-1 p-2.5 bg-slate-100 border border-border text-xs font-mono rounded-none text-text-muted select-all">
+                                    {selectedVariant.code}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Variant Name */}
+                        <div>
+                            <InputLabel htmlFor="name" value={t.vName + " *"} />
+                            <TextInput
+                                id="name"
+                                className="mt-1 block w-full text-xs rounded-none border-border"
+                                value={data.name}
+                                onChange={(e) => setData("name", e.target.value)}
+                                placeholder="5ك | 5kg"
+                                required
+                            />
+                            <InputError message={errors.name} className="mt-1 font-bold text-danger text-[11px]" />
+                        </div>
+
+                        {/* Quality */}
+                        <div>
+                            <InputLabel htmlFor="quality" value={t.vQuality} />
+                            <TextInput
+                                id="quality"
+                                className="mt-1 block w-full text-xs rounded-none border-border"
+                                value={data.quality}
+                                onChange={(e) => setData("quality", e.target.value)}
+                                placeholder="ملكي | Royal"
+                            />
+                            <InputError message={errors.quality} className="mt-1 font-bold text-danger text-[11px]" />
+                        </div>
+
+                        {/* Default Price */}
+                        <div>
+                            <InputLabel htmlFor="default_price" value={t.vPrice + " *"} />
+                            <TextInput
+                                id="default_price"
+                                type="number"
+                                step="0.01"
+                                className="mt-1 block w-full text-xs rounded-none border-border"
+                                value={data.default_price}
+                                onChange={(e) => setData("default_price", e.target.value)}
+                                placeholder="0.00"
+                                required
+                            />
+                            <InputError message={errors.default_price} className="mt-1 font-bold text-danger text-[11px]" />
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                            <InputLabel htmlFor="is_active" value={t.vStatus} />
+                            <select
+                                id="is_active"
+                                className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2.5"
+                                value={data.is_active ? "1" : "0"}
+                                onChange={(e) => setData("is_active", e.target.value === "1")}
+                            >
+                                <option value="1">{t.active}</option>
+                                <option value="0">{t.inactive}</option>
+                            </select>
+                            <InputError message={errors.is_active} className="mt-1 font-bold text-danger text-[11px]" />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 border-t border-border pt-4 mt-2">
+                        <SecondaryButton type="button" onClick={() => setIsEditModalOpen(false)} className="rounded-none text-xs">
+                            {lang === "ar" ? "إلغاء" : "Cancel"}
+                        </SecondaryButton>
+                        <PrimaryButton type="submit" disabled={processing} className="rounded-none text-xs">
+                            {processing ? (lang === "ar" ? "جاري الحفظ..." : "Saving...") : (lang === "ar" ? "حفظ البيانات" : "Save Changes")}
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

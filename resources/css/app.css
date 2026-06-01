@@ -40,9 +40,43 @@
     margin-top: var(--layout-main-gap-y);
 }
 
-/* Hover shadow and move animation for all dashboard/settings cards */
+/* Button and Input compact height rules (max 30px) */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+select,
+.btn-compact,
+button,
+.btn-compact button,
+.btn-compact a,
+button.h-\[36px\],
+a.h-\[36px\],
+.h-\[38px\],
+.h-\[30px\] {
+    height: 30px !important;
+    max-height: 30px !important;
+    min-height: 30px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    line-height: 30px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+/* Ensure child elements like icons inside buttons align correctly */
+button svg,
+a svg {
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+/* Hover shadow and move animation for all dashboard/settings cards and interactive elements */
 .settings-card,
 .dashboard-card,
+button,
+a.p-1\.5,
 .bg-surface.border.rounded-xl,
 .bg-surface.border.rounded-lg,
 .bg-surface.border.rounded-2xl {
@@ -53,6 +87,8 @@
 
 .settings-card:hover,
 .dashboard-card:hover,
+button:hover,
+a.p-1\.5:hover,
 .bg-surface.border.rounded-xl:hover,
 .bg-surface.border.rounded-lg:hover,
 .bg-surface.border.rounded-2xl:hover {

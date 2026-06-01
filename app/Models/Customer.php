@@ -67,4 +67,9 @@ class Customer extends Model
     {
         return $this->hasMany(Pallet::class);
     }
+
+    public function receptions()
+    {
+        return $this->hasMany(Reception::class);
+    }
 }
