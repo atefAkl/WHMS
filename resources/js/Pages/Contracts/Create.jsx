@@ -529,7 +529,7 @@ export default function Create({ customer, contacts: initialContacts, seasonTerm
                                                         onDragEnd={onTermDragEnd}
                                                         onDragOver={e => e.preventDefault()}
                                                         className={`flex items-start gap-2.5 px-3 py-2.5 select-none transition-colors ${
-                                                            termDragOver === index ? 'bg-primary/5 border-s-2 border-primary' : 'hover:bg-surface-muted/30'
+                                                            termDragOver === index ? 'bg-primary/5' : 'hover:bg-surface-muted/30'
                                                         }`}
                                                     >
                                                         <div className="cursor-grab active:cursor-grabbing text-text-muted mt-0.5 shrink-0">

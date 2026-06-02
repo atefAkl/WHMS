@@ -49,17 +49,18 @@ import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
 import Tooltip from "@/Components/Tooltip";
+import TabBar from "@/Components/TabBar";
 
 const SectionCard = ({ title, icon: Icon, children, action }) => (
-    <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-surface-muted/30">
+    <div className="flex flex-col space-y-3 mb-4">
+        <div className="flex items-center justify-between pb-2 border-b border-border/50">
             <div className="flex items-center gap-1.5">
-                <Icon className="h-3.5 w-3.5 text-primary" />
+                <Icon className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-bold text-text">{title}</h2>
             </div>
             {action && <div>{action}</div>}
         </div>
-        <div className="flex-1 flex flex-col px-2.5 pt-2.5 pb-1">
+        <div className="flex-1 flex flex-col">
             {children}
         </div>
     </div>
@@ -1132,7 +1133,7 @@ export default function Show({
             </span>
             <ChevronRight
                 className={
-                    lang === "ar" ? "h-3.5 w-3.5 rotate-180" : "h-3.5 w-3.5"
+            lang === "ar" ? "h-3.5 w-3.5 rotate-180" : "h-3.5 w-3.5"
                 }
             />
             <span
@@ -1162,74 +1163,75 @@ export default function Show({
 
             <div className="max-w-7xl mx-auto px-3 sm:px-3 lg:px-8 py-2 space-y-2">
                 {/* Header Info & Actions Bar */}
-                <div className="rounded-xl border border-border bg-surface shadow-sm p-1 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary shadow-inner shrink-0 hover:bg-primary/20 hover:scale-105 transition-all cursor-pointer">
-                            <FileText className="h-4 w-4" />
-                        </div>
-                        <div>
+                <div className="rounded-xl border border-border bg-surface shadow-sm p-4 mb-4">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
-                                <h1 className="text-lg font-extrabold text-text font-mono tracking-tight">
-                                    {contract.contract_number}
-                                </h1>
-                                <span
-                                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                        contract.status === "active"
-                                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                                            : contract.status === "suspended"
-                                              ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                                              : contract.status === "ended"
-                                                ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                                                : contract.status ===
-                                                    "cancelled"
-                                                  ? "bg-danger/10 text-danger border border-danger/20"
-                                                  : "bg-gray-500/10 text-gray-500 border border-gray-500/20"
-                                    }`}
-                                >
-                                    {contract.status === "active"
-                                        ? t("show.status_active")
-                                        : contract.status === "suspended"
-                                          ? t("show.status_suspended")
-                                          : contract.status === "ended"
-                                            ? t("show.status_ended")
-                                            : contract.status === "cancelled"
-                                              ? t("show.status_cancelled")
-                                              : t("show.status_draft")}
-                                </span>
+                                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary shadow-inner shrink-0 hover:bg-primary/20 hover:scale-105 transition-all cursor-pointer">
+                                    <FileText className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h1 className="text-lg font-extrabold text-text font-mono tracking-tight">
+                                            {contract.contract_number}
+                                        </h1>
+                                        <span
+                                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                                contract.status === "active"
+                                                    ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                                                    : contract.status === "suspended"
+                                                      ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                                                      : contract.status === "ended"
+                                                        ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                                                        : contract.status ===
+                                                            "cancelled"
+                                                          ? "bg-danger/10 text-danger border border-danger/20"
+                                                          : "bg-gray-500/10 text-gray-500 border border-gray-500/20"
+                                            }`}
+                                        >
+                                            {contract.status === "active"
+                                                ? t("show.status_active")
+                                                : contract.status === "suspended"
+                                                  ? t("show.status_suspended")
+                                                  : contract.status === "ended"
+                                                    ? t("show.status_ended")
+                                                    : contract.status === "cancelled"
+                                                      ? t("show.status_cancelled")
+                                                      : t("show.status_draft")}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-text-muted">
+                                        <span
+                                            className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors"
+                                            onClick={() =>
+                                                router.get(
+                                                    route(
+                                                        "customers.show",
+                                                        contract.customer_id,
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            <User className="h-3.5 w-3.5" />
+                                            {contract.customer?.name}
+                                        </span>
+                                        <span>•</span>
+                                        <span
+                                            className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors"
+                                            onClick={() =>
+                                                router.get(
+                                                    route("settings.seasons.index"),
+                                                )
+                                            }
+                                        >
+                                            <Calendar className="h-3.5 w-3.5" />
+                                            {t("show.season_settings")}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-text-muted">
-                                <span
-                                    className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors"
-                                    onClick={() =>
-                                        router.get(
-                                            route(
-                                                "customers.show",
-                                                contract.customer_id,
-                                            ),
-                                        )
-                                    }
-                                >
-                                    <User className="h-3.5 w-3.5" />
-                                    {contract.customer?.name}
-                                </span>
-                                <span>�</span>
-                                <span
-                                    className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors"
-                                    onClick={() =>
-                                        router.get(
-                                            route("settings.seasons.index"),
-                                        )
-                                    }
-                                >
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    {t("show.season_settings")}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-1.5 w-full lg:w-auto justify-end border-t lg:border-t-0 pt-2 lg:pt-0 border-border">
+                            {/* Action Buttons */}
+                            <div className="flex flex-wrap items-center gap-1.5 w-full lg:w-auto justify-end border-t lg:border-t-0 pt-2 lg:pt-0 border-border">
                         {/* Edit */}
                         <Tooltip text={t("show.edit_contract")}>
                             <button
@@ -1317,24 +1319,13 @@ export default function Show({
                         </Tooltip>
                     </div>
                 </div>
+            </div>
 
-                {/* Tabs Navigation Bar */}
-                <div className="bg-surface border border-border rounded-xl shadow-sm flex overflow-x-auto scrollbar-none">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-all border-b-2 whitespace-nowrap shrink-0 ${
-                                activeTab === tab.id
-                                    ? "border-primary text-primary bg-primary/5"
-                                    : "border-transparent text-text-muted hover:text-text hover:bg-surface-muted/50"
-                            }`}
-                        >
-                            <tab.icon className="h-4 w-4" />
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
+                {/* Main Card: TabBar as header, content as body */}
+                <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+                    <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+                    
+                    <div className="p-4 space-y-4 flex-1">
 
                 {/* Tab Content 1: Contract View */}
                 {activeTab === "view" &&
@@ -3604,8 +3595,11 @@ export default function Show({
                         </SectionCard>
                     </div>
                 )}
+            </div>
+        </div>
 
-                {/* Movement History Modal (shared by Items and Pallets) */}
+
+        {/* Movement History Modal (shared by Items and Pallets) */}
                 <Modal
                     show={showMovementModal}
                     onClose={() => { setShowMovementModal(false); setMovementData(null); }}
@@ -3661,7 +3655,7 @@ export default function Show({
                                                     <strong className="text-text">{lang === "ar" ? "الأصناف:" : "Items:"}</strong>{" "}
                                                     {movementData.contents.map((c, i) => (
                                                         <span key={i} className="bg-primary/5 text-primary text-[10px] px-1.5 py-0.5 rounded border border-primary/10 font-bold mx-0.5">
-                                                            {c}
+                                                            {displayBilingual(c.item_name)}{c.variant_name ? ` (${c.variant_name})` : ""}{c.quality ? ` - ${displayBilingual(c.quality)}` : ""}
                                                         </span>
                                                     ))}
                                                 </div>

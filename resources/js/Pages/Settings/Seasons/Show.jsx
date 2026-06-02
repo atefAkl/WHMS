@@ -32,6 +32,7 @@ import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
 import TextInput from "@/Components/TextInput";
 import Tooltip from "@/Components/Tooltip";
+import TabBar from "@/Components/TabBar";
 
 export default function Show({ season, allTerms, settings, blocks }) {
     const { lang } = useLang();
@@ -456,26 +457,11 @@ export default function Show({ season, allTerms, settings, blocks }) {
                     </div>
                 </div>
 
-                {/* Tabs Navigation */}
+                {/* Main Card */}
                 <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-                    <div className="flex border-b border-border bg-surface-muted/30">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-all border-b-2 ${
-                                    activeTab === tab.id
-                                        ? "border-primary text-primary bg-surface"
-                                        : "border-transparent text-text-muted hover:text-text hover:bg-surface-muted/50"
-                                }`}
-                            >
-                                <tab.icon className="h-4 w-4" />
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
+                    <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-                    <div className="p-6 flex-1">
+                    <div className="p-6 flex-1 space-y-4">
                         {/* Tab 1: Season Settings Form */}
                         {activeTab === "settings" && (
                             <form
@@ -917,7 +903,7 @@ export default function Show({ season, allTerms, settings, blocks }) {
                                                             className={`flex items-start gap-2 px-3 py-2 select-none transition-colors ${
                                                                 dragOver ===
                                                                 index
-                                                                    ? "bg-primary/5 border-s-2 border-primary"
+                                                                    ? "bg-primary/5"
                                                                     : "hover:bg-surface-muted/20"
                                                             }`}
                                                         >

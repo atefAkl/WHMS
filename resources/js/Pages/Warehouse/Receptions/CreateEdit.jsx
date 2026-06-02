@@ -663,8 +663,8 @@ export default function CreateEdit({
                                                     key={c.id}
                                                     className={`p-2 text-xs font-semibold cursor-pointer text-text transition-colors ${
                                                         idx === customerActiveIndex 
-                                                            ? "bg-slate-100 text-slate-900 font-bold border-r-4 border-primary" 
-                                                            : "hover:bg-slate-50"
+                                                            ? "bg-primary/10 text-primary font-bold" 
+                                                            : "hover:bg-surface-muted"
                                                     }`}
                                                     onMouseDown={(e) => {
                                                         e.preventDefault();
@@ -927,8 +927,8 @@ export default function CreateEdit({
                                                     key={item.id}
                                                     className={`p-2 text-xs font-semibold cursor-pointer text-text transition-colors ${
                                                         idx === posItemActiveIndex 
-                                                            ? "bg-slate-100 text-slate-900 font-bold border-r-4 border-primary" 
-                                                            : "hover:bg-slate-50"
+                                                            ? "bg-primary/10 text-primary font-bold" 
+                                                            : "hover:bg-surface-muted"
                                                     }`}
                                                     onMouseDown={(e) => {
                                                         e.preventDefault();

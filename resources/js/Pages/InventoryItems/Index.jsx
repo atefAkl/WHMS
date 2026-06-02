@@ -421,7 +421,7 @@ export default function Index({ items = [], categories = [] }) {
                                 onClick={() => setSelectedCategoryId(null)}
                                 className={`w-full text-start px-2 py-1.5 transition-colors flex items-center gap-2 rounded-none font-semibold ${
                                     !selectedCategoryId
-                                        ? "bg-primary/10 text-primary border-l-2 border-primary"
+                                        ? "bg-primary/10 text-primary"
                                         : "text-text hover:bg-surface-muted"
                                 }`}
                             >
@@ -459,7 +459,7 @@ export default function Index({ items = [], categories = [] }) {
                                                 className={`w-full text-start px-2 py-1.5 transition-colors flex items-center gap-1.5 cursor-pointer rounded-none ${
                                                     selectedCategoryId ===
                                                     lvl1.id
-                                                        ? "bg-primary/5 text-primary border-s border-primary font-bold"
+                                                        ? "bg-primary/5 text-primary font-bold"
                                                         : "text-text hover:bg-surface-muted font-medium"
                                                 }`}
                                             >
@@ -516,7 +516,7 @@ export default function Index({ items = [], categories = [] }) {
                                                                         className={`w-full text-start px-2 py-1.5 transition-colors flex items-center gap-1.5 cursor-pointer rounded-none ${
                                                                             selectedCategoryId ===
                                                                             lvl2.id
-                                                                                ? "bg-primary/5 text-primary border-s border-primary font-bold"
+                                                                                ? "bg-primary/5 text-primary font-bold"
                                                                                 : "text-text-muted hover:text-text hover:bg-surface-muted font-medium"
                                                                         }`}
                                                                     >
@@ -565,7 +565,7 @@ export default function Index({ items = [], categories = [] }) {
                                                                                                 className={`w-full text-start px-2 py-1 transition-colors flex items-center gap-1.5 cursor-pointer rounded-none text-[11px] ${
                                                                                                     selectedCategoryId ===
                                                                                                     lvl3.id
-                                                                                                        ? "bg-primary/10 text-primary font-bold border-s-2 border-primary"
+                                                                                                        ? "bg-primary/10 text-primary font-bold"
                                                                                                         : "text-text-muted hover:text-text hover:bg-surface-muted"
                                                                                                 }`}
                                                                                             >

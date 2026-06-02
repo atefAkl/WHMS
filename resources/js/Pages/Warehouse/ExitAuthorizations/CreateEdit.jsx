@@ -506,8 +506,8 @@ export default function CreateEdit({ customers = [], inventoryItems = [], driver
                                                         key={c.id}
                                                         className={`p-2.5 text-xs font-semibold cursor-pointer text-text transition-colors ${
                                                             idx === customerActiveIndex 
-                                                                ? "bg-slate-100 text-slate-900 border-r-4 border-primary" 
-                                                                : "hover:bg-slate-50"
+                                                                ? "bg-primary/10 text-primary font-bold" 
+                                                                : "hover:bg-surface-muted"
                                                         }`}
                                                         onMouseDown={() => {
                                                             setData("customer_id", c.id);

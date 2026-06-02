@@ -17,6 +17,7 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Tooltip from '@/Components/Tooltip';
 import PageHeader from '@/Components/PageHeader';
+import TabBar from '@/Components/TabBar';
 
 // Import Quill WYSIWYG Editor
 import Quill from 'quill';
@@ -565,27 +566,13 @@ export default function ContractSettings({ terms: initialTerms, settings, header
                     }
                 />
 
-                <div className="bg-surface border border-border rounded-none shadow-sm overflow-hidden flex flex-col min-h-[600px] print:border-0 print:shadow-none print:bg-transparent print:min-h-0 print:overflow-visible">
+                <div className="bg-surface border border-border rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[600px] print:border-0 print:shadow-none print:bg-transparent print:min-h-0 print:overflow-visible">
                     {/* شريط التبويبات مع الاشارة للتبويب النشط */}
-                    <div className="flex border-b border-border bg-surface-muted/30 print:hidden overflow-x-auto">
-                        {tabs.map(tab => (
-                            <button
-                                type="button"
-                                key={tab.id}
-                                onClick={() => handleTabChange(tab.id)}
-                                className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2 rounded-none whitespace-nowrap ${
-                                    activeTab === tab.id 
-                                        ? 'border-primary text-primary bg-primary/5' 
-                                        : 'border-transparent text-text-muted hover:text-text hover:bg-surface-muted/50'
-                                }`}
-                            >
-                                <tab.icon className="h-4 w-4" />
-                                {tab.label}
-                            </button>
-                        ))}
+                    <div className="print:hidden">
+                        <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
                     </div>
 
-                    <div className="p-6 flex-1 print:p-0 print:overflow-visible">
+                    <div className="p-6 flex-1 print:p-0 print:overflow-visible space-y-4">
 
                         {/* Tab 1: Company Data & First Party Settings */}
                         {activeTab === 'company' && (

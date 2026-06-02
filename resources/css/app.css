@@ -41,14 +41,14 @@
 }
 
 /* Button and Input compact height rules (max 30px) */
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="number"],
-input[type="date"],
-select,
+form input[type="text"],
+form input[type="password"],
+form input[type="email"],
+form input[type="number"],
+form input[type="date"],
+form select,
 .btn-compact,
-button,
+form button,
 .btn-compact button,
 .btn-compact a,
 button.h-\[36px\],
@@ -66,7 +66,7 @@ a.h-\[36px\],
 }
 
 /* Ensure child elements like icons inside buttons align correctly */
-button svg,
+form button svg,
 a svg {
     margin-top: auto;
     margin-bottom: auto;
@@ -75,7 +75,7 @@ a svg {
 /* Hover shadow and move animation for all dashboard/settings cards and interactive elements */
 .settings-card,
 .dashboard-card,
-button,
+form button,
 a.p-1\.5,
 .bg-surface.border.rounded-xl,
 .bg-surface.border.rounded-lg,
@@ -87,7 +87,7 @@ a.p-1\.5,
 
 .settings-card:hover,
 .dashboard-card:hover,
-button:hover,
+form button:hover,
 a.p-1\.5:hover,
 .bg-surface.border.rounded-xl:hover,
 .bg-surface.border.rounded-lg:hover,
