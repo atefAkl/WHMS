@@ -3,14 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Reception;
-use App\Models\InventoryEntry;
 use App\Models\Customer;
 use App\Models\Contract;
 use App\Models\Driver;
 use App\Models\Pallet;
 use App\Models\InventoryItem;
 use App\Models\ContractPeriod;
-use App\Models\ContractAgent;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -41,12 +39,12 @@ class ReceptionController extends Controller
         }
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('serial_number', 'like', "%{$search}%")
-                  ->orWhere('farm_source', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($c) use ($search) {
-                      $c->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('farm_source', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($c) use ($search) {
+                        $c->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -97,6 +95,10 @@ class ReceptionController extends Controller
             'items.*.pallet_number'             => 'required|string|max:50',
             'items.*.quantity_in'               => 'required|numeric|min:0.01',
         ]);
+
+        if (!$isDraft && !$this->isActiveContractPeriod($request->contract_id, $request->period_id)) {
+            return back()->withErrors(['period_id' => 'يجب اختيار فترة نشطة تابعة للعقد.'])->withInput();
+        }
 
         $reception = DB::transaction(function () use ($request) {
             $reception = Reception::create([
@@ -150,13 +152,13 @@ class ReceptionController extends Controller
     public function show(Reception $reception)
     {
         $reception->load([
-            'customer', 
-            'contract', 
-            'driver', 
-            'representative', 
-            'period', 
-            'inventoryEntries.inventoryItem', 
-            'inventoryEntries.variant', 
+            'customer',
+            'contract',
+            'driver',
+            'representative',
+            'period',
+            'inventoryEntries.inventoryItem',
+            'inventoryEntries.variant',
             'inventoryEntries.pallet',
             'creator',
             'editor'
@@ -177,19 +179,19 @@ class ReceptionController extends Controller
         $reception->load(['inventoryEntries.pallet']);
 
         $customers = Customer::where('status', 'active')
-            ->orWhereHas('contracts', function($q) {
+            ->orWhereHas('contracts', function ($q) {
                 $q->where('status', 'active');
             })
-            ->with(['contracts' => function($q) {
+            ->with(['contracts' => function ($q) {
                 $q->where('status', 'active')->with(['periods', 'contractAgents']);
             }])
             ->orderBy('name')
             ->get();
 
         $drivers = Driver::where('is_active', true)->orderBy('name')->get();
-        
+
         $inventoryItems = InventoryItem::where('is_active', true)
-            ->with(['variants' => function($v) {
+            ->with(['variants' => function ($v) {
                 $v->where('is_active', true);
             }])
             ->orderBy('name')
@@ -238,9 +240,13 @@ class ReceptionController extends Controller
             'items.*.quantity_in'               => 'required|numeric|min:0.01',
         ]);
 
+        if (!$isDraft && !$this->isActiveContractPeriod($request->contract_id, $request->period_id)) {
+            return back()->withErrors(['period_id' => 'يجب اختيار فترة نشطة تابعة للعقد.'])->withInput();
+        }
+
         DB::transaction(function () use ($request, $reception) {
             $reason = $request->modification_reason ?: 'تعديل وحفظ مسودة';
-            
+
             // Append to history log
             $history = $reception->history ?: [];
             $history[] = [
@@ -371,13 +377,13 @@ class ReceptionController extends Controller
     public function print(Reception $reception)
     {
         $reception->load([
-            'customer', 
-            'contract', 
-            'driver', 
-            'representative', 
-            'period', 
-            'inventoryEntries.inventoryItem', 
-            'inventoryEntries.variant', 
+            'customer',
+            'contract',
+            'driver',
+            'representative',
+            'period',
+            'inventoryEntries.inventoryItem',
+            'inventoryEntries.variant',
             'inventoryEntries.pallet'
         ]);
 
@@ -392,20 +398,20 @@ class ReceptionController extends Controller
         $bookedPallets = $contract->total_capacity ?: 0;
 
         // 2. Utilized pallets (pallets under contract with balance > 0)
-        $utilizedPallets = \App\Models\InventoryEntry::where(function($q) use ($contract) {
-            $q->where(function($q1) use ($contract) {
+        $utilizedPallets = \App\Models\InventoryEntry::where(function ($q) use ($contract) {
+            $q->where(function ($q1) use ($contract) {
                 $q1->where('voucher_type', \App\Models\Reception::class)
-                   ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contract->id)->pluck('id'));
-            })->orWhere(function($q2) use ($contract) {
+                    ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contract->id)->pluck('id'));
+            })->orWhere(function ($q2) use ($contract) {
                 $q2->where('voucher_type', \App\Models\Delivery::class)
-                   ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contract->id)->pluck('id'));
+                    ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contract->id)->pluck('id'));
             });
         })
-        ->select('pallet_id')
-        ->groupBy('pallet_id')
-        ->having(\Illuminate\Support\Facades\DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
-        ->get()
-        ->count();
+            ->select('pallet_id')
+            ->groupBy('pallet_id')
+            ->having(\Illuminate\Support\Facades\DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
+            ->get()
+            ->count();
 
         // 3. Available pallets (booked - utilized)
         $availablePallets = max(0, $bookedPallets - $utilizedPallets);
@@ -414,7 +420,7 @@ class ReceptionController extends Controller
         $totalInvoiced = (float) $contract->invoices()->sum('amount');
         $totalPaid = (float) $contract->invoices()->sum('paid_amount');
         $totalDues = max(0.0, $totalInvoiced - $totalPaid);
-        $invoices = $contract->invoices()->orderBy('due_date', 'asc')->get()->map(function($inv) {
+        $invoices = $contract->invoices()->orderBy('due_date', 'asc')->get()->map(function ($inv) {
             return [
                 'id' => $inv->id,
                 'invoice_number' => $inv->invoice_number,
@@ -426,7 +432,7 @@ class ReceptionController extends Controller
             ];
         });
 
-        $payments = $contract->payments()->orderBy('payment_date', 'desc')->get()->map(function($pay) {
+        $payments = $contract->payments()->orderBy('payment_date', 'desc')->get()->map(function ($pay) {
             return [
                 'id' => $pay->id,
                 'payment_date' => $pay->payment_date ? $pay->payment_date->toDateString() : null,
@@ -446,13 +452,13 @@ class ReceptionController extends Controller
             // New fields for Deliveries compatibility
             'booked_capacity' => $bookedPallets,
             'booked_pallets' => $bookedPallets,
-            
+
             'current_utilized' => $utilizedPallets,
             'utilized_pallets' => $utilizedPallets,
-            
+
             'capacity_balance' => $availablePallets,
             'available_pallets' => $availablePallets,
-            
+
             'end_date' => $contract->end_date ? $contract->end_date->toDateString() : null,
 
             // Financial stats
@@ -464,5 +470,17 @@ class ReceptionController extends Controller
                 'payments' => $payments,
             ]
         ]);
+    }
+
+    private function isActiveContractPeriod($contractId, $periodId): bool
+    {
+        if (empty($contractId) || empty($periodId)) {
+            return false;
+        }
+
+        return ContractPeriod::where('id', $periodId)
+            ->where('contract_id', $contractId)
+            ->where('status', 'active')
+            ->exists();
     }
 }

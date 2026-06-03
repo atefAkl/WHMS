@@ -86,6 +86,10 @@ Route::middleware([
                 Route::delete('contracts/{contract}', [\App\Http\Controllers\ContractController::class, 'destroy'])->name('contracts.destroy');
 
                 Route::post('contracts/{contract}/periods', [\App\Http\Controllers\ContractController::class, 'addPeriod'])->name('contracts.periods.store');
+                Route::patch('contracts/{contract}/periods/{period}', [\App\Http\Controllers\ContractController::class, 'updatePeriod'])->name('contracts.periods.update');
+                Route::patch('contracts/{contract}/periods/{period}/items', [\App\Http\Controllers\ContractController::class, 'updatePeriodItems'])->name('contracts.periods.items.update');
+                Route::patch('contracts/{contract}/periods/{period}/status', [\App\Http\Controllers\ContractController::class, 'updatePeriodStatus'])->name('contracts.periods.status');
+                Route::delete('contracts/{contract}/periods/{period}', [\App\Http\Controllers\ContractController::class, 'destroyPeriod'])->name('contracts.periods.destroy');
                 Route::post('contracts/{contract}/contacts', [\App\Http\Controllers\ContractController::class, 'addContact'])->name('contracts.contacts.store');
                 Route::patch('contracts/{contract}/contacts/{contractContact}/status', [\App\Http\Controllers\ContractController::class, 'updateContactStatus'])->name('contracts.contacts.status');
 

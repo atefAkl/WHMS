@@ -21,6 +21,7 @@ class ContractStoreRequest extends FormRequest
     {
         return [
             'customer_id'      => 'required|exists:customers,id',
+            'contract_type'    => 'required|in:managed,free',
             'contract_number'  => 'required|string|unique:contracts,contract_number',
             'write_date'       => 'required|date',
             'write_date_hijri' => 'nullable|string',

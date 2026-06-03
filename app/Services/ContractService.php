@@ -18,6 +18,7 @@ class ContractService
             $contract = Contract::create([
                 'customer_id'      => $data['customer_id'],
                 'contact_id'       => $data['contact_id'] ?? null,
+                'contract_type'    => $data['contract_type'],
                 'contract_number'  => $data['contract_number'],
                 'contract_date'    => $data['write_date'],
                 'write_date'       => $data['write_date'],
@@ -73,12 +74,15 @@ class ContractService
                 }
             }
 
+            $contract->load('items');
+            $contract->syncFirstPeriodItems();
+
             // terms
             if (!empty($data['term_ids'])) {
                 $sortIndex = 0;
                 foreach ($data['term_ids'] as $id) {
                     if (empty($id)) continue;
-                    
+
                     if (is_string($id) && str_starts_with($id, 'custom_')) {
                         $text = substr($id, 7);
                         Term::create([

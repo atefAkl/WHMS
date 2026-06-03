@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -34,17 +35,10 @@ class ActivateContractsCommand extends Command
         $count = 0;
         foreach ($contracts as $contract) {
             $contract->update(['status' => 'active']);
-            
-            // Ensure first period exists
-            if ($contract->periods()->count() === 0) {
-                $contract->periods()->create([
-                    'period_number' => 1,
-                    'start_date' => $contract->start_date,
-                    'end_date' => $contract->end_date ?? Carbon::parse($contract->start_date)->addMonths($contract->mandatory_period),
-                    'status' => 'active',
-                    'notes' => 'الفترة الإلزامية الأولى (تنشيط تلقائي)'
-                ]);
-            }
+
+            $contract->ensureMandatoryPeriod();
+            $contract->load('items');
+            $contract->syncFirstPeriodItems();
             $count++;
         }
 

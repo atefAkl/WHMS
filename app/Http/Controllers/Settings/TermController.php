@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Term;
 use App\Models\ContractSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class TermController extends Controller
 {
+    private const CONTRACT_TYPES = ['managed', 'free'];
+
     public function index()
     {
         $terms = Term::whereNull('season_id')->whereNull('contract_id')->orderBy('id', 'desc')->get();
@@ -31,18 +34,36 @@ class TermController extends Controller
         $settings['table_show_total'] = $settings['table_show_total'] ?? '1';
         $settings['contract_title'] = $settings['contract_title'] ?? 'عقد تخزين وتأجير طبالي';
 
+        foreach (self::CONTRACT_TYPES as $type) {
+            $settings[$type . '_contract_title'] = $settings[$type . '_contract_title'] ?? $settings['contract_title'];
+            $settings[$type . '_default_introduction'] = $settings[$type . '_default_introduction'] ?? ($settings['default_introduction'] ?? '');
+            $settings[$type . '_default_preamble'] = $settings[$type . '_default_preamble'] ?? ($settings['default_preamble'] ?? '');
+            $settings[$type . '_default_mandatory_period'] = $settings[$type . '_default_mandatory_period'] ?? ($settings['default_mandatory_period'] ?? 12);
+            $settings[$type . '_default_renewal_period'] = $settings[$type . '_default_renewal_period'] ?? ($settings['default_renewal_period'] ?? 12);
+            $settings[$type . '_footer'] = $settings[$type . '_footer'] ?? ($settings['footer'] ?? '');
+        }
+
         if (empty($settings['unified_contract_template'])) {
             $defaultIntro = $settings['default_introduction'] ?? "بعون الله وتوفيقه، في يوم {\$write_date} م، الموافق {\$write_date_hijri} هـ ، قد اجتمع كل من:-";
             $defaultPreamble = $settings['default_preamble'] ?? "حيث أن الطرف الأول لديه مخازن تبريد وتجميد ويعمل في مجال التخزين بخدماته، ومرخص له بمزاولة النشاط بموجب الترخيص رقم ({\$company_license}) وحيث أن الطرف الثاني يرغب في استئجار طبالي لدى الطرف الأول، فقد اتفقا وهما بكامل أهليتهما الشرعية المعتبرة للتوقيع على هذا العقد فيما يلي:-";
             $settings['unified_contract_template'] = $defaultIntro . "\n\n" . $defaultPreamble . "\n\n[ITEMS_TABLE]\n\n" . "بند الشروط والأحكام:\nيلتزم الطرف الثاني بكافة الشروط المحددة.";
         }
 
+        foreach (self::CONTRACT_TYPES as $type) {
+            $typedTemplateKey = $type . '_unified_contract_template';
+            if (empty($settings[$typedTemplateKey])) {
+                $defaultIntro = $settings[$type . '_default_introduction'] ?: ($settings['default_introduction'] ?? "بعون الله وتوفيقه، في يوم {\$write_date} م، الموافق {\$write_date_hijri} هـ ، قد اجتمع كل من:-");
+                $defaultPreamble = $settings[$type . '_default_preamble'] ?: ($settings['default_preamble'] ?? "حيث أن الطرف الأول لديه مخازن تبريد وتجميد ويعمل في مجال التخزين بخدماته، ومرخص له بمزاولة النشاط بموجب الترخيص رقم ({\$company_license}) وحيث أن الطرف الثاني يرغب في استئجار طبالي لدى الطرف الأول، فقد اتفقا وهما بكامل أهليتهما الشرعية المعتبرة للتوقيع على هذا العقد فيما يلي:-");
+                $settings[$typedTemplateKey] = $defaultIntro . "\n\n" . $defaultPreamble . "\n\n[ITEMS_TABLE]\n\n" . "بند الشروط والأحكام:\nيلتزم الطرف الثاني بكافة الشروط المحددة.";
+            }
+        }
+
         // Fetch SaaS Admin configurations from Central DB
         $centralConnection = config('tenancy.database.central_connection');
-        $centralHeaderLayouts = \DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_header_layouts')->value('value');
-        $centralFooterLayouts = \DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_footer_layouts')->value('value');
-        $centralSmartVariables = \DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_smart_variables')->value('value');
-        $centralTableColumns = \DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_table_columns')->value('value');
+        $centralHeaderLayouts = DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_header_layouts')->value('value');
+        $centralFooterLayouts = DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_footer_layouts')->value('value');
+        $centralSmartVariables = DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_smart_variables')->value('value');
+        $centralTableColumns = DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_table_columns')->value('value');
 
         $headerLayouts = $centralHeaderLayouts ? json_decode($centralHeaderLayouts, true) : [
             ["id" => "1", "name_ar" => "تصميم 1: كلاسيكي قياسي (البيانات باليمين والشعار باليسار)", "name_en" => "Design 1: Classic Standard (Split header)"],
@@ -90,7 +111,9 @@ class TermController extends Controller
             ["code" => "total", "label_ar" => "الإجمالي شامل الضريبة", "label_en" => "Total with VAT", "default_visible" => true]
         ];
 
-        return Inertia::render('Settings/ContractSettings', compact('terms', 'settings', 'headerLayouts', 'footerLayouts', 'smartVariables', 'tableColumns'));
+        $contractTypes = self::CONTRACT_TYPES;
+
+        return Inertia::render('Settings/ContractSettings', compact('terms', 'settings', 'headerLayouts', 'footerLayouts', 'smartVariables', 'tableColumns', 'contractTypes'));
     }
 
     public function updateSettings(Request $request)
@@ -114,6 +137,20 @@ class TermController extends Controller
             'default_preamble'         => 'nullable|string',
             'default_mandatory_period' => 'nullable|integer|min:0',
             'default_renewal_period'   => 'nullable|integer|min:0',
+            'managed_default_introduction' => 'nullable|string',
+            'managed_default_preamble' => 'nullable|string',
+            'managed_default_mandatory_period' => 'nullable|integer|min:0',
+            'managed_default_renewal_period' => 'nullable|integer|min:0',
+            'managed_contract_title' => 'nullable|string',
+            'managed_footer' => 'nullable|string',
+            'managed_unified_contract_template' => 'nullable|string',
+            'free_default_introduction' => 'nullable|string',
+            'free_default_preamble' => 'nullable|string',
+            'free_default_mandatory_period' => 'nullable|integer|min:0',
+            'free_default_renewal_period' => 'nullable|integer|min:0',
+            'free_contract_title' => 'nullable|string',
+            'free_footer' => 'nullable|string',
+            'free_unified_contract_template' => 'nullable|string',
             'show_first_party_cr'      => 'nullable|boolean',
             'show_first_party_vat'     => 'nullable|boolean',
             'show_first_party_license'  => 'nullable|boolean',
@@ -130,10 +167,10 @@ class TermController extends Controller
             'show_second_party_email'   => 'nullable|boolean',
             'show_second_party_gm'      => 'nullable|boolean',
             'show_second_party_id'      => 'nullable|boolean',
-            'include_second_party_proxy'=> 'nullable|boolean',
+            'include_second_party_proxy' => 'nullable|boolean',
             'calendar_type'            => 'nullable|string|in:gregorian,hijri',
             'is_renewable'             => 'nullable|boolean',
-            
+
             // Layout customization fields
             'contract_title'            => 'nullable|string',
             'header_design_id'          => 'required|string',
@@ -205,7 +242,7 @@ class TermController extends Controller
         // Propagate season term text updates to unmodified contract-level terms
         if ($term->season_id && !$term->contract_id) {
             $contractIds = \App\Models\Contract::where('season_id', $term->season_id)->pluck('id')->toArray();
-            
+
             if (!empty($contractIds)) {
                 Term::whereIn('contract_id', $contractIds)
                     ->where('parent_id', $term->id)

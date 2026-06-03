@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Contract;
 use App\Models\Customer;
-use App\Models\Agent;
 use App\Models\Term;
 use Carbon\Carbon;
 
@@ -15,9 +14,8 @@ use App\Models\StorageItem;
 use App\Models\ContractSetting;
 use App\Models\Contact;
 use App\Models\ContractPeriod;
-use App\Models\ContractAgent;
-use App\Models\ContractInvoice;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use App\Http\Requests\ContractStoreRequest;
 use App\Services\ContractService;
 
@@ -83,30 +81,38 @@ class ContractController extends Controller
     {
         $customer = Customer::with(['country', 'category.parent', 'contacts'])->findOrFail($request->customer_id);
         $storageItems = StorageItem::where('is_active', true)->get();
-        
+
         // 2. Get Active Season Defaults (Priority)
         $activeSeason = Season::with(['blocks'])->where('is_active', true)->first();
-        
+
         $nextSerial = $this->nextSerial($activeSeason ? $activeSeason->id : null);
 
         // 1. Get Global Defaults
         $globalSettings = ContractSetting::pluck('value', 'key')->all();
         $seasonSettings = $activeSeason ? ContractSetting::where('season_id', $activeSeason->id)->pluck('value', 'key')->all() : [];
+        $contractType = $request->input('contract_type', Contract::TYPE_MANAGED);
 
         $introBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'intro') : null;
         $preambleBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'preamble') : null;
         $titleBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'title') : null;
         $footerBlock = $activeSeason ? $activeSeason->blocks->firstWhere('key', 'footer') : null;
 
-        $defaults = [
-            'introduction'     => $introBlock ? ($introBlock->content['text'] ?? '') : ($globalSettings['default_introduction'] ?? ''),
-            'preamble'         => $preambleBlock ? ($preambleBlock->content['text'] ?? '') : ($globalSettings['default_preamble'] ?? ''),
-            'mandatory_period' => $activeSeason->mandatory_period ?? $globalSettings['default_mandatory_period'] ?? 12,
-            'renewal_period'   => $activeSeason->renewal_period   ?? $globalSettings['default_renewal_period']   ?? 12,
-            'contract_title'   => $titleBlock ? ($titleBlock->content['text'] ?? '') : ($seasonSettings['contract_title'] ?? $globalSettings['contract_title'] ?? ''),
-            'footer'           => $footerBlock ? ($footerBlock->content['text'] ?? '') : ($seasonSettings['footer'] ?? $globalSettings['footer'] ?? ''),
-            'season_id'        => $activeSeason ? $activeSeason->id : null,
-        ];
+        $typeDefaults = [];
+        foreach (Contract::types() as $type) {
+            $typeDefaults[$type] = [
+                'contract_type' => $type,
+                'introduction' => $introBlock ? ($introBlock->content['text'] ?? '') : $this->getSettingByType($globalSettings, 'default_introduction', $type, ''),
+                'preamble' => $preambleBlock ? ($preambleBlock->content['text'] ?? '') : $this->getSettingByType($globalSettings, 'default_preamble', $type, ''),
+                'mandatory_period' => $activeSeason->mandatory_period ?? $this->getSettingByType($globalSettings, 'default_mandatory_period', $type, 12),
+                'renewal_period' => $activeSeason->renewal_period ?? $this->getSettingByType($globalSettings, 'default_renewal_period', $type, 12),
+                'contract_title' => $titleBlock ? ($titleBlock->content['text'] ?? '') : $this->getSettingByType($seasonSettings + $globalSettings, 'contract_title', $type, ''),
+                'footer' => $footerBlock ? ($footerBlock->content['text'] ?? '') : $this->getSettingByType($seasonSettings + $globalSettings, 'footer', $type, ''),
+                'unified_contract_template' => $this->resolveUnifiedTemplate($globalSettings, $type),
+                'season_id' => $activeSeason ? $activeSeason->id : null,
+            ];
+        }
+
+        $defaults = $typeDefaults[$contractType] ?? $typeDefaults[Contract::TYPE_MANAGED];
 
         // 3. Get Season Terms (Pre-assigned)
         $seasonTerms = $activeSeason ? $activeSeason->terms()->orderBy('sort_order')->get() : collect();
@@ -122,7 +128,9 @@ class ContractController extends Controller
             'seasonTerms'  => $seasonTerms,
             'allTerms'     => $allTerms,
             'defaults'     => $defaults,
+            'typeDefaults' => $typeDefaults,
             'settings'     => $globalSettings,
+            'contractTypes' => Contract::types(),
         ]);
     }
 
@@ -135,24 +143,23 @@ class ContractController extends Controller
             'contact',
             'items.storageItem',
             'terms',
-            'payments',
-            'periods',
+            'payments.period',
+            'payments.invoice',
+            'periods.items.storageItem',
             'contractAgents.contact',
-            'invoices',
+            'invoices.period',
             'blocks'
         ])->findOrFail($id);
 
         // Auto-create first period for legacy contracts
         if ($contract->periods->isEmpty()) {
-            $contract->periods()->create([
-                'period_number' => 1,
-                'start_date' => $contract->start_date,
-                'end_date' => $contract->end_date ?? Carbon::parse($contract->start_date)->addMonths($contract->mandatory_period),
-                'status' => 'active',
-                'notes' => 'الفترة الإلزامية الأولى (تلقائي)'
-            ]);
-            $contract->load('periods');
+            $contract->ensureMandatoryPeriod();
+            $contract->load('periods.items.storageItem');
         }
+
+        $contract->load('items');
+        $contract->syncFirstPeriodItems();
+        $contract->load('periods.items.storageItem');
 
         // Auto-create contract agent for legacy contracts if contact_id exists
         if ($contract->contractAgents->isEmpty() && $contract->contact_id) {
@@ -177,7 +184,7 @@ class ContractController extends Controller
         $allTerms = Term::orderBy('sort_order')->get();
 
         $centralConnection = config('tenancy.database.central_connection');
-        $centralTableColumns = \DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_table_columns')->value('value');
+        $centralTableColumns = DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_table_columns')->value('value');
         $tableColumns = $centralTableColumns ? json_decode($centralTableColumns, true) : [
             ["code" => "item_name", "label_ar" => "الصنف والمستودع", "label_en" => "Item & Warehouse", "default_visible" => true],
             ["code" => "qty", "label_ar" => "الكمية", "label_en" => "Qty", "default_visible" => true],
@@ -224,6 +231,37 @@ class ContractController extends Controller
         return '10015' . str_pad($seq, 5, '0', STR_PAD_LEFT);
     }
 
+    private function getSettingByType(array $settings, string $baseKey, string $type, mixed $fallback = ''): mixed
+    {
+        $typedKey = $type . '_' . $baseKey;
+
+        return $settings[$typedKey] ?? $settings[$baseKey] ?? $fallback;
+    }
+
+    private function resolveUnifiedTemplate(array $settings, string $type): string
+    {
+        $template = $this->getSettingByType($settings, 'unified_contract_template', $type, '');
+
+        if (!empty($template)) {
+            return $template;
+        }
+
+        $defaultIntro = $this->getSettingByType(
+            $settings,
+            'default_introduction',
+            $type,
+            "بعون الله وتوفيقه، في يوم {\$write_date} م، الموافق {\$write_date_hijri} هـ ، قد اجتمع كل من:-"
+        );
+        $defaultPreamble = $this->getSettingByType(
+            $settings,
+            'default_preamble',
+            $type,
+            "حيث أن الطرف الأول لديه مخازن تبريد وتجميد ويعمل في مجال التخزين بخدماته، ومرخص له بمزاولة النشاط بموجب الترخيص رقم ({\$company_license}) وحيث أن الطرف الثاني يرغب في استئجار طبالي لدى الطرف الأول، فقد اتفقا وهما بكامل أهليتهما الشرعية المعتبرة للتوقيع على هذا العقد فيما يلي:-"
+        );
+
+        return $defaultIntro . "\n\n" . $defaultPreamble . "\n\n[ITEMS_TABLE]\n\n" . "بند الشروط والأحكام:\nيلتزم الطرف الثاني بكافة الشروط المحددة.";
+    }
+
     public function activate(Request $request, Contract $contract)
     {
         $this->contractService->changeStatus($contract, 'active');
@@ -263,13 +301,24 @@ class ContractController extends Controller
             'notes' => 'nullable|string'
         ]);
 
-        $currentEnd = $contract->end_date ? Carbon::parse($contract->end_date) : Carbon::parse($contract->start_date)->addMonths($contract->mandatory_period);
+        $durationMonths = (int) $validated['duration_months'];
+
+        $lastPeriod = $contract->periods()->with('items')->orderByDesc('period_number')->first();
+        if (!$lastPeriod) {
+            $contract->ensureMandatoryPeriod();
+            $contract->syncFirstPeriodItems();
+            $lastPeriod = $contract->periods()->with('items')->orderByDesc('period_number')->first();
+        }
+
+        $currentEnd = Carbon::parse($lastPeriod->end_date);
         $newStart = $currentEnd->copy()->addDay();
-        $newEnd = $newStart->copy()->addMonths($validated['duration_months'])->subDay();
+        $newEnd = $newStart->copy()->addMonths($durationMonths)->subDay();
 
-        $nextPeriodNum = $contract->periods()->count() + 1;
+        $nextPeriodNum = (int) $contract->periods()->max('period_number') + 1;
 
-        $contract->periods()->create([
+        $contract->periods()->where('status', 'active')->update(['status' => 'expired']);
+
+        $newPeriod = $contract->periods()->create([
             'period_number' => $nextPeriodNum,
             'start_date' => $newStart,
             'end_date' => $newEnd,
@@ -277,9 +326,164 @@ class ContractController extends Controller
             'notes' => $validated['notes']
         ]);
 
+        foreach ($lastPeriod->items as $item) {
+            $newPeriod->items()->create([
+                'storage_item_id' => $item->storage_item_id,
+                'unit_count' => $item->unit_count,
+                'monthly_rent' => $item->monthly_rent,
+                'discount' => $item->discount,
+                'vat_rate' => $item->vat_rate,
+            ]);
+        }
+
         $contract->update(['end_date' => $newEnd]);
 
         return back()->with('success', 'تم تمديد العقد وإضافة فترة جديدة بنجاح.');
+    }
+
+    public function updatePeriod(Request $request, Contract $contract, ContractPeriod $period)
+    {
+        if ($period->contract_id !== $contract->id) {
+            abort(404);
+        }
+
+        if ($period->period_number !== (int) $contract->periods()->max('period_number')) {
+            return back()->with('error', 'يمكن تعديل مدة آخر فترة فقط للحفاظ على التسلسل الزمني.');
+        }
+
+        $validated = $request->validate([
+            'duration_months' => 'required|integer|min:1',
+            'notes' => 'nullable|string',
+        ]);
+
+        $durationMonths = (int) $validated['duration_months'];
+
+        $newEnd = Carbon::parse($period->start_date)
+            ->addMonths($durationMonths)
+            ->subDay();
+
+        $period->update([
+            'end_date' => $newEnd,
+            'notes' => $validated['notes'] ?? $period->notes,
+        ]);
+
+        if ($period->is($contract->periods()->orderByDesc('period_number')->first())) {
+            $contract->update(['end_date' => $newEnd]);
+        }
+
+        return back()->with('success', 'تم تحديث بيانات الفترة بنجاح.');
+    }
+
+    public function updatePeriodItems(Request $request, Contract $contract, ContractPeriod $period)
+    {
+        if ($period->contract_id !== $contract->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:contract_period_items,id',
+            'items.*.unit_count' => 'required|integer|min:0',
+        ]);
+
+        $periodItems = $period->items()->get()->keyBy('id');
+
+        foreach ($validated['items'] as $itemPayload) {
+            $periodItem = $periodItems->get((int) $itemPayload['id']);
+            if (!$periodItem) {
+                return back()->withErrors(['items' => 'تم العثور على عنصر غير تابع للفترة المحددة.']);
+            }
+
+            if ((int) $itemPayload['unit_count'] < (int) $periodItem->unit_count) {
+                return back()->withErrors(['items' => 'يمكن تعديل أصناف الفترة بالزيادة فقط.']);
+            }
+
+            $periodItem->update([
+                'unit_count' => (int) $itemPayload['unit_count'],
+            ]);
+        }
+
+        return back()->with('success', 'تم تحديث أصناف الفترة بنجاح.');
+    }
+
+    public function updatePeriodStatus(Request $request, Contract $contract, ContractPeriod $period)
+    {
+        if ($period->contract_id !== $contract->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:active,suspended,expired',
+            'status_reason' => 'nullable|string',
+            'remaining_period_action' => 'nullable|in:keep_remaining,end_contract,review_manually',
+            'terminate_contract' => 'nullable|boolean',
+            'notify_customer' => 'nullable|boolean',
+        ]);
+
+        if ($validated['status'] === 'suspended') {
+            $request->validate([
+                'status_reason' => 'required|string',
+                'remaining_period_action' => 'required|in:keep_remaining,end_contract,review_manually',
+            ]);
+        }
+
+        if ($validated['status'] === 'active') {
+            $contract->periods()->where('id', '!=', $period->id)->where('status', 'active')->update(['status' => 'expired']);
+            $contract->update(['status' => 'active']);
+        }
+
+        if ($validated['status'] === 'suspended' && $period->status === 'active') {
+            $contract->update([
+                'status' => !empty($validated['terminate_contract']) || ($validated['remaining_period_action'] ?? null) === 'end_contract'
+                    ? 'ended'
+                    : 'suspended',
+            ]);
+        }
+
+        $period->update([
+            'status' => $validated['status'],
+            'status_reason' => $validated['status'] === 'suspended' ? ($validated['status_reason'] ?? null) : null,
+            'remaining_period_action' => $validated['status'] === 'suspended' ? ($validated['remaining_period_action'] ?? null) : null,
+            'terminate_contract' => $validated['status'] === 'suspended' ? (bool) ($validated['terminate_contract'] ?? false) : false,
+            'notify_customer' => $validated['status'] === 'suspended' ? (bool) ($validated['notify_customer'] ?? false) : false,
+        ]);
+
+        return back()->with('success', 'تم تحديث حالة الفترة بنجاح.');
+    }
+
+    public function destroyPeriod(Contract $contract, ContractPeriod $period)
+    {
+        if ($period->contract_id !== $contract->id) {
+            abort(404);
+        }
+
+        $lastPeriodId = $contract->periods()->orderByDesc('period_number')->value('id');
+        if ($period->id !== $lastPeriodId) {
+            return back()->with('error', 'يمكن حذف آخر فترة فقط.');
+        }
+
+        if ($period->status === 'active') {
+            return back()->with('error', 'لا يمكن حذف فترة نشطة.');
+        }
+
+        if (
+            $period->receptions()->exists() ||
+            $period->deliveries()->exists() ||
+            $period->exitAuthorizations()->exists() ||
+            $period->invoices()->exists() ||
+            $period->payments()->exists()
+        ) {
+            return back()->with('error', 'لا يمكن حذف فترة مرتبطة بسجلات تشغيلية أو مالية.');
+        }
+
+        $period->delete();
+
+        $latestRemainingPeriod = $contract->periods()->orderByDesc('period_number')->first();
+        if ($latestRemainingPeriod) {
+            $contract->update(['end_date' => $latestRemainingPeriod->end_date]);
+        }
+
+        return back()->with('success', 'تم حذف الفترة بنجاح.');
     }
 
     public function addContact(Request $request, Contract $contract)
@@ -326,12 +530,18 @@ class ContractController extends Controller
     public function storeInvoice(Request $request, Contract $contract)
     {
         $validated = $request->validate([
+            'period_id' => 'required|exists:contract_periods,id',
             'invoice_number' => 'required|string|unique:contract_invoices,invoice_number',
             'issue_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issue_date',
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string'
         ]);
+
+        $period = $contract->periods()->find($validated['period_id']);
+        if (!$period) {
+            return back()->withErrors(['period_id' => 'الفترة المختارة لا تتبع هذا العقد.']);
+        }
 
         $contract->invoices()->create($validated);
 
@@ -341,6 +551,7 @@ class ContractController extends Controller
     public function storePayment(Request $request, Contract $contract)
     {
         $validated = $request->validate([
+            'period_id' => 'required|exists:contract_periods,id',
             'amount' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
             'method' => 'required|in:cash,bank_transfer,cheque',
@@ -349,7 +560,25 @@ class ContractController extends Controller
             'invoice_id' => 'nullable|exists:contract_invoices,id'
         ]);
 
+        $period = $contract->periods()->find($validated['period_id']);
+        if (!$period) {
+            return back()->withErrors(['period_id' => 'الفترة المختارة لا تتبع هذا العقد.']);
+        }
+
+        $invoice = null;
+        if (!empty($validated['invoice_id'])) {
+            $invoice = $contract->invoices()
+                ->where('period_id', $validated['period_id'])
+                ->find($validated['invoice_id']);
+
+            if (!$invoice) {
+                return back()->withErrors(['invoice_id' => 'الفاتورة المختارة لا تتبع نفس الفترة.']);
+            }
+        }
+
         $payment = $contract->payments()->create([
+            'period_id' => $validated['period_id'],
+            'invoice_id' => $validated['invoice_id'] ?? null,
             'amount' => $validated['amount'],
             'payment_date' => $validated['payment_date'],
             'method' => $validated['method'],
@@ -357,17 +586,14 @@ class ContractController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        if (!empty($validated['invoice_id'])) {
-            $invoice = $contract->invoices()->find($validated['invoice_id']);
-            if ($invoice) {
-                $invoice->paid_amount += $validated['amount'];
-                if ($invoice->paid_amount >= $invoice->amount) {
-                    $invoice->status = 'paid';
-                } elseif ($invoice->paid_amount > 0) {
-                    $invoice->status = 'partially_paid';
-                }
-                $invoice->save();
+        if ($invoice) {
+            $invoice->paid_amount += $validated['amount'];
+            if ($invoice->paid_amount >= $invoice->amount) {
+                $invoice->status = 'paid';
+            } elseif ($invoice->paid_amount > 0) {
+                $invoice->status = 'partially_paid';
             }
+            $invoice->save();
         }
 
         return back()->with('success', 'تم تسجيل الدفعة النقدية بنجاح.');
@@ -401,7 +627,7 @@ class ContractController extends Controller
             'term_ids.*' => 'nullable',
         ]);
 
-        \DB::transaction(function () use ($contract, $validated) {
+        DB::transaction(function () use ($contract, $validated) {
             // Update contract fields
             $contractFields = array_intersect_key($validated, array_flip([
                 'write_date',
@@ -471,6 +697,9 @@ class ContractController extends Controller
                         'subtotal'            => round($total_inclusive, 2),
                     ]);
                 }
+
+                $contract->load('items');
+                $contract->syncFirstPeriodItems();
             }
 
             // Update terms if provided
@@ -479,7 +708,7 @@ class ContractController extends Controller
                 $sortIndex = 0;
                 foreach ($validated['term_ids'] as $id) {
                     if (empty($id)) continue;
-                    
+
                     if (is_string($id) && str_starts_with($id, 'custom_')) {
                         $newTermsData[] = [
                             'contract_id' => $contract->id,
@@ -554,7 +783,7 @@ class ContractController extends Controller
     public function getVouchers(Request $request, Contract $contract)
     {
         $activeSeasonId = session('active_season_id');
-        
+
         $receptionsQuery = \App\Models\Reception::query()
             ->where('contract_id', $contract->id)
             ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
@@ -595,11 +824,11 @@ class ContractController extends Controller
             $pallet = $request->input('search_pallet');
             $receptionsQuery->whereHas('inventoryEntries.pallet', function ($q) use ($pallet) {
                 $q->where('pallet_number', 'like', "%{$pallet}%")
-                  ->orWhere('pallet_code', 'like', "%{$pallet}%");
+                    ->orWhere('pallet_code', 'like', "%{$pallet}%");
             });
             $deliveriesQuery->whereHas('inventoryEntries.pallet', function ($q) use ($pallet) {
                 $q->where('pallet_number', 'like', "%{$pallet}%")
-                  ->orWhere('pallet_code', 'like', "%{$pallet}%");
+                    ->orWhere('pallet_code', 'like', "%{$pallet}%");
             });
         }
 
@@ -652,8 +881,8 @@ class ContractController extends Controller
             $voucher->pallet_count = $entries->pluck('pallet_id')->filter()->unique()->count();
             $voucher->item_count = $entries->pluck('inventory_item_id')->filter()->unique()->count();
             $voucher->variant_count = $entries->pluck('inventory_item_variant_id')->filter()->unique()->count();
-            $voucher->package_count = $voucher->voucher_type === 'reception' 
-                ? (float) $entries->sum('quantity_in') 
+            $voucher->package_count = $voucher->voucher_type === 'reception'
+                ? (float) $entries->sum('quantity_in')
                 : (float) $entries->sum('quantity_out');
         }
 
@@ -725,8 +954,8 @@ class ContractController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => app()->getLocale() === 'ar' 
-                ? "تم اعتماد {$approvedCount} من السندات بنجاح." 
+            'message' => app()->getLocale() === 'ar'
+                ? "تم اعتماد {$approvedCount} من السندات بنجاح."
                 : "Successfully approved {$approvedCount} vouchers."
         ]);
     }
@@ -791,8 +1020,8 @@ class ContractController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => app()->getLocale() === 'ar' 
-                ? "تم إعادة فتح {$reopenedCount} من السندات للتعديل بنجاح." 
+            'message' => app()->getLocale() === 'ar'
+                ? "تم إعادة فتح {$reopenedCount} من السندات للتعديل بنجاح."
                 : "Successfully reopened {$reopenedCount} vouchers to draft."
         ]);
     }
@@ -815,8 +1044,14 @@ class ContractController extends Controller
             if ($type === 'reception') {
                 $reception = \App\Models\Reception::where('contract_id', $contract->id)
                     ->with([
-                        'customer', 'contract', 'driver', 'representative', 'period',
-                        'inventoryEntries.inventoryItem', 'inventoryEntries.variant', 'inventoryEntries.pallet'
+                        'customer',
+                        'contract',
+                        'driver',
+                        'representative',
+                        'period',
+                        'inventoryEntries.inventoryItem',
+                        'inventoryEntries.variant',
+                        'inventoryEntries.pallet'
                     ])->find($id);
                 if ($reception) {
                     $reception->voucher_type = 'reception';
@@ -825,8 +1060,14 @@ class ContractController extends Controller
             } elseif ($type === 'delivery') {
                 $delivery = \App\Models\Delivery::where('contract_id', $contract->id)
                     ->with([
-                        'customer', 'contract', 'driver', 'representative', 'period',
-                        'inventoryEntries.inventoryItem', 'inventoryEntries.variant', 'inventoryEntries.pallet'
+                        'customer',
+                        'contract',
+                        'driver',
+                        'representative',
+                        'period',
+                        'inventoryEntries.inventoryItem',
+                        'inventoryEntries.variant',
+                        'inventoryEntries.pallet'
                     ])->find($id);
                 if ($delivery) {
                     $delivery->voucher_type = 'delivery';
@@ -855,7 +1096,7 @@ class ContractController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('pallet_number', 'like', "%{$search}%")
-                  ->orWhere('pallet_code', 'like', "%{$search}%");
+                    ->orWhere('pallet_code', 'like', "%{$search}%");
             });
         }
 
@@ -968,7 +1209,7 @@ class ContractController extends Controller
             $search = $request->input('search');
             $entriesQuery->whereHas('inventoryItem', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 

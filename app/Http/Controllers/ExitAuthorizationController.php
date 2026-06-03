@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ExitAuthorization;
-use App\Models\ExitAuthorizationItem;
 use App\Models\Customer;
 use App\Models\Contract;
+use App\Models\ContractPeriod;
 use App\Models\InventoryItem;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,11 +37,11 @@ class ExitAuthorizationController extends Controller
         }
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('serial_number', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($c) use ($search) {
-                      $c->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('customer', function ($c) use ($search) {
+                        $c->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -61,14 +61,14 @@ class ExitAuthorizationController extends Controller
     public function create()
     {
         $customers = Customer::where('status', 'active')
-            ->with(['contracts' => function($q) {
+            ->with(['contracts' => function ($q) {
                 $q->where('status', 'active')->with(['periods', 'contractAgents']);
             }])
             ->orderBy('name')
             ->get();
 
         $inventoryItems = InventoryItem::where('is_active', true)
-            ->with(['variants' => function($v) {
+            ->with(['variants' => function ($v) {
                 $v->where('is_active', true);
             }])
             ->orderBy('name')
@@ -103,6 +103,10 @@ class ExitAuthorizationController extends Controller
             'items.*.pallet_number'             => 'nullable|string|max:50',
             'items.*.quantity'                  => 'required|numeric|min:0.01',
         ]);
+
+        if (!$this->isActiveContractPeriod($request->contract_id, $request->period_id)) {
+            return back()->withErrors(['period_id' => 'يجب اختيار فترة نشطة تابعة للعقد.'])->withInput();
+        }
 
         $proofPath = null;
         if ($request->hasFile('requester_proof')) {
@@ -157,14 +161,14 @@ class ExitAuthorizationController extends Controller
         $exitAuthorization->load(['items.inventoryItem', 'items.inventoryItemVariant']);
 
         $customers = Customer::where('status', 'active')
-            ->with(['contracts' => function($q) {
+            ->with(['contracts' => function ($q) {
                 $q->where('status', 'active')->with(['periods', 'contractAgents']);
             }])
             ->orderBy('name')
             ->get();
 
         $inventoryItems = InventoryItem::where('is_active', true)
-            ->with(['variants' => function($v) {
+            ->with(['variants' => function ($v) {
                 $v->where('is_active', true);
             }])
             ->orderBy('name')
@@ -204,6 +208,10 @@ class ExitAuthorizationController extends Controller
             'items.*.pallet_number'             => 'nullable|string|max:50',
             'items.*.quantity'                  => 'required|numeric|min:0.01',
         ]);
+
+        if (!$this->isActiveContractPeriod($request->contract_id, $request->period_id)) {
+            return back()->withErrors(['period_id' => 'يجب اختيار فترة نشطة تابعة للعقد.'])->withInput();
+        }
 
         $proofPath = null;
         if ($request->hasFile('requester_proof')) {
@@ -280,5 +288,17 @@ class ExitAuthorizationController extends Controller
         $exitAuthorization->delete();
 
         return redirect()->route('exit-authorizations.index')->with('success', 'تم حذف إذن الخروج بنجاح.');
+    }
+
+    private function isActiveContractPeriod($contractId, $periodId): bool
+    {
+        if (empty($contractId) || empty($periodId)) {
+            return false;
+        }
+
+        return ContractPeriod::where('id', $periodId)
+            ->where('contract_id', $contractId)
+            ->where('status', 'active')
+            ->exists();
     }
 }

@@ -11,7 +11,6 @@ use App\Models\Driver;
 use App\Models\Pallet;
 use App\Models\InventoryItem;
 use App\Models\ContractPeriod;
-use App\Models\ContractAgent;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -42,12 +41,12 @@ class DeliveryController extends Controller
         }
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('serial_number', 'like', "%{$search}%")
-                  ->orWhere('written_reference', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($c) use ($search) {
-                      $c->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('written_reference', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($c) use ($search) {
+                        $c->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -87,10 +86,10 @@ class DeliveryController extends Controller
         $delivery->load(['inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
         $customers = Customer::where('status', 'active')
-            ->orWhereHas('contracts', function($q) {
+            ->orWhereHas('contracts', function ($q) {
                 $q->where('status', 'active');
             })
-            ->with(['contracts' => function($q) {
+            ->with(['contracts' => function ($q) {
                 $q->where('status', 'active')->with(['periods', 'contractAgents']);
             }])
             ->orderBy('name')
@@ -99,7 +98,7 @@ class DeliveryController extends Controller
         $drivers = Driver::where('is_active', true)->orderBy('name')->get();
 
         $inventoryItems = InventoryItem::where('is_active', true)
-            ->with(['variants' => function($v) {
+            ->with(['variants' => function ($v) {
                 $v->where('is_active', true);
             }])
             ->orderBy('name')
@@ -154,6 +153,10 @@ class DeliveryController extends Controller
             'items.*.pallet_number'             => 'required|string|max:50',
             'items.*.quantity_out'              => 'required|numeric|min:0.01',
         ]);
+
+        if (!$isDraft && !$this->isActiveContractPeriod($request->contract_id, $request->period_id)) {
+            return back()->withErrors(['period_id' => 'يجب اختيار فترة نشطة تابعة للعقد.'])->withInput();
+        }
 
         // If not draft and exit_authorization_id is null, require written_reference
         if (!$isDraft && empty($request->exit_authorization_id) && empty($request->written_reference)) {
@@ -402,25 +405,25 @@ class DeliveryController extends Controller
     public function getContractPallets($contractId)
     {
         // Get pallets under this contract with balance > 0
-        $entries = InventoryEntry::where(function($q) use ($contractId) {
-            $q->where(function($q1) use ($contractId) {
+        $entries = InventoryEntry::where(function ($q) use ($contractId) {
+            $q->where(function ($q1) use ($contractId) {
                 $q1->where('voucher_type', \App\Models\Reception::class)
-                   ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
-            })->orWhere(function($q2) use ($contractId) {
+                    ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
+            })->orWhere(function ($q2) use ($contractId) {
                 $q2->where('voucher_type', \App\Models\Delivery::class)
-                   ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contractId)->pluck('id'));
+                    ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contractId)->pluck('id'));
             });
         })
-        ->select('pallet_id', DB::raw('SUM(quantity_in) - SUM(quantity_out) as balance'))
-        ->groupBy('pallet_id')
-        ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
-        ->get();
+            ->select('pallet_id', DB::raw('SUM(quantity_in) - SUM(quantity_out) as balance'))
+            ->groupBy('pallet_id')
+            ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
+            ->get();
 
         $palletIds = $entries->pluck('pallet_id');
         $pallets = Pallet::whereIn('id', $palletIds)->orderBy('pallet_number')->get();
 
         // Attach balance
-        $pallets->map(function($p) use ($entries) {
+        $pallets->map(function ($p) use ($entries) {
             $p->balance = (float) $entries->firstWhere('pallet_id', $p->id)->balance;
             return $p;
         });
@@ -428,28 +431,40 @@ class DeliveryController extends Controller
         return response()->json($pallets);
     }
 
+    private function isActiveContractPeriod($contractId, $periodId): bool
+    {
+        if (empty($contractId) || empty($periodId)) {
+            return false;
+        }
+
+        return ContractPeriod::where('id', $periodId)
+            ->where('contract_id', $contractId)
+            ->where('status', 'active')
+            ->exists();
+    }
+
     public function getPalletItems($contractId, $palletId)
     {
         // Get items on this pallet with balance > 0 under this contract
         $entries = InventoryEntry::where('pallet_id', $palletId)
-        ->where(function($q) use ($contractId) {
-            $q->where(function($q1) use ($contractId) {
-                $q1->where('voucher_type', \App\Models\Reception::class)
-                   ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
-            })->orWhere(function($q2) use ($contractId) {
-                $q2->where('voucher_type', \App\Models\Delivery::class)
-                   ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contractId)->pluck('id'));
-            });
-        })
-        ->select('inventory_item_id', DB::raw('SUM(quantity_in) - SUM(quantity_out) as balance'))
-        ->groupBy('inventory_item_id')
-        ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
-        ->get();
+            ->where(function ($q) use ($contractId) {
+                $q->where(function ($q1) use ($contractId) {
+                    $q1->where('voucher_type', \App\Models\Reception::class)
+                        ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
+                })->orWhere(function ($q2) use ($contractId) {
+                    $q2->where('voucher_type', \App\Models\Delivery::class)
+                        ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contractId)->pluck('id'));
+                });
+            })
+            ->select('inventory_item_id', DB::raw('SUM(quantity_in) - SUM(quantity_out) as balance'))
+            ->groupBy('inventory_item_id')
+            ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
+            ->get();
 
         $itemIds = $entries->pluck('inventory_item_id');
         $items = InventoryItem::whereIn('id', $itemIds)->orderBy('name')->get();
 
-        $items->map(function($item) use ($entries) {
+        $items->map(function ($item) use ($entries) {
             $item->balance = (float) $entries->firstWhere('inventory_item_id', $item->id)->balance;
             return $item;
         });
@@ -461,21 +476,21 @@ class DeliveryController extends Controller
     {
         // Get variants and balances for this item on this pallet under this contract
         $entries = InventoryEntry::where('pallet_id', $palletId)
-        ->where('inventory_item_id', $itemId)
-        ->where(function($q) use ($contractId) {
-            $q->where(function($q1) use ($contractId) {
-                $q1->where('voucher_type', \App\Models\Reception::class)
-                   ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
-            })->orWhere(function($q2) use ($contractId) {
-                $q2->where('voucher_type', \App\Models\Delivery::class)
-                   ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contractId)->pluck('id'));
-            });
-        })
-        ->select('inventory_item_variant_id', DB::raw('SUM(quantity_in) - SUM(quantity_out) as balance'))
-        ->groupBy('inventory_item_variant_id')
-        ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
-        ->with('variant')
-        ->get();
+            ->where('inventory_item_id', $itemId)
+            ->where(function ($q) use ($contractId) {
+                $q->where(function ($q1) use ($contractId) {
+                    $q1->where('voucher_type', \App\Models\Reception::class)
+                        ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
+                })->orWhere(function ($q2) use ($contractId) {
+                    $q2->where('voucher_type', \App\Models\Delivery::class)
+                        ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contractId)->pluck('id'));
+                });
+            })
+            ->select('inventory_item_variant_id', DB::raw('SUM(quantity_in) - SUM(quantity_out) as balance'))
+            ->groupBy('inventory_item_variant_id')
+            ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
+            ->with('variant')
+            ->get();
 
         return response()->json($entries);
     }
@@ -485,17 +500,17 @@ class DeliveryController extends Controller
         $query = InventoryEntry::where('pallet_id', $palletId)
             ->where('inventory_item_id', $itemId)
             ->where('inventory_item_variant_id', $variantId)
-            ->where(function($q) use ($contractId, $excludeDeliveryId) {
-                $q->where(function($q1) use ($contractId) {
+            ->where(function ($q) use ($contractId, $excludeDeliveryId) {
+                $q->where(function ($q1) use ($contractId) {
                     $q1->where('voucher_type', \App\Models\Reception::class)
-                       ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
-                })->orWhere(function($q2) use ($contractId, $excludeDeliveryId) {
+                        ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contractId)->pluck('id'));
+                })->orWhere(function ($q2) use ($contractId, $excludeDeliveryId) {
                     $q2Query = \App\Models\Delivery::where('contract_id', $contractId);
                     if ($excludeDeliveryId) {
                         $q2Query->where('id', '!=', $excludeDeliveryId);
                     }
                     $q2->where('voucher_type', \App\Models\Delivery::class)
-                       ->whereIn('voucher_id', $q2Query->pluck('id'));
+                        ->whereIn('voucher_id', $q2Query->pluck('id'));
                 });
             });
 
