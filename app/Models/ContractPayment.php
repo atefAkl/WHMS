@@ -18,6 +18,6 @@ class ContractPayment extends Model
     }
     public function invoice()
     {
-        return $this->belongsTo(ContractInvoice::class, 'invoice_id');
+        return $this->belongsTo(SalesInvoice::class, 'invoice_id');
     }
 }

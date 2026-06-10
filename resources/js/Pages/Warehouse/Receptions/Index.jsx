@@ -21,6 +21,8 @@ import {
     X
 } from "lucide-react";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
@@ -42,10 +44,16 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
     const [dateTo, setDateTo] = useState(filters.date_to || "");
     
     // Deletion Security Password Modal
-    const [receptionToDelete, setReceptionToDelete] = useState(null);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteError, setDeleteError] = useState("");
-    const [processingDelete, setProcessingDelete] = useState(false);
+    const {
+        itemToDelete: receptionToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: processingDelete,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     // Receptions Approve & Reopen State
     const [receptionToApprove, setReceptionToApprove] = useState(null);
@@ -140,36 +148,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
         router.get(route("receptions.index"));
     };
 
-    const confirmDelete = (e) => {
-        e.preventDefault();
-        setDeleteError("");
-        setProcessingDelete(true);
-
-        router.post(
-            route("receptions.destroy", receptionToDelete.id),
-            {
-                _method: "DELETE",
-                password: deletePassword,
-            },
-            {
-                onSuccess: () => {
-                    setReceptionToDelete(null);
-                    setDeletePassword("");
-                    setProcessingDelete(false);
-                },
-                onError: (errs) => {
-                    setProcessingDelete(false);
-                    if (errs.error) {
-                        setDeleteError(errs.error);
-                    } else if (errs.password) {
-                        setDeleteError(errs.password);
-                    } else {
-                        setDeleteError(lang === "ar" ? "حدث خطأ ما." : "An error occurred.");
-                    }
-                },
-            }
-        );
-    };
+    // Delete function handled by useSecureDelete hook
 
     const breadcrumbs = (
         <div className="flex items-center gap-[6px] text-xs text-text-muted">
@@ -474,7 +453,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                         )}
                                                         <Tooltip text={lang === "ar" ? "حذف" : "Delete"}>
                                                             <button
-                                                                onClick={() => setReceptionToDelete(reception)}
+                                                                onClick={() => requestDelete(route("receptions.destroy", reception.id), reception)}
                                                                 className={`p-1.5 text-danger hover:bg-danger/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-2.5' : 'w-[30px]'}`}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -523,79 +502,20 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
             </div>
 
             {/* Confirm Secure Delete Modal */}
-            <Modal show={!!receptionToDelete} onClose={() => setReceptionToDelete(null)} maxWidth="md">
-                <form onSubmit={confirmDelete} className="p-6 space-y-4 text-start" dir={lang === "ar" ? "rtl" : "ltr"}>
-                    <div className="flex items-center gap-2 border-b border-border pb-3">
-                        <ShieldAlert className="h-6 w-6 text-danger" />
-                        <h3 className="font-bold text-lg text-text">
-                            {lang === "ar" ? "تأكيد حذف سند الاستلام" : "Confirm Reception Deletion"}
-                        </h3>
-                    </div>
-
-                    <p className="text-xs text-text-muted">
-                        {lang === "ar"
+            <ConfirmationModal
+                show={!!receptionToDelete}
+                title={lang === "ar" ? "تأكيد حذف سند الاستلام" : "Confirm Reception Deletion"}
+                message={lang === "ar"
                             ? "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع."
                             : "You are about to permanently delete this reception voucher and all associated inventory entries. This action cannot be undone."}
-                    </p>
-
-                    <div className="bg-surface-muted/50 p-3 border border-border text-xs font-mono rounded-none">
-                        <div>
-                            <span className="font-bold text-text-muted">{lang === "ar" ? "رقم السند: " : "Serial: "}</span>
-                            <span className="text-text font-bold">{receptionToDelete?.serial_number}</span>
-                        </div>
-                        <div className="mt-1">
-                            <span className="font-bold text-text-muted">{lang === "ar" ? "العميل: " : "Customer: "}</span>
-                            <span className="text-text font-bold">{receptionToDelete?.customer?.name}</span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <InputLabel
-                            htmlFor="delete_password"
-                            value={lang === "ar" ? "كلمة مرور العمليات الآمنة *" : "Secure Operations Password *"}
-                        />
-                        <TextInput
-                            id="delete_password"
-                            type="password"
-                            className="mt-1 block w-full text-sm rounded-none border-border"
-                            value={deletePassword}
-                            onChange={(e) => setDeletePassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                        />
-                        {deleteError && <p className="text-xs text-danger mt-1 font-bold">{deleteError}</p>}
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
-                            <button
-                                type="button"
-                                onClick={() => setReceptionToDelete(null)}
-                                className={`border border-border bg-surface text-text hover:bg-surface-muted rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'}`}
-                            >
-                                <X className="h-4 w-4" />
-                                {showButtonText && <span>{lang === "ar" ? "إلغاء" : "Cancel"}</span>}
-                            </button>
-                        </Tooltip>
-                        <Tooltip text={lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"}>
-                            <button
-                                type="submit"
-                                disabled={processingDelete}
-                                className={`bg-danger hover:bg-danger-hover text-white rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'} disabled:opacity-50`}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                {showButtonText && (
-                                    <span>
-                                        {processingDelete
-                                            ? (lang === "ar" ? "جاري الحذف..." : "Deleting...")
-                                            : (lang === "ar" ? "تأكيد الحذف" : "Confirm Delete")}
-                                    </span>
-                                )}
-                            </button>
-                        </Tooltip>
-                    </div>
-                </form>
-            </Modal>
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={processingDelete}
+            />
 
             {/* Modal: Confirm Reopen */}
             <Modal show={isReopenModalOpen} onClose={() => setReopenModalOpen(false)} maxWidth="md">

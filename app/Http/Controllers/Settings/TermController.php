@@ -8,9 +8,11 @@ use App\Models\ContractSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use App\Traits\ValidatesSecureDeletion;
 
 class TermController extends Controller
 {
+    use ValidatesSecureDeletion;
     private const CONTRACT_TYPES = ['managed', 'free'];
 
     public function index()
@@ -273,8 +275,9 @@ class TermController extends Controller
         return redirect()->back()->with('success', 'تم تحديث جزء العقد بنجاح.');
     }
 
-    public function destroy(Term $term)
+    public function destroy(Request $request, Term $term)
     {
+        $this->validateSecureDelete($request);
         $term->delete();
         return redirect()->back()->with('success', 'تم حذف الشرط.');
     }

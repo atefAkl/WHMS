@@ -27,6 +27,8 @@ import {
     CheckCircle2,
 } from "lucide-react";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
@@ -88,8 +90,12 @@ export default function ContractSettings({
     const [terms, setTerms] = useState(initialTerms || []);
     const [showTermModal, setShowTermModal] = useState(false);
     const [editingTerm, setEditingTerm] = useState(null);
-    const [deleteTarget, setDeleteTarget] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    const {
+        itemToDelete: deleteTarget, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     const quillRef = useRef(null);
     const quillInstance = useRef(null);
@@ -359,12 +365,6 @@ export default function ContractSettings({
         } finally {
             setSaving(false);
         }
-    };
-
-    const removeTerm = () => {
-        router.delete(route("settings.terms.destroy", deleteTarget.id), {
-            onSuccess: () => setDeleteTarget(null),
-        });
     };
 
     // Reordering drag and drop logic
@@ -1396,7 +1396,7 @@ export default function ContractSettings({
                                                 </button>
                                                 <button
                                                     onClick={() =>
-                                                        setDeleteTarget(term)
+                                                        requestDelete(route("settings.terms.destroy", term.id), term)
                                                     }
                                                     className="p-2 rounded-none text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                 >
@@ -2249,40 +2249,18 @@ export default function ContractSettings({
             </Modal>
 
             {/* Delete Confirmation */}
-            <Modal
+            <ConfirmationModal
                 show={!!deleteTarget}
-                onClose={() => setDeleteTarget(null)}
-                maxWidth="sm"
-            >
-                <div className="p-6 text-center">
-                    <div className="h-12 w-12 bg-danger/10 text-danger rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Trash2 className="h-6 w-6" />
-                    </div>
-                    <h3 className="font-bold text-lg text-text">
-                        {lang === "ar" ? "حذف الشرط؟" : "Delete Term?"}
-                    </h3>
-                    <p className="text-sm text-text-muted mt-2">
-                        {lang === "ar"
-                            ? "هل أنت متأكد من حذف هذا الشرط من المكتبة العامة؟"
-                            : "Are you sure you want to delete this term from the global library?"}
-                    </p>
-
-                    <div className="flex justify-center gap-3 mt-6">
-                        <SecondaryButton
-                            onClick={() => setDeleteTarget(null)}
-                            className="rounded-none"
-                        >
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton
-                            onClick={removeTerm}
-                            className="rounded-none"
-                        >
-                            {lang === "ar" ? "حذف نهائياً" : "Delete Forever"}
-                        </DangerButton>
-                    </div>
-                </div>
-            </Modal>
+                title={lang === "ar" ? "حذف الشرط؟" : "Delete Term?"}
+                message={lang === "ar" ? "هل أنت متأكد من حذف هذا الشرط من المكتبة العامة؟" : "Are you sure you want to delete this term from the global library?"}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={deleteProcessing}
+            />
         </AuthenticatedLayout>
     );
 }

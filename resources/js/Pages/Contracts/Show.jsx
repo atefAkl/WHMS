@@ -45,8 +45,10 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import InputError from "@/Components/InputError";
 import Tooltip from "@/Components/Tooltip";
 import TabBar from "@/Components/TabBar";
@@ -85,6 +87,7 @@ export default function Show({
     allTerms = [],
     translations,
     tableColumns = [],
+    accounts = [],
 }) {
     const { lang } = useLang();
     const displayBilingual = (rawName) => {
@@ -99,6 +102,11 @@ export default function Show({
     const [activeTab, setActiveTab] = useState("view");
     const { auth } = usePage().props;
     const showButtonText = auth?.user?.preferences?.show_button_text ?? false;
+
+    const {
+        itemToDelete, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     // Vouchers Tab states
     const [vouchers, setVouchers] = useState([]);
@@ -1470,32 +1478,21 @@ export default function Show({
     });
 
     const [invoiceForm, setInvoiceForm] = useState({
-        period_id:
-            contract.periods?.find((period) => period.status === "active")
-                ?.id ||
-            contract.periods?.[0]?.id ||
-            "",
+        period_id: contract.periods?.find((period) => period.status === "active")?.id || contract.periods?.[0]?.id || "",
         invoice_number: `INV-${contract.contract_number}-${(contract.invoices?.length || 0) + 1}`,
-        issue_date: new Date().toISOString().split("T")[0],
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-        amount: "",
+        date: new Date().toISOString().split("T")[0],
         notes: "",
     });
 
     const [paymentForm, setPaymentForm] = useState({
-        period_id:
-            contract.periods?.find((period) => period.status === "active")
-                ?.id ||
-            contract.periods?.[0]?.id ||
-            "",
+        period_id: "",
         amount: "",
         payment_date: new Date().toISOString().split("T")[0],
         method: "bank_transfer",
         reference: "",
         notes: "",
         invoice_id: "",
+        primary_account_id: "",
     });
 
     const [processing, setProcessing] = useState(false);
@@ -1505,6 +1502,7 @@ export default function Show({
             !filterPeriodId ||
             String(invoice.period_id || "") === String(filterPeriodId),
     );
+    const financialVouchers = (contract.vouchers || []).filter(v => v.type === 'receipt');
     const financialPayments = (contract.payments || []).filter(
         (payment) =>
             !filterPeriodId ||
@@ -1547,6 +1545,15 @@ export default function Show({
     const openPeriodDetails = (period) => {
         setSelectedPeriod(period);
         setShowPeriodDetailsModal(true);
+    };
+
+    const openInvoiceModalForPeriod = (period) => {
+        setInvoiceForm({
+            ...invoiceForm,
+            period_id: period.id,
+            amount: contract.contract_items?.reduce((total, item) => total + (item.price * item.quantity), 0) || "",
+        });
+        setShowInvoiceModal(true);
     };
 
     const openPeriodEdit = (period) => {
@@ -1889,9 +1896,7 @@ export default function Show({
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        if (confirm(t("show.delete_confirm"))) {
-                                            handleAction("destroy", "delete");
-                                        }
+                                        requestDelete(route("contracts.destroy", contract.id), contract);
                                     }}
                                     disabled={processing || formProcessing}
                                     className="flex items-center justify-center h-8 w-8 rounded-lg bg-danger text-white hover:bg-danger/90 transition-colors shadow-sm"
@@ -2861,6 +2866,23 @@ export default function Show({
                                                                     </Tooltip>
                                                                     <Tooltip
                                                                         text={t(
+                                                                            "show.issue_invoice",
+                                                                        )}
+                                                                    >
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                openInvoiceModalForPeriod(
+                                                                                    period,
+                                                                                )
+                                                                            }
+                                                                            className="flex items-center justify-center h-8 w-8 border border-border bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                                                                        >
+                                                                            <DollarSign className="h-4 w-4" />
+                                                                        </button>
+                                                                    </Tooltip>
+                                                                    <Tooltip
+                                                                        text={t(
                                                                             "show.edit_period",
                                                                         )}
                                                                     >
@@ -3048,7 +3070,20 @@ export default function Show({
                                                         }
                                                         className="text-xs py-1 px-3"
                                                     >
-                                                        {t("show.view_period")}
+                                                        <Eye className="h-3 w-3 me-1" />
+                                                        {t("show.view")}
+                                                    </SecondaryButton>
+                                                    <SecondaryButton
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openInvoiceModalForPeriod(
+                                                                period,
+                                                            )
+                                                        }
+                                                        className="text-xs py-1 px-3 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                                                    >
+                                                        <DollarSign className="h-3 w-3 me-1" />
+                                                        {t("show.issue_invoice")}
                                                     </SecondaryButton>
                                                     <SecondaryButton
                                                         type="button"
@@ -3376,7 +3411,7 @@ export default function Show({
                                                                 </td>
                                                                 <td className="px-4 py-3 font-mono">
                                                                     {
-                                                                        inv.issue_date
+                                                                        inv.date
                                                                     }
                                                                 </td>
                                                                 <td className="px-4 py-3 font-mono">
@@ -3388,7 +3423,7 @@ export default function Show({
                                                                     className="px-4 py-3 font-mono font-bold"
                                                                     dir="ltr"
                                                                 >
-                                                                    {inv.amount}
+                                                                    {inv.total_amount}
                                                                 </td>
                                                                 <td
                                                                     className="px-4 py-3 font-mono font-bold text-emerald-600"
@@ -3543,6 +3578,70 @@ export default function Show({
                                         </table>
                                     </div>
                                 </SectionCard>
+
+                                {/* Financial Vouchers */}
+                                <SectionCard
+                                    title={lang === 'ar' ? 'سندات القبض (المالية)' : 'Receipt Vouchers (Financial)'}
+                                    icon={FileSpreadsheet}
+                                >
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-start">
+                                            <thead className="bg-surface-muted text-text-muted text-[11px] uppercase tracking-wider">
+                                                <tr>
+                                                    <th className="px-4 py-3">{lang === 'ar' ? 'رقم السند' : 'Voucher No'}</th>
+                                                    <th className="px-4 py-3">{t("show.date")}</th>
+                                                    <th className="px-4 py-3">{t("show.amount")}</th>
+                                                    <th className="px-4 py-3">{lang === 'ar' ? 'البيان' : 'Description'}</th>
+                                                    <th className="px-4 py-3 text-center">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
+                                                    <th className="px-4 py-3 text-end">{lang === 'ar' ? 'إجراءات' : 'Actions'}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border">
+                                                {financialVouchers.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="6" className="text-center py-6 text-xs text-text-muted">
+                                                            {lang === 'ar' ? 'لا توجد سندات مسجلة' : 'No vouchers'}
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    financialVouchers.map((v) => (
+                                                        <tr key={v.id} className="hover:bg-surface-muted/30 transition-colors">
+                                                            <td className="px-4 py-3 font-bold text-primary font-mono text-xs">{v.voucher_number}</td>
+                                                            <td className="px-4 py-3 font-mono" dir="ltr">{new Date(v.date).toLocaleDateString()}</td>
+                                                            <td className="px-4 py-3 font-mono font-extrabold text-emerald-600" dir="ltr">{Number(v.amount).toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-xs text-text-muted">{v.description}</td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                                                    v.status === 'approved' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                                                                }`}>
+                                                                    {v.status === 'approved' ? (lang === 'ar' ? 'معتمد' : 'Approved') : (lang === 'ar' ? 'مسودة' : 'Draft')}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-end">
+                                                                <div className="flex justify-end gap-2">
+                                                                    {v.status === 'draft' && (
+                                                                        <PrimaryButton 
+                                                                            type="button" 
+                                                                            className="!py-1 !px-2 !text-[10px]"
+                                                                            onClick={() => {
+                                                                                if (confirm(lang === 'ar' ? 'تأكيد اعتماد السند وإنشاء قيد؟' : 'Confirm approve and post?')) {
+                                                                                    router.post(route('accounting.financial-vouchers.approve', v.id), {}, {preserveScroll: true});
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            {lang === 'ar' ? 'اعتماد السند' : 'Approve'}
+                                                                        </PrimaryButton>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </SectionCard>
+
                             </div>
                         )}
 
@@ -6622,7 +6721,7 @@ export default function Show({
                     onSubmit={(e) => {
                         e.preventDefault();
                         handleAction(
-                            "invoices.store",
+                            "invoices.store-from-period",
                             "post",
                             invoiceForm,
                             setShowInvoiceModal,
@@ -6662,15 +6761,15 @@ export default function Show({
                         </select>
                     </div>
                     <div>
-                        <InputLabel value={t("show.invoice_no")} />
+                        <InputLabel value={lang === "ar" ? "الوصف" : "Description"} />
                         <TextInput
                             type="text"
                             className="mt-1 block w-full"
-                            value={invoiceForm.invoice_number}
+                            value={invoiceForm.description}
                             onChange={(e) =>
                                 setInvoiceForm({
                                     ...invoiceForm,
-                                    invoice_number: e.target.value,
+                                    description: e.target.value,
                                 })
                             }
                             required
@@ -6678,65 +6777,73 @@ export default function Show({
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <InputLabel value={t("show.issue_date")} />
+                            <InputLabel value={lang === "ar" ? "التاريخ" : "Date"} />
                             <TextInput
                                 type="date"
                                 className="mt-1 block w-full"
-                                value={invoiceForm.issue_date}
+                                value={invoiceForm.date}
                                 onChange={(e) =>
                                     setInvoiceForm({
                                         ...invoiceForm,
-                                        issue_date: e.target.value,
+                                        date: e.target.value,
                                     })
                                 }
                                 required
                             />
                         </div>
                         <div>
-                            <InputLabel value={t("show.due_date")} />
-                            <TextInput
-                                type="date"
-                                className="mt-1 block w-full"
-                                value={invoiceForm.due_date}
+                            <InputLabel value={lang === "ar" ? "حساب الإيراد" : "Revenue Account"} />
+                            <select
+                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-xs py-2 px-3"
+                                value={invoiceForm.revenue_account_id}
                                 onChange={(e) =>
                                     setInvoiceForm({
                                         ...invoiceForm,
-                                        due_date: e.target.value,
+                                        revenue_account_id: e.target.value,
+                                    })
+                                }
+                                required
+                            >
+                                <option value="">{lang === 'ar' ? 'اختر حساب...' : 'Select Account...'}</option>
+                                {accounts.map(a => (
+                                    <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <InputLabel value={t("show.amount_due")} />
+                            <TextInput
+                                type="number"
+                                step="0.01"
+                                className="mt-1 block w-full font-mono"
+                                value={invoiceForm.amount}
+                                onChange={(e) =>
+                                    setInvoiceForm({
+                                        ...invoiceForm,
+                                        amount: e.target.value,
                                     })
                                 }
                                 required
                             />
                         </div>
-                    </div>
-                    <div>
-                        <InputLabel value={t("show.amount_due")} />
-                        <TextInput
-                            type="number"
-                            step="0.01"
-                            className="mt-1 block w-full font-mono"
-                            value={invoiceForm.amount}
-                            onChange={(e) =>
-                                setInvoiceForm({
-                                    ...invoiceForm,
-                                    amount: e.target.value,
-                                })
-                            }
-                            required
-                        />
-                    </div>
-                    <div>
-                        <InputLabel value={t("show.notes")} />
-                        <TextInput
-                            type="text"
-                            className="mt-1 block w-full"
-                            value={invoiceForm.notes}
-                            onChange={(e) =>
-                                setInvoiceForm({
-                                    ...invoiceForm,
-                                    notes: e.target.value,
-                                })
-                            }
-                        />
+                        <div>
+                            <InputLabel value={lang === "ar" ? "نسبة الضريبة %" : "Tax Rate %"} />
+                            <TextInput
+                                type="number"
+                                step="1"
+                                className="mt-1 block w-full font-mono"
+                                value={invoiceForm.tax_rate}
+                                onChange={(e) =>
+                                    setInvoiceForm({
+                                        ...invoiceForm,
+                                        tax_rate: e.target.value,
+                                    })
+                                }
+                                required
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-1 border-t border-border">
                         <SecondaryButton
@@ -6869,13 +6976,46 @@ export default function Show({
                             }
                         >
                             <option value="">{t("show.no_link")}</option>
-                            {selectedPaymentPeriodInvoices.map((inv) => (
+                                                        {financialInvoices.map((inv) => (
                                 <option key={inv.id} value={inv.id}>
-                                    {inv.invoice_number} ({inv.amount} -
-                                    �������: {inv.amount - inv.paid_amount})
+                                    {inv.invoice_number} ({inv.total_amount} - المتبقي: {inv.total_amount - inv.paid_amount})
                                 </option>
                             ))}
                         </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <InputLabel value={lang === 'ar' ? 'حساب الخزينة/البنك' : 'Cash/Bank Account'} />
+                            <select
+                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-xs py-2 px-3"
+                                value={paymentForm.primary_account_id}
+                                onChange={(e) => setPaymentForm({...paymentForm, primary_account_id: e.target.value})}
+                                required
+                            >
+                                <option value="">{lang === 'ar' ? 'اختر الحساب...' : 'Select Account...'}</option>
+                                {accounts.filter(a => a.type === 'asset' || a.type === 'liability').map(acc => (
+                                    <option key={acc.id} value={acc.id}>
+                                        {acc.code} - {lang === 'ar' ? acc.name_ar : (acc.name_en || acc.name_ar)}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <InputLabel value={lang === 'ar' ? 'حساب الإيراد/الإيجار' : 'Revenue/Rent Account'} />
+                            <select
+                                className="mt-1 block w-full rounded-md border-border bg-surface shadow-sm focus:border-primary focus:ring-primary text-xs py-2 px-3"
+                                value={paymentForm.counter_account_id}
+                                onChange={(e) => setPaymentForm({...paymentForm, counter_account_id: e.target.value})}
+                                required
+                            >
+                                <option value="">{lang === 'ar' ? 'اختر الحساب...' : 'Select Account...'}</option>
+                                {accounts.map(acc => (
+                                    <option key={acc.id} value={acc.id}>
+                                        {acc.code} - {lang === 'ar' ? acc.name_ar : (acc.name_en || acc.name_ar)}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                     <div>
                         <InputLabel value={t("show.reference_notes")} />
@@ -6912,6 +7052,19 @@ export default function Show({
             >
                 {renderUnifiedLayout(true)}
             </div>
+
+            <ConfirmationModal
+                show={!!itemToDelete}
+                title={lang === "ar" ? "تأكيد الحذف" : "Confirm Deletion"}
+                message={lang === "ar" ? "هل أنت متأكد من حذف هذا العقد؟" : "Are you sure you want to delete this contract?"}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={deleteProcessing}
+            />
         </AuthenticatedLayout>
     );
 }

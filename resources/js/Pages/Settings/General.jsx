@@ -26,6 +26,8 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import { useTheme } from "@/Contexts/ThemeContext";
 
 export default function General({ settings }) {
@@ -102,7 +104,17 @@ export default function General({ settings }) {
     });
 
     const [filePreviewName, setFilePreviewName] = useState("");
-    const [fileToDelete, setFileToDelete] = useState(null);
+
+    const {
+        itemToDelete: fileToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: processingDelete,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -121,21 +133,6 @@ export default function General({ settings }) {
                 setFilePreviewName("");
             },
         });
-    };
-
-    const confirmDeleteFile = (file) => {
-        setFileToDelete(file);
-    };
-
-    const deleteFile = () => {
-        if (!fileToDelete) return;
-        router.delete(
-            route("settings.general.files.destroy", fileToDelete.id),
-            {
-                preserveScroll: true,
-                onSuccess: () => setFileToDelete(null),
-            },
-        );
     };
 
     const companyFiles = settings?.company_files || [];
@@ -1672,11 +1669,7 @@ export default function General({ settings }) {
                                                                     <ExternalLink className="h-3.5 w-3.5" />
                                                                 </a>
                                                                 <button
-                                                                    onClick={() =>
-                                                                        confirmDeleteFile(
-                                                                            file,
-                                                                        )
-                                                                    }
+                                                                    onClick={() => requestDelete(route("settings.general.files.destroy", file.id), file)}
                                                                     className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                                     title={
                                                                         lang ===
@@ -1701,35 +1694,18 @@ export default function General({ settings }) {
                 </div>
 
                 {/* Delete File Modal */}
-                <Modal
+                <ConfirmationModal
                     show={!!fileToDelete}
-                    onClose={() => setFileToDelete(null)}
-                    maxWidth="sm"
-                >
-                    <div className="p-5 text-center">
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 mb-3">
-                            <Trash2 className="h-5 w-5 text-danger" />
-                        </div>
-                        <h3 className="text-xs font-bold text-text mb-1">
-                            {lang === "ar"
-                                ? "تأكيد حذف المستند"
-                                : "Confirm Document Deletion"}
-                        </h3>
-                        <p className="text-[11px] text-text-muted mb-4 truncate px-4">
-                            {fileToDelete?.name}
-                        </p>
-                        <div className="flex justify-center gap-2">
-                            <SecondaryButton
-                                onClick={() => setFileToDelete(null)}
-                            >
-                                {lang === "ar" ? "إلغاء" : "Cancel"}
-                            </SecondaryButton>
-                            <DangerButton onClick={deleteFile}>
-                                {lang === "ar" ? "حذف الملف" : "Delete File"}
-                            </DangerButton>
-                        </div>
-                    </div>
-                </Modal>
+                    title={lang === "ar" ? "تأكيد حذف المستند" : "Confirm Document Deletion"}
+                    message={fileToDelete?.name}
+                    onConfirm={() => confirmDelete()}
+                    onCancel={cancelDelete}
+                    requirePassword={true}
+                    passwordValue={deletePassword}
+                    onPasswordChange={setDeletePassword}
+                    passwordError={deleteError}
+                    processing={processingDelete}
+                />
             </div>
         </AuthenticatedLayout>
     );

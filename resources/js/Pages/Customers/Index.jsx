@@ -41,6 +41,7 @@ import DangerButton from "@/Components/DangerButton";
 import Tooltip from "@/Components/Tooltip";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import PageHeader from "@/Components/PageHeader";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -55,6 +56,7 @@ export default function Index({
     filters,
     countries = [],
     categories = [],
+    accounts = [],
     stats = {},
 }) {
     const { lang, __ } = useLang();
@@ -90,16 +92,24 @@ export default function Index({
     );
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [customerToEdit, setCustomerToEdit] = useState(null);
-    const [customerToDelete, setCustomerToDelete] = useState(null);
+
+    const {
+        itemToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: deleteProcessing,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     const {
         data,
         setData,
         post,
         put,
-        delete: destroy,
         processing,
         errors,
         reset,
@@ -117,6 +127,7 @@ export default function Index({
         country_id: countries.length > 0 ? countries[0].id : 1,
         parent_category_id: "",
         category_id: "",
+        account_id: "",
         password: "",
     });
 
@@ -218,25 +229,21 @@ export default function Index({
                 (countries.length > 0 ? countries[0].id : 1),
             parent_category_id: parentId,
             category_id: customer.category_id || "",
+            account_id: customer.account_id || "",
         });
         setCustomerToEdit(customer);
         setIsFormModalOpen(true);
     };
 
     const openDeleteModal = (customer) => {
-        clearErrors();
-        setData("password", "");
-        setCustomerToDelete(customer);
-        setIsDeleteModalOpen(true);
+        requestDelete(route("customers.destroy", customer.id), customer);
     };
 
     const closeModals = () => {
         setIsFormModalOpen(false);
-        setIsDeleteModalOpen(false);
         setTimeout(() => {
             reset();
             setCustomerToEdit(null);
-            setCustomerToDelete(null);
             clearErrors();
         }, 200);
     };
@@ -252,14 +259,6 @@ export default function Index({
                 onSuccess: () => closeModals(),
             });
         }
-    };
-
-    const deleteCustomer = () => {
-        if (!customerToDelete) return;
-        destroy(route("customers.destroy", customerToDelete.id), {
-            data: { password: data.password },
-            onSuccess: () => closeModals(),
-        });
     };
 
     const breadcrumbs = (
@@ -1134,6 +1133,13 @@ export default function Index({
                                                                 "customers.add_contract",
                                                             )}
                                                         </a>
+                                                        <Link
+                                                            href={route('customers.statement', customer.id)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-xs text-primary font-bold hover:underline py-1 px-2 hover:bg-primary/5 transition-colors"
+                                                        >
+                                                            {lang === 'ar' ? 'كشف حساب' : 'Statement'}
+                                                        </Link>
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -1375,6 +1381,33 @@ export default function Index({
                                 className="mt-1"
                             />
                         </div>
+                        <div>
+                            <InputLabel
+                                htmlFor="account_id"
+                                value={lang === 'ar' ? 'ربط بحساب (الذمم/العملاء)' : 'Link to Account (Receivables)'}
+                            />
+                            <select
+                                id="account_id"
+                                className="mt-1 block w-full rounded-md border-border bg-surface text-text shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                value={data.account_id}
+                                onChange={(e) =>
+                                    setData("account_id", e.target.value)
+                                }
+                            >
+                                <option value="">
+                                    {lang === 'ar' ? 'بدون ربط' : 'No link'}
+                                </option>
+                                {accounts?.map((acc) => (
+                                    <option key={acc.id} value={acc.id}>
+                                        {acc.code} - {lang === 'ar' ? acc.name_ar : acc.name_en}
+                                    </option>
+                                ))}
+                            </select>
+                            <InputError
+                                message={errors.account_id}
+                                className="mt-1"
+                            />
+                        </div>
 
                         {/* Row 4 */}
                         <div>
@@ -1585,20 +1618,20 @@ export default function Index({
 
             {/* Delete Confirmation Modal */}
             <ConfirmationModal
-                show={isDeleteModalOpen}
+                show={!!itemToDelete}
                 title={t("customers.deleteModal.title")}
                 message={t("customers.deleteModal.message", {
-                    name: customerToDelete?.name ?? "",
+                    name: itemToDelete?.name ?? "",
                 })}
                 confirmLabel={t("customers.deleteModal.confirm")}
                 cancelLabel={t("customers.deleteModal.cancel")}
                 requirePassword={true}
-                passwordValue={data.password || ""}
-                onPasswordChange={(val) => setData("password", val)}
-                passwordError={errors.password}
-                onConfirm={deleteCustomer}
-                onCancel={closeModals}
-                processing={processing}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                processing={deleteProcessing}
                 type="danger"
             />
 

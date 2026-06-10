@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Pagination from "@/Components/Pagination";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
@@ -21,20 +23,22 @@ import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import Tooltip from "@/Components/Tooltip";
 
-export default function Categories({ auth, categories, parentCategories }) {
+export default function Categories({ auth, categories, parentCategories, accounts }) {
     const { lang } = useLang();
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [categoryToEdit, setCategoryToEdit] = useState(null);
-    const [categoryToDelete, setCategoryToDelete] = useState(null);
+
+    const {
+        itemToDelete, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     const {
         data,
         setData,
         post,
         put,
-        delete: destroy,
         processing,
         errors,
         reset,
@@ -43,6 +47,7 @@ export default function Categories({ auth, categories, parentCategories }) {
         name_ar: "",
         name_en: "",
         parent_id: "",
+        account_id: "",
     });
 
     const t = {
@@ -69,23 +74,17 @@ export default function Categories({ auth, categories, parentCategories }) {
             name_ar: category.name_ar,
             name_en: category.name_en,
             parent_id: category.parent_id || "",
+            account_id: category.account_id || "",
         });
         setCategoryToEdit(category);
         setIsFormModalOpen(true);
     };
 
-    const openDeleteModal = (category) => {
-        setCategoryToDelete(category);
-        setIsDeleteModalOpen(true);
-    };
-
     const closeModals = () => {
         setIsFormModalOpen(false);
-        setIsDeleteModalOpen(false);
         setTimeout(() => {
             reset();
             setCategoryToEdit(null);
-            setCategoryToDelete(null);
             clearErrors();
         }, 200);
     };
@@ -101,13 +100,6 @@ export default function Categories({ auth, categories, parentCategories }) {
                 onSuccess: () => closeModals(),
             });
         }
-    };
-
-    const deleteCategory = () => {
-        if (!categoryToDelete) return;
-        destroy(route("settings.categories.destroy", categoryToDelete.id), {
-            onSuccess: () => closeModals(),
-        });
     };
 
     const breadcrumbs = (
@@ -285,9 +277,7 @@ export default function Categories({ auth, categories, parentCategories }) {
                                                             >
                                                                 <button
                                                                     onClick={() =>
-                                                                        openDeleteModal(
-                                                                            category,
-                                                                        )
+                                                                        requestDelete(route("settings.categories.destroy", category.id), category)
                                                                     }
                                                                     className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                                 >
@@ -425,32 +415,18 @@ export default function Categories({ auth, categories, parentCategories }) {
             </Modal>
 
             {/* Delete Modal */}
-            <Modal show={isDeleteModalOpen} onClose={closeModals} maxWidth="sm">
-                <div className="p-6 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 mb-4">
-                        <Trash2 className="h-6 w-6 text-danger" />
-                    </div>
-                    <h3 className="text-lg font-bold text-text mb-2">
-                        {lang === "ar" ? "تأكيد الحذف" : "Confirm Deletion"}
-                    </h3>
-                    <p className="text-sm text-text-muted mb-6">
-                        {lang === "ar"
-                            ? "هل أنت متأكد من حذف هذا التصنيف؟"
-                            : "Are you sure you want to delete this category?"}
-                    </p>
-                    <div className="flex justify-center gap-3">
-                        <SecondaryButton type="button" onClick={closeModals}>
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton
-                            onClick={deleteCategory}
-                            disabled={processing}
-                        >
-                            {lang === "ar" ? "حذف" : "Delete"}
-                        </DangerButton>
-                    </div>
-                </div>
-            </Modal>
+            <ConfirmationModal
+                show={!!itemToDelete}
+                title={lang === "ar" ? "تأكيد الحذف" : "Confirm Deletion"}
+                message={lang === "ar" ? "هل أنت متأكد من حذف هذا التصنيف؟" : "Are you sure you want to delete this category?"}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={deleteProcessing}
+            />
         </AuthenticatedLayout>
     );
 }

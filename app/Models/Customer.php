@@ -20,6 +20,7 @@ class Customer extends Model
         'id_number',
         'status',
         'address',
+        'account_id',
     ];
 
     protected static function boot()
@@ -46,6 +47,11 @@ class Customer extends Model
     public function country()
     {
         return $this->belongsTo(Country::class);
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class, 'account_id');
     }
 
     public function category()

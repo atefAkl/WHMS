@@ -30,6 +30,8 @@ import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 
 // ─── helpers ───────────────────────────────────────────────────
 const Field = ({ label, value, dir }) => (
@@ -65,7 +67,17 @@ export default function Show({ customer, countries = [], categories = [] }) {
     const [editMode, setEditMode] = useState(false);
     const [isContactModal, setContactModal] = useState(false);
     const [editingContact, setEditingContact] = useState(null);
-    const [contactToDelete, setContactDelete] = useState(null);
+
+    const {
+        itemToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: deleteProcessing,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     // determine parent category
     const parentCategories = categories.filter((c) => !c.parent_id);
@@ -148,10 +160,8 @@ export default function Show({ customer, countries = [], categories = [] }) {
         setContactModal(true);
     };
 
-    const deleteContact = (id) => {
-        router.delete(route("customers.contacts.destroy", [customer.id, id]), {
-            onSuccess: () => setContactDelete(null),
-        });
+    const deleteContact = (contact) => {
+        requestDelete(route("customers.contacts.destroy", [customer.id, contact.id]), contact);
     };
 
     const isIndividual = customer.category?.parent
@@ -702,7 +712,7 @@ export default function Show({ customer, countries = [], categories = [] }) {
                                                 >
                                                     <button
                                                         onClick={() =>
-                                                            setContactDelete(c)
+                                                            deleteContact(c)
                                                         }
                                                         className="p-1 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                     >
@@ -948,33 +958,29 @@ export default function Show({ customer, countries = [], categories = [] }) {
             </Modal>
 
             {/* ── Delete Contact Confirm ── */}
-            <Modal
-                show={!!contactToDelete}
-                onClose={() => setContactDelete(null)}
-                maxWidth="sm"
+            <ConfirmationModal
+                show={!!itemToDelete}
+                title={lang === "ar" ? "حذف جهة الاتصال" : "Delete Contact"}
+                message={lang === "ar"
+                    ? "هل أنت متأكد من حذف جهة الاتصال هذه؟ هذا الإجراء يتطلب كلمة مرور العمليات."
+                    : "Are you sure you want to delete this contact? This requires secure operations password."}
+                confirmLabel={lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"}
+                cancelLabel={lang === "ar" ? "إلغاء" : "Cancel"}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                processing={deleteProcessing}
+                type="danger"
             >
-                <div className="p-5 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 mb-3">
-                        <Trash2 className="h-5 w-5 text-danger" />
+                {itemToDelete && (
+                    <div className="bg-surface-muted/50 p-3 border border-border text-xs rounded-md mt-4 text-center">
+                        <span className="font-bold text-text">{itemToDelete?.name}</span>
                     </div>
-                    <h3 className="text-[14px] font-bold text-text mb-1">
-                        {lang === "ar" ? "حذف جهة الاتصال" : "Delete Contact"}
-                    </h3>
-                    <p className="text-[12px] text-text-muted mb-4">
-                        {contactToDelete?.name}
-                    </p>
-                    <div className="flex justify-center gap-2">
-                        <SecondaryButton onClick={() => setContactDelete(null)}>
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton
-                            onClick={() => deleteContact(contactToDelete.id)}
-                        >
-                            {lang === "ar" ? "حذف" : "Delete"}
-                        </DangerButton>
-                    </div>
-                </div>
-            </Modal>
+                )}
+            </ConfirmationModal>
         </AuthenticatedLayout>
     );
 }

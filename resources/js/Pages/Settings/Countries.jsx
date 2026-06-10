@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import Pagination from "@/Components/Pagination";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
@@ -27,16 +29,18 @@ export default function Countries({ auth, countries, filters }) {
     const [searchQuery, setSearchQuery] = useState(filters?.search || "");
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [countryToEdit, setCountryToEdit] = useState(null);
-    const [countryToDelete, setCountryToDelete] = useState(null);
+
+    const {
+        itemToDelete, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     const {
         data,
         setData,
         post,
         put,
-        delete: destroy,
         processing,
         errors,
         reset,
@@ -94,18 +98,11 @@ export default function Countries({ auth, countries, filters }) {
         setIsFormModalOpen(true);
     };
 
-    const openDeleteModal = (country) => {
-        setCountryToDelete(country);
-        setIsDeleteModalOpen(true);
-    };
-
     const closeModals = () => {
         setIsFormModalOpen(false);
-        setIsDeleteModalOpen(false);
         setTimeout(() => {
             reset();
             setCountryToEdit(null);
-            setCountryToDelete(null);
             clearErrors();
         }, 200);
     };
@@ -121,13 +118,6 @@ export default function Countries({ auth, countries, filters }) {
                 onSuccess: () => closeModals(),
             });
         }
-    };
-
-    const deleteCountry = () => {
-        if (!countryToDelete) return;
-        destroy(route("settings.countries.destroy", countryToDelete.id), {
-            onSuccess: () => closeModals(),
-        });
     };
 
     const seedCountries = () => {
@@ -323,9 +313,7 @@ export default function Countries({ auth, countries, filters }) {
                                                             >
                                                                 <button
                                                                     onClick={() =>
-                                                                        openDeleteModal(
-                                                                            country,
-                                                                        )
+                                                                        requestDelete(route("settings.countries.destroy", country.id), country)
                                                                     }
                                                                     className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                                 >
@@ -485,32 +473,18 @@ export default function Countries({ auth, countries, filters }) {
             </Modal>
 
             {/* Delete Modal */}
-            <Modal show={isDeleteModalOpen} onClose={closeModals} maxWidth="sm">
-                <div className="p-6 text-center">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-danger/10 mb-4">
-                        <Trash2 className="h-6 w-6 text-danger" />
-                    </div>
-                    <h3 className="text-lg font-bold text-text mb-2">
-                        {lang === "ar" ? "تأكيد الحذف" : "Confirm Deletion"}
-                    </h3>
-                    <p className="text-sm text-text-muted mb-6">
-                        {lang === "ar"
-                            ? "هل أنت متأكد من حذف هذه الدولة؟ لا يمكن التراجع."
-                            : "Are you sure you want to delete this country? This cannot be undone."}
-                    </p>
-                    <div className="flex justify-center gap-3">
-                        <SecondaryButton type="button" onClick={closeModals}>
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton
-                            onClick={deleteCountry}
-                            disabled={processing}
-                        >
-                            {lang === "ar" ? "حذف" : "Delete"}
-                        </DangerButton>
-                    </div>
-                </div>
-            </Modal>
+            <ConfirmationModal
+                show={!!itemToDelete}
+                title={lang === "ar" ? "تأكيد الحذف" : "Confirm Deletion"}
+                message={lang === "ar" ? "هل أنت متأكد من حذف هذه الدولة؟ لا يمكن التراجع." : "Are you sure you want to delete this country? This cannot be undone."}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={deleteProcessing}
+            />
         </AuthenticatedLayout>
     );
 }

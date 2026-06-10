@@ -26,6 +26,8 @@ import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 
 export default function Index({ pallets = { data: [] }, filters = {} }) {
     const { lang } = useLang();
@@ -40,10 +42,16 @@ export default function Index({ pallets = { data: [] }, filters = {} }) {
     const [editingPallet, setEditingPallet] = useState(null);
 
     // Secure Deletion State
-    const [palletToDelete, setPalletToDelete] = useState(null);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteError, setDeleteError] = useState("");
-    const [processingDelete, setProcessingDelete] = useState(false);
+    const {
+        itemToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: deleteProcessing,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     // Form setup using Inertia useForm
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
@@ -105,35 +113,8 @@ export default function Index({ pallets = { data: [] }, filters = {} }) {
         }
     };
 
-    const confirmDelete = (e) => {
-        e.preventDefault();
-        setDeleteError("");
-        setProcessingDelete(true);
-
-        router.post(
-            route("pallets.destroy", palletToDelete.id),
-            {
-                _method: "DELETE",
-                password: deletePassword,
-            },
-            {
-                onSuccess: () => {
-                    setPalletToDelete(null);
-                    setDeletePassword("");
-                    setProcessingDelete(false);
-                },
-                onError: (errs) => {
-                    setProcessingDelete(false);
-                    if (errs.error) {
-                        setDeleteError(errs.error);
-                    } else if (errs.password) {
-                        setDeleteError(errs.password);
-                    } else {
-                        setDeleteError(lang === "ar" ? "حدث خطأ ما." : "An error occurred.");
-                    }
-                },
-            }
-        );
+    const handleDelete = (pallet) => {
+        requestDelete(route("pallets.destroy", pallet.id), pallet);
     };
 
     const getSizeBadgeStyle = (size) => {
@@ -298,7 +279,7 @@ export default function Index({ pallets = { data: [] }, filters = {} }) {
                                                     </Tooltip>
                                                     <Tooltip text={lang === "ar" ? "حذف" : "Delete"}>
                                                         <button
-                                                            onClick={() => setPalletToDelete(pallet)}
+                                                            onClick={() => handleDelete(pallet)}
                                                             className="p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 border border-transparent hover:border-danger/20 transition-all rounded-none inline-flex items-center"
                                                         >
                                                             <Trash2 className="h-3.5 w-3.5" />
@@ -403,63 +384,40 @@ export default function Index({ pallets = { data: [] }, filters = {} }) {
             </Modal>
 
             {/* Modal: Confirm Secure Delete */}
-            <Modal show={!!palletToDelete} onClose={() => setPalletToDelete(null)} maxWidth="md">
-                <form onSubmit={confirmDelete} className="p-6 space-y-4 text-start" dir={lang === "ar" ? "rtl" : "ltr"}>
-                    <div className="flex items-center gap-2 border-b border-border pb-3">
-                        <ShieldAlert className="h-6 w-6 text-danger" />
-                        <h3 className="font-bold text-lg text-text">
-                            {lang === "ar" ? "تأكيد حذف الطبلية" : "Confirm Pallet Deletion"}
-                        </h3>
-                    </div>
-
-                    <p className="text-xs text-text-muted">
-                        {lang === "ar"
-                            ? "أنت على وشك حذف هذه الطبلية بشكل نهائي. هذا الإجراء يتطلب كلمة مرور العمليات ولا يمكن التراجع عنه."
-                            : "You are about to permanently delete this pallet record. This requires secure operations password validation and cannot be undone."}
-                    </p>
-
-                    <div className="bg-surface-muted/50 p-3 border border-border text-xs font-mono rounded-none">
+            <ConfirmationModal
+                show={!!itemToDelete}
+                title={lang === "ar" ? "تأكيد حذف الطبلية" : "Confirm Pallet Deletion"}
+                message={lang === "ar" 
+                    ? "أنت على وشك حذف هذه الطبلية بشكل نهائي. هذا الإجراء يتطلب كلمة مرور العمليات ولا يمكن التراجع عنه."
+                    : "You are about to permanently delete this pallet record. This requires secure operations password validation and cannot be undone."}
+                confirmLabel={lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"}
+                cancelLabel={lang === "ar" ? "إلغاء" : "Cancel"}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                processing={deleteProcessing}
+                type="danger"
+            >
+                {itemToDelete && (
+                    <div className="bg-surface-muted/50 p-3 border border-border text-xs font-mono rounded-none mb-4">
                         <div>
                             <span className="font-bold text-text-muted">{lang === "ar" ? "رقم الطبلية: " : "Pallet Number: "}</span>
-                            <span className="text-text font-bold">{palletToDelete?.pallet_number}</span>
+                            <span className="text-text font-bold">{itemToDelete?.pallet_number}</span>
                         </div>
                         <div className="mt-1">
                             <span className="font-bold text-text-muted">{lang === "ar" ? "كود الطبلية: " : "Pallet Code: "}</span>
-                            <span className="text-text font-bold text-primary">{palletToDelete?.pallet_code}</span>
+                            <span className="text-text font-bold text-primary">{itemToDelete?.pallet_code}</span>
                         </div>
                         <div className="mt-1">
                             <span className="font-bold text-text-muted">{lang === "ar" ? "الحجم والنوع: " : "Size & Type: "}</span>
-                            <span className="text-text font-bold">{palletToDelete?.size}</span>
+                            <span className="text-text font-bold">{itemToDelete?.size}</span>
                         </div>
                     </div>
-
-                    <div>
-                        <InputLabel
-                            htmlFor="delete_password"
-                            value={lang === "ar" ? "كلمة مرور العمليات الآمنة *" : "Secure Operations Password *"}
-                        />
-                        <TextInput
-                            id="delete_password"
-                            type="password"
-                            className="mt-1 block w-full text-sm rounded-none border-border"
-                            value={deletePassword}
-                            onChange={(e) => setDeletePassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                        />
-                        {deleteError && <p className="text-xs text-danger mt-1 font-bold">{deleteError}</p>}
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <SecondaryButton type="button" onClick={() => setPalletToDelete(null)} className="rounded-none text-xs">
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton type="submit" disabled={processingDelete} className="rounded-none text-xs">
-                            {processingDelete ? (lang === "ar" ? "جاري الحذف..." : "Deleting...") : (lang === "ar" ? "تأكيد الحذف" : "Confirm Delete")}
-                        </DangerButton>
-                    </div>
-                </form>
-            </Modal>
+                )}
+            </ConfirmationModal>
         </AuthenticatedLayout>
     );
 }

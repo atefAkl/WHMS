@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Customer;
 use Inertia\Inertia;
+use App\Traits\ValidatesSecureDeletion;
 
 class CustomerController extends Controller
 {
+    use ValidatesSecureDeletion;
+
     /** Shared validation rules */
     private function rules(string $mode = 'create', ?int $customerId = null): array
     {
@@ -29,6 +32,7 @@ class CustomerController extends Controller
             'address'      => 'nullable|string|max:1000',
             'country_id'   => 'required|exists:countries,id',
             'category_id'  => 'required|exists:customer_categories,id',
+            'account_id'   => 'nullable|exists:accounts,id',
         ];
     }
 
@@ -81,6 +85,12 @@ class CustomerController extends Controller
         ])->latest()->paginate(10)->withQueryString();
         $countries  = \App\Models\Country::all();
         $categories = \App\Models\CustomerCategory::all();
+        $accounts   = \App\Models\Account::where('is_transactional', true)
+            ->where(function ($query) {
+                $query->where('code', 'like', '1103%') // العملاء / الذمم المدينة
+                      ->orWhere('code', 'like', '2101%'); // الموردين / الذمم الدائنة
+            })
+            ->get();
 
         $businessParent      = \App\Models\CustomerCategory::whereNull('parent_id')
             ->where(fn($q) => $q->where('name_ar', 'like', '%أعمال%')->orWhere('name_en', 'like', '%business%'))
@@ -93,6 +103,7 @@ class CustomerController extends Controller
             'customers'  => $customers,
             'countries'  => $countries,
             'categories' => $categories,
+            'accounts'   => $accounts,
             'filters'    => $request->only(['search']),
             'stats'      => [
                 'total'            => Customer::count(),
@@ -134,9 +145,64 @@ class CustomerController extends Controller
         return redirect()->back()->with('success', 'تم تحديث بيانات العميل بنجاح.');
     }
 
-    public function destroy(\App\Http\Requests\DeleteResourceRequest $request, string $id)
+    public function destroy(Request $request, string $id)
     {
+        $this->validateSecureDelete($request);
         Customer::findOrFail($id)->delete();
         return redirect()->route('customers.index')->with('success', 'تم حذف العميل بنجاح.');
+    }
+
+    public function statement(Customer $customer, Request $request)
+    {
+        $invoices = \App\Models\SalesInvoice::where('customer_id', $customer->id)
+            ->whereIn('status', ['posted', 'paid', 'partially_paid'])
+            ->get()
+            ->map(function ($inv) {
+                return [
+                    'id' => $inv->id,
+                    'date' => $inv->invoice_date,
+                    'type' => 'invoice',
+                    'type_ar' => 'فاتورة مبيعات',
+                    'type_en' => 'Sales Invoice',
+                    'reference' => $inv->invoice_number,
+                    'description' => 'فاتورة مبيعات رقم ' . $inv->invoice_number,
+                    'debit' => $inv->total_amount,
+                    'credit' => 0,
+                    'timestamp' => strtotime($inv->invoice_date . ' 00:00:00'),
+                ];
+            });
+
+        $vouchers = \App\Models\FinancialVoucher::where('customer_id', $customer->id)
+            ->whereIn('status', ['approved'])
+            ->get()
+            ->map(function ($voucher) {
+                $isReceipt = $voucher->type === 'receipt';
+                return [
+                    'id' => $voucher->id,
+                    'date' => $voucher->date,
+                    'type' => 'voucher',
+                    'type_ar' => $isReceipt ? 'سند قبض' : 'سند صرف',
+                    'type_en' => $isReceipt ? 'Receipt Voucher' : 'Payment Voucher',
+                    'reference' => $voucher->voucher_number,
+                    'description' => $voucher->description ?? ($isReceipt ? 'دفعة نقدية/بنكية' : 'رد دفعة'),
+                    'debit' => $isReceipt ? 0 : $voucher->amount,
+                    'credit' => $isReceipt ? $voucher->amount : 0,
+                    'timestamp' => strtotime($voucher->date . ' 00:00:01'), // slightly after invoice if same day
+                ];
+            });
+
+        $transactions = $invoices->concat($vouchers)->sortBy('timestamp')->values();
+
+        $runningBalance = 0;
+        foreach ($transactions as $key => $tx) {
+            $runningBalance += $tx['debit'] - $tx['credit'];
+            $transactions[$key]['balance'] = $runningBalance;
+        }
+
+        return Inertia::render('Customers/Statement', [
+            'customer' => $customer,
+            'transactions' => $transactions,
+            'total_balance' => $runningBalance
+        ]);
     }
 }

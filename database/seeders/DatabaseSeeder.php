@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
                 PalletSeeder::class,
                 InventoryCategorySeeder::class,
                 InventoryItemSeeder::class,
+                ChartOfAccountsSeeder::class,
             ]);
         }
     }

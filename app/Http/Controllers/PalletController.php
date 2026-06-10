@@ -6,9 +6,12 @@ use App\Models\Pallet;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
+use App\Traits\ValidatesSecureDeletion;
 
 class PalletController extends Controller
 {
+    use ValidatesSecureDeletion;
+
     public function index(Request $request)
     {
         $query = Pallet::query();
@@ -100,18 +103,7 @@ class PalletController extends Controller
 
     public function destroy(Request $request, Pallet $pallet)
     {
-        $request->validate([
-            'password' => 'required|string',
-        ]);
-
-        $user = auth()->user();
-        if (empty($user->secure_password)) {
-            return redirect()->back()->with('error', 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.');
-        }
-
-        if (!Hash::check($request->password, $user->secure_password)) {
-            return redirect()->back()->with('error', 'كلمة مرور تأكيد الحذف غير صحيحة.');
-        }
+        $this->validateSecureDelete($request);
 
         // Verify if pallet has active inventory entries
         $hasEntries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)->exists();

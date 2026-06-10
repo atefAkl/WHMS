@@ -33,6 +33,7 @@ import Pagination from "@/Components/Pagination";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -73,6 +74,11 @@ export default function Index({ contracts, stats, filters, translations }) {
     const [actionType, setActionType] = useState(null); // 'activate', 'suspend', 'end', 'cancel', 'delete'
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+
+    const {
+        itemToDelete, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     // Helpers
     const handleExport = (format) => {
@@ -159,6 +165,10 @@ export default function Index({ contracts, stats, filters, translations }) {
     };
 
     const openConfirmModal = (contract, type) => {
+        if (type === "delete") {
+            requestDelete(route("contracts.destroy", contract.id), contract);
+            return;
+        }
         setActionContract(contract);
         setActionType(type);
         setIsConfirmOpen(true);
@@ -182,13 +192,6 @@ export default function Index({ contracts, stats, filters, translations }) {
             url = route("contracts.end", actionContract.id);
         else if (actionType === "cancel")
             url = route("contracts.cancel", actionContract.id);
-        else if (actionType === "delete") {
-            router.delete(route("contracts.destroy", actionContract.id), {
-                onSuccess: () => closeConfirmModal(),
-                onError: () => closeConfirmModal(),
-            });
-            return;
-        }
 
         if (url) {
             router.post(
@@ -1208,6 +1211,19 @@ export default function Index({ contracts, stats, filters, translations }) {
                     onConfirm={handleActionConfirm}
                     onCancel={closeConfirmModal}
                     processing={false}
+                />
+
+                <ConfirmationModal
+                    show={!!itemToDelete}
+                    title={lang === "ar" ? "تأكيد الحذف" : "Confirm Deletion"}
+                    message={lang === "ar" ? "هل أنت متأكد؟" : "Are you sure?"}
+                    onConfirm={() => confirmDelete()}
+                    onCancel={cancelDelete}
+                    requirePassword={true}
+                    passwordValue={deletePassword}
+                    onPasswordChange={setDeletePassword}
+                    passwordError={deleteError}
+                    processing={deleteProcessing}
                 />
             </div>
         </AuthenticatedLayout>

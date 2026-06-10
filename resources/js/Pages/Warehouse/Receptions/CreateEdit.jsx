@@ -18,11 +18,12 @@ import {
     CheckCircle2,
     ChevronUp,
     ChevronDown,
-    ShieldAlert,
     Printer,
     Unlock,
 } from "lucide-react";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
@@ -31,6 +32,7 @@ import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import PageHeader from "@/Components/PageHeader";
 import Tooltip from "@/Components/Tooltip";
+import SearchableSelect from "@/Components/SearchableSelect";
 import axios from "axios";
 
 export default function CreateEdit({
@@ -98,10 +100,16 @@ export default function CreateEdit({
     const [isGeneralCollapsed, setIsGeneralCollapsed] = useState(false);
 
     // Deletion Modal state
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteError, setDeleteError] = useState("");
-    const [processingDelete, setProcessingDelete] = useState(false);
+    const {
+        itemToDelete: deleteItem,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: processingDelete,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     // Reset active index when search text changes or dropdown toggles
     useEffect(() => {
@@ -180,7 +188,7 @@ export default function CreateEdit({
                 e.preventDefault();
                 // Ctrl + D: Open delete confirmation modal
                 if (reception) {
-                    setIsDeleteModalOpen(true);
+                    requestDelete(route("receptions.destroy", reception.id), reception);
                 }
             }
         };
@@ -400,41 +408,7 @@ export default function CreateEdit({
         }
     };
 
-    // Confirm Secure Delete
-    const confirmDelete = (e) => {
-        if (e) e.preventDefault();
-        setDeleteError("");
-        setProcessingDelete(true);
-
-        router.post(
-            route("receptions.destroy", reception.id),
-            {
-                _method: "DELETE",
-                password: deletePassword,
-            },
-            {
-                onSuccess: () => {
-                    setIsDeleteModalOpen(false);
-                    setDeletePassword("");
-                    setProcessingDelete(false);
-                },
-                onError: (errs) => {
-                    setProcessingDelete(false);
-                    if (errs.error) {
-                        setDeleteError(errs.error);
-                    } else if (errs.password) {
-                        setDeleteError(errs.password);
-                    } else {
-                        setDeleteError(
-                            lang === "ar"
-                                ? "حدث خطأ ما."
-                                : "An error occurred.",
-                        );
-                    }
-                },
-            },
-        );
-    };
+    // Confirm Secure Delete handled by hook
 
     // Default form submit handler
     const handleSubmit = (e) => {
@@ -766,147 +740,19 @@ export default function CreateEdit({
 
                                         {/* Customer Autocomplete Field */}
                                         <div className="relative">
-                                            <InputLabel
-                                                value={
-                                                    lang === "ar"
-                                                        ? "العميل *"
-                                                        : "Customer *"
-                                                }
-                                            />
-                                            <TextInput
-                                                type="text"
-                                                className="mt-1 w-full text-sm rounded-none border-border"
-                                                placeholder={
-                                                    lang === "ar"
-                                                        ? "ابحث عن اسم العميل..."
-                                                        : "Type customer name..."
-                                                }
-                                                value={customerSearch}
-                                                onChange={(e) => {
-                                                    setCustomerSearch(
-                                                        e.target.value,
-                                                    );
-                                                    setShowCustomerDropdown(
-                                                        true,
-                                                    );
+                                            <SearchableSelect
+                                                label={lang === "ar" ? "العميل *" : "Customer *"}
+                                                items={customers}
+                                                value={data.customer_id}
+                                                onChange={(selected) => {
+                                                    setData("customer_id", selected ? selected.id : "");
                                                 }}
-                                                onFocus={() =>
-                                                    setShowCustomerDropdown(
-                                                        true,
-                                                    )
-                                                }
-                                                onBlur={() =>
-                                                    setShowCustomerDropdown(
-                                                        false,
-                                                    )
-                                                }
-                                                onKeyDown={(e) => {
-                                                    if (
-                                                        !showCustomerDropdown ||
-                                                        filteredCustomers.length ===
-                                                            0
-                                                    )
-                                                        return;
-                                                    if (e.key === "ArrowDown") {
-                                                        e.preventDefault();
-                                                        setCustomerActiveIndex(
-                                                            (prev) =>
-                                                                prev <
-                                                                filteredCustomers.length -
-                                                                    1
-                                                                    ? prev + 1
-                                                                    : 0,
-                                                        );
-                                                    } else if (
-                                                        e.key === "ArrowUp"
-                                                    ) {
-                                                        e.preventDefault();
-                                                        setCustomerActiveIndex(
-                                                            (prev) =>
-                                                                prev > 0
-                                                                    ? prev - 1
-                                                                    : filteredCustomers.length -
-                                                                      1,
-                                                        );
-                                                    } else if (
-                                                        e.key === "Enter"
-                                                    ) {
-                                                        if (
-                                                            customerActiveIndex >=
-                                                                0 &&
-                                                            customerActiveIndex <
-                                                                filteredCustomers.length
-                                                        ) {
-                                                            e.preventDefault();
-                                                            const selected =
-                                                                filteredCustomers[
-                                                                    customerActiveIndex
-                                                                ];
-                                                            setData(
-                                                                "customer_id",
-                                                                selected.id,
-                                                            );
-                                                            setCustomerSearch(
-                                                                selected.name,
-                                                            );
-                                                            setShowCustomerDropdown(
-                                                                false,
-                                                            );
-                                                        }
-                                                    } else if (
-                                                        e.key === "Escape"
-                                                    ) {
-                                                        setShowCustomerDropdown(
-                                                            false,
-                                                        );
-                                                    }
-                                                }}
-                                                disabled={
-                                                    reception?.status ===
-                                                    "approved"
-                                                }
-                                                required
-                                            />
-                                            {showCustomerDropdown &&
-                                                customerSearch &&
-                                                filteredCustomers.length >
-                                                    0 && (
-                                                    <div className="absolute z-10 w-full bg-surface border border-border shadow-md max-h-48 overflow-y-auto mt-1 divide-y divide-border">
-                                                        {filteredCustomers.map(
-                                                            (c, idx) => (
-                                                                <div
-                                                                    key={c.id}
-                                                                    className={`p-2 text-xs font-semibold cursor-pointer text-text transition-colors ${
-                                                                        idx ===
-                                                                        customerActiveIndex
-                                                                            ? "bg-primary/10 text-primary font-bold"
-                                                                            : "hover:bg-surface-muted"
-                                                                    }`}
-                                                                    onMouseDown={(
-                                                                        e,
-                                                                    ) => {
-                                                                        e.preventDefault();
-                                                                        setData(
-                                                                            "customer_id",
-                                                                            c.id,
-                                                                        );
-                                                                        setCustomerSearch(
-                                                                            c.name,
-                                                                        );
-                                                                        setShowCustomerDropdown(
-                                                                            false,
-                                                                        );
-                                                                    }}
-                                                                >
-                                                                    {c.name}
-                                                                </div>
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                )}
-                                            <InputError
-                                                message={errors.customer_id}
-                                                className="mt-1"
+                                                placeholder={lang === "ar" ? "ابحث عن اسم العميل..." : "Type customer name..."}
+                                                searchKeys={['name']}
+                                                displayFormat={(c) => c.name}
+                                                valueKey="id"
+                                                error={errors.customer_id}
+                                                disabled={reception?.status === "approved"}
                                             />
                                         </div>
 
@@ -1314,144 +1160,33 @@ export default function CreateEdit({
 
                                 {/* Item Autocomplete */}
                                 <div className="sm:col-span-3 relative">
-                                    <InputLabel
-                                        value={
-                                            lang === "ar"
-                                                ? "الصنف المخزني *"
-                                                : "Inventory Item *"
-                                        }
-                                    />
-                                    <input
-                                        ref={itemSearchRef}
-                                        type="text"
-                                        className="mt-1 block w-full text-xs rounded-none border-border h-[38px] px-2 bg-surface text-text"
-                                        placeholder={
-                                            lang === "ar"
-                                                ? "ابحث عن الصنف..."
-                                                : "Search item..."
-                                        }
-                                        value={posItemSearch}
-                                        onChange={(e) => {
-                                            setPosItemSearch(e.target.value);
-                                            setShowPosItemDropdown(true);
-                                        }}
-                                        onFocus={() =>
-                                            setShowPosItemDropdown(true)
-                                        }
-                                        onBlur={() =>
-                                            setShowPosItemDropdown(false)
-                                        }
-                                        onKeyDown={(e) => {
-                                            if (
-                                                showPosItemDropdown &&
-                                                filteredPOSItems.length > 0
-                                            ) {
-                                                if (e.key === "ArrowDown") {
-                                                    e.preventDefault();
-                                                    setPosItemActiveIndex(
-                                                        (prev) =>
-                                                            prev <
-                                                            filteredPOSItems.length -
-                                                                1
-                                                                ? prev + 1
-                                                                : 0,
-                                                    );
-                                                    return;
-                                                } else if (
-                                                    e.key === "ArrowUp"
-                                                ) {
-                                                    e.preventDefault();
-                                                    setPosItemActiveIndex(
-                                                        (prev) =>
-                                                            prev > 0
-                                                                ? prev - 1
-                                                                : filteredPOSItems.length -
-                                                                  1,
-                                                    );
-                                                    return;
-                                                } else if (e.key === "Enter") {
-                                                    if (
-                                                        posItemActiveIndex >=
-                                                            0 &&
-                                                        posItemActiveIndex <
-                                                            filteredPOSItems.length
-                                                    ) {
-                                                        e.preventDefault();
-                                                        const selected =
-                                                            filteredPOSItems[
-                                                                posItemActiveIndex
-                                                            ];
-                                                        setPosItemId(
-                                                            selected.id,
-                                                        );
-                                                        setPosItemSearch(
-                                                            displayBilingual(
-                                                                selected.name,
-                                                            ),
-                                                        );
-                                                        setShowPosItemDropdown(
-                                                            false,
-                                                        );
-                                                        variantSelectRef.current?.focus();
-                                                        return;
-                                                    }
-                                                } else if (e.key === "Escape") {
-                                                    setShowPosItemDropdown(
-                                                        false,
-                                                    );
-                                                    return;
-                                                }
+                                    <SearchableSelect
+                                        label={lang === "ar" ? "الصنف المخزني *" : "Inventory Item *"}
+                                        inputRef={itemSearchRef}
+                                        items={inventoryItems}
+                                        value={posItemId}
+                                        onChange={(selected) => {
+                                            setPosItemId(selected ? selected.id : "");
+                                            if (selected) {
+                                                // Using setTimeout to give the blur a chance to finish before jumping focus
+                                                setTimeout(() => {
+                                                    variantSelectRef.current?.focus();
+                                                }, 10);
                                             }
-                                            // Fallback to left/right arrow navigation
-                                            handleKeyNavigation(
-                                                e,
-                                                variantSelectRef,
-                                                sizeSelectRef,
-                                            );
                                         }}
-                                        required
-                                    />
-                                    {showPosItemDropdown &&
-                                        posItemSearch &&
-                                        filteredPOSItems.length > 0 && (
-                                            <div className="absolute z-20 w-full bg-surface border border-border shadow-md max-h-48 overflow-y-auto mt-1 divide-y divide-border">
-                                                {filteredPOSItems.map(
-                                                    (item, idx) => (
-                                                        <div
-                                                            key={item.id}
-                                                            className={`p-2 text-xs font-semibold cursor-pointer text-text transition-colors ${
-                                                                idx ===
-                                                                posItemActiveIndex
-                                                                    ? "bg-primary/10 text-primary font-bold"
-                                                                    : "hover:bg-surface-muted"
-                                                            }`}
-                                                            onMouseDown={(
-                                                                e,
-                                                            ) => {
-                                                                e.preventDefault();
-                                                                setPosItemId(
-                                                                    item.id,
-                                                                );
-                                                                setPosItemSearch(
-                                                                    displayBilingual(
-                                                                        item.name,
-                                                                    ),
-                                                                );
-                                                                setShowPosItemDropdown(
-                                                                    false,
-                                                                );
-                                                                variantSelectRef.current?.focus();
-                                                            }}
-                                                        >
-                                                            {displayBilingual(
-                                                                item.name,
-                                                            )}{" "}
-                                                            ({item.code})
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
+                                        placeholder={lang === "ar" ? "ابحث عن الصنف..." : "Search item..."}
+                                        searchKeys={['name', 'code']}
+                                        displayFormat={(item) => displayBilingual(item.name)}
+                                        valueKey="id"
+                                        className="h-[38px] text-xs rounded-none border-border bg-surface text-text"
+                                        error=""
+                                        renderOption={(item, isActive) => (
+                                            <>
+                                                <span>{displayBilingual(item.name)}</span>
+                                                <span className={`text-xs ml-2 ${isActive ? 'text-white/80' : 'text-text-muted'}`}>({item.code})</span>
+                                            </>
                                         )}
+                                    />
                                 </div>
 
                                 {/* Variant Select (عبوة) */}
@@ -2034,123 +1769,20 @@ export default function CreateEdit({
             </Modal>
 
             {/* Confirm Secure Delete Modal */}
-            <Modal
-                show={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
-                maxWidth="md"
-            >
-                <form
-                    onSubmit={confirmDelete}
-                    className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
-                >
-                    <div className="flex items-center gap-2 border-b border-border pb-3">
-                        <ShieldAlert className="h-6 w-6 text-danger" />
-                        <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "تأكيد حذف سند الاستلام"
-                                : "Confirm Reception Deletion"}
-                        </h3>
-                    </div>
-
-                    <p className="text-xs text-text-muted">
-                        {lang === "ar"
+            <ConfirmationModal
+                show={!!deleteItem}
+                title={lang === "ar" ? "تأكيد حذف سند الاستلام" : "Confirm Reception Deletion"}
+                message={lang === "ar"
                             ? "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع."
                             : "You are about to permanently delete this reception voucher and all associated inventory entries. This action cannot be undone."}
-                    </p>
-
-                    {reception && (
-                        <div className="bg-surface-muted/50 p-3 border border-border text-xs font-mono rounded-none">
-                            <div>
-                                <span className="font-bold text-text-muted">
-                                    {lang === "ar" ? "رقم السند: " : "Serial: "}
-                                </span>
-                                <span className="text-text font-bold">
-                                    {reception.serial_number}
-                                </span>
-                            </div>
-                            {reception.customer && (
-                                <div className="mt-1">
-                                    <span className="font-bold text-text-muted">
-                                        {lang === "ar"
-                                            ? "العميل: "
-                                            : "Customer: "}
-                                    </span>
-                                    <span className="text-text font-bold">
-                                        {reception.customer.name}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <div>
-                        <InputLabel
-                            htmlFor="delete_password"
-                            value={
-                                lang === "ar"
-                                    ? "كلمة مرور العمليات الآمنة *"
-                                    : "Secure Operations Password *"
-                            }
-                        />
-                        <TextInput
-                            id="delete_password"
-                            type="password"
-                            className="mt-1 block w-full text-sm rounded-none border-border"
-                            value={deletePassword}
-                            onChange={(e) => setDeletePassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                        />
-                        {deleteError && (
-                            <p className="text-xs text-danger mt-1 font-bold">
-                                {deleteError}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
-                            <button
-                                type="button"
-                                onClick={() => setIsDeleteModalOpen(false)}
-                                className={`border border-border bg-surface text-text hover:bg-surface-muted rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
-                            >
-                                <X className="h-4 w-4" />
-                                {showButtonText && (
-                                    <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
-                                    </span>
-                                )}
-                            </button>
-                        </Tooltip>
-                        <Tooltip
-                            text={
-                                lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"
-                            }
-                        >
-                            <button
-                                type="submit"
-                                disabled={processingDelete}
-                                className={`bg-danger hover:bg-danger-hover text-white rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${showButtonText ? "px-3" : "w-[30px] p-0"} disabled:opacity-50`}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                {showButtonText && (
-                                    <span>
-                                        {processingDelete
-                                            ? lang === "ar"
-                                                ? "جاري الحذف..."
-                                                : "Deleting..."
-                                            : lang === "ar"
-                                              ? "تأكيد الحذف"
-                                              : "Confirm Delete"}
-                                    </span>
-                                )}
-                            </button>
-                        </Tooltip>
-                    </div>
-                </form>
-            </Modal>
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={processingDelete}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -9,9 +9,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
+use App\Traits\ValidatesSecureDeletion;
 
 class InventoryItemController extends Controller
 {
+    use ValidatesSecureDeletion;
+
     public function index()
     {
         $items = InventoryItem::with(['category', 'variants'])->latest()->get();
@@ -132,18 +135,7 @@ class InventoryItemController extends Controller
 
     public function destroy(Request $request, InventoryItem $inventory_item)
     {
-        $request->validate([
-            'password' => 'required|string',
-        ]);
-
-        $user = auth()->user();
-        if (empty($user->secure_password)) {
-            return redirect()->back()->with('error', 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.');
-        }
-
-        if (!Hash::check($request->password, $user->secure_password)) {
-            return redirect()->back()->with('error', 'كلمة مرور تأكيد الحذف غير صحيحة.');
-        }
+        $this->validateSecureDelete($request);
 
         if (!empty($inventory_item->image) && File::exists(public_path($inventory_item->image))) {
             File::delete(public_path($inventory_item->image));

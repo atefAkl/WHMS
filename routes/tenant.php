@@ -93,7 +93,7 @@ Route::middleware([
                 Route::post('contracts/{contract}/contacts', [\App\Http\Controllers\ContractController::class, 'addContact'])->name('contracts.contacts.store');
                 Route::patch('contracts/{contract}/contacts/{contractContact}/status', [\App\Http\Controllers\ContractController::class, 'updateContactStatus'])->name('contracts.contacts.status');
 
-                Route::post('contracts/{contract}/invoices', [\App\Http\Controllers\ContractController::class, 'storeInvoice'])->name('contracts.invoices.store');
+                Route::post('contracts/{contract}/invoices-period', [\App\Http\Controllers\ContractController::class, 'storeInvoiceFromPeriod'])->name('contracts.invoices.store-from-period');
                 Route::post('contracts/{contract}/payments', [\App\Http\Controllers\ContractController::class, 'storePayment'])->name('contracts.payments.store');
                 Route::get('contracts/{contract}/vouchers', [\App\Http\Controllers\ContractController::class, 'getVouchers'])->name('contracts.vouchers');
                 Route::post('contracts/{contract}/vouchers/bulk-approve', [\App\Http\Controllers\ContractController::class, 'bulkApproveVouchers'])->name('contracts.vouchers.bulk-approve');
@@ -136,6 +136,21 @@ Route::middleware([
                 Route::get('api/contracts/{contract}/pallets/{pallet}/items', [\App\Http\Controllers\DeliveryController::class, 'getPalletItems'])->name('api.contracts.pallets.items');
                 Route::get('api/contracts/{contract}/pallets/{pallet}/items/{item}/variants', [\App\Http\Controllers\DeliveryController::class, 'getItemVariants'])->name('api.contracts.pallets.items.variants');
 
+                // Sales
+                Route::prefix('sales')->name('sales.')->group(function () {
+                    Route::post('services/bulk-destroy', [\App\Http\Controllers\Sales\ServiceController::class, 'bulkDestroy'])->name('services.bulk-destroy');
+                    Route::post('services/bulk-status', [\App\Http\Controllers\Sales\ServiceController::class, 'bulkUpdateStatus'])->name('services.bulk-status');
+                    Route::resource('services', \App\Http\Controllers\Sales\ServiceController::class);
+                    
+                    Route::post('services-categories', [\App\Http\Controllers\Sales\ServiceController::class, 'storeCategory'])->name('services-categories.store');
+                    Route::put('services-categories/{category}', [\App\Http\Controllers\Sales\ServiceController::class, 'updateCategory'])->name('services-categories.update');
+                    Route::delete('services-categories/{category}', [\App\Http\Controllers\Sales\ServiceController::class, 'destroyCategory'])->name('services-categories.destroy');
+
+                    Route::post('invoices/{invoice}/approve', [\App\Http\Controllers\Accounting\SalesInvoiceController::class, 'approve'])->name('invoices.approve');
+                    Route::post('invoices/{invoice}/unapprove', [\App\Http\Controllers\Accounting\SalesInvoiceController::class, 'unapprove'])->name('invoices.unapprove');
+                    Route::resource('invoices', \App\Http\Controllers\Accounting\SalesInvoiceController::class);
+                });
+
                 // Settings Sub-module
                 Route::prefix('settings')->name('settings.')->group(function () {
                     Route::get('/', [\App\Http\Controllers\SettingsController::class, 'index'])->name('index');
@@ -155,6 +170,25 @@ Route::middleware([
                     Route::put('terms/blocks/{block}', [\App\Http\Controllers\Settings\TermController::class, 'updateBlock'])->name('terms.blocks.update');
                     Route::resource('seasons', \App\Http\Controllers\Settings\SeasonController::class)->except(['create', 'edit']);
                     Route::put('seasons/{season}/blocks/{block}', [\App\Http\Controllers\Settings\SeasonController::class, 'updateBlock'])->name('seasons.blocks.update');
+                });
+
+                // Accounting Sub-module
+                Route::prefix('accounting')->name('accounting.')->group(function () {
+                    Route::get('/', [\App\Http\Controllers\Accounting\DashboardController::class, 'index'])->name('index');
+                    Route::resource('accounts', \App\Http\Controllers\Accounting\AccountController::class);
+                    Route::post('financial-vouchers/{financial_voucher}/approve', [\App\Http\Controllers\Accounting\FinancialVoucherController::class, 'approve'])->name('financial-vouchers.approve');
+                    Route::post('financial-vouchers/{financial_voucher}/unapprove', [\App\Http\Controllers\Accounting\FinancialVoucherController::class, 'unapprove'])->name('financial-vouchers.unapprove');
+                    Route::resource('financial-vouchers', \App\Http\Controllers\Accounting\FinancialVoucherController::class);
+                    Route::post('journal-entries/bulk-action', [\App\Http\Controllers\Accounting\JournalEntryController::class, 'bulkAction'])->name('journal-entries.bulk-action');
+                    Route::post('journal-entries/{journal_entry}/post', [\App\Http\Controllers\Accounting\JournalEntryController::class, 'postEntry'])->name('journal-entries.post');
+                    Route::resource('journal-entries', \App\Http\Controllers\Accounting\JournalEntryController::class);
+                    
+                    // Reports
+                    Route::prefix('reports')->name('reports.')->group(function () {
+                        Route::get('account-statement', [\App\Http\Controllers\Accounting\ReportController::class, 'accountStatement'])->name('account-statement');
+                        Route::get('trial-balance', [\App\Http\Controllers\Accounting\ReportController::class, 'trialBalance'])->name('trial-balance');
+                        Route::get('income-statement', [\App\Http\Controllers\Accounting\ReportController::class, 'incomeStatement'])->name('income-statement');
+                    });
                 });
             });
         });

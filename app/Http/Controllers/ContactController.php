@@ -7,10 +7,12 @@ use App\Models\Contact;
 use App\Models\Customer;
 
 use App\Traits\ApiResponse;
+use App\Traits\ValidatesSecureDeletion;
 
 class ContactController extends Controller
 {
     use ApiResponse;
+    use ValidatesSecureDeletion;
 
     public function store(Request $request, string $customerId)
     {
@@ -54,8 +56,9 @@ class ContactController extends Controller
         return redirect()->back()->with('success', 'تم تحديث جهة الاتصال.');
     }
 
-    public function destroy(string $customerId, string $contactId)
+    public function destroy(Request $request, string $customerId, string $contactId)
     {
+        $this->validateSecureDelete($request);
         $contact = Contact::where('customer_id', $customerId)->findOrFail($contactId);
         $contact->delete();
 

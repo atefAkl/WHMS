@@ -11,6 +11,8 @@ import {
     ChevronRight,
 } from "lucide-react";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
@@ -23,16 +25,18 @@ export default function InventoryCategories({ auth, categories }) {
     const { lang } = useLang();
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [categoryToEdit, setCategoryToEdit] = useState(null);
-    const [categoryToDelete, setCategoryToDelete] = useState(null);
+
+    const {
+        itemToDelete, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     const {
         data,
         setData,
         post,
         put,
-        delete: destroy,
         processing,
         errors,
         reset,
@@ -115,18 +119,11 @@ export default function InventoryCategories({ auth, categories }) {
         setIsFormModalOpen(true);
     };
 
-    const openDeleteModal = (category) => {
-        setCategoryToDelete(category);
-        setIsDeleteModalOpen(true);
-    };
-
     const closeModals = () => {
         setIsFormModalOpen(false);
-        setIsDeleteModalOpen(false);
         setTimeout(() => {
             reset();
             setCategoryToEdit(null);
-            setCategoryToDelete(null);
             clearErrors();
         }, 200);
     };
@@ -142,13 +139,6 @@ export default function InventoryCategories({ auth, categories }) {
                 onSuccess: () => closeModals(),
             });
         }
-    };
-
-    const deleteCategory = () => {
-        if (!categoryToDelete) return;
-        destroy(route("settings.inventory-categories.destroy", categoryToDelete.id), {
-            onSuccess: () => closeModals(),
-        });
     };
 
     const breadcrumbs = (
@@ -301,7 +291,7 @@ export default function InventoryCategories({ auth, categories }) {
                                                             }
                                                         >
                                                             <button
-                                                                onClick={() => openDeleteModal(category)}
+                                                                onClick={() => requestDelete(route("settings.inventory-categories.destroy", category.id), category)}
                                                                 className="p-1.5 rounded-none text-text-muted hover:text-danger hover:bg-danger/10 border border-transparent hover:border-danger/20 transition-colors inline-flex items-center justify-center"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -430,41 +420,21 @@ export default function InventoryCategories({ auth, categories }) {
             </Modal>
 
             {/* Delete Modal */}
-            <Modal
-                show={isDeleteModalOpen}
-                onClose={closeModals}
-                maxWidth="sm"
-            >
-                <div className="p-6 text-center space-y-4">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-none bg-danger/10 border border-danger/25">
-                        <Trash2 className="h-6 w-6 text-danger" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-text">
-                            {lang === "ar"
-                                ? "حذف فئة الأصناف"
-                                : "Delete Category"}
-                        </h3>
-                        <p className="text-sm text-text-muted mt-2">
-                            {lang === "ar"
-                                ? "هل أنت متأكد من حذف فئة"
-                                : "Are you sure you want to delete"}{" "}
-                            <span className="font-bold text-text">
-                                {categoryToDelete?.name}
-                            </span>
-                            ؟
-                        </p>
-                    </div>
-                    <div className="flex justify-center gap-3 pt-2">
-                        <SecondaryButton onClick={closeModals} className="rounded-none">
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton onClick={deleteCategory} className="rounded-none">
-                            {lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"}
-                        </DangerButton>
-                    </div>
-                </div>
-            </Modal>
+            <ConfirmationModal
+                show={!!itemToDelete}
+                title={lang === "ar" ? "حذف فئة الأصناف" : "Delete Category"}
+                message={
+                    (lang === "ar" ? "هل أنت متأكد من حذف فئة " : "Are you sure you want to delete ") +
+                    (itemToDelete?.name || "") + "؟"
+                }
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={deleteProcessing}
+            />
         </AuthenticatedLayout>
     );
 }

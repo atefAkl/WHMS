@@ -18,11 +18,12 @@ import {
     CheckCircle2,
     ChevronUp,
     ChevronDown,
-    ShieldAlert,
     Printer,
     RefreshCw,
 } from "lucide-react";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
@@ -105,10 +106,16 @@ export default function CreateEdit({
     const [isGeneralCollapsed, setIsGeneralCollapsed] = useState(isEdit);
 
     // Deletion Modal state
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteError, setDeleteError] = useState("");
-    const [processingDelete, setProcessingDelete] = useState(false);
+    const {
+        itemToDelete: deleteItem,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: processingDelete,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     // Keyboard navigation refs
     const palletSelectRef = useRef(null);
@@ -215,7 +222,7 @@ export default function CreateEdit({
             } else if (e.code === "KeyD") {
                 e.preventDefault();
                 if (delivery) {
-                    setIsDeleteModalOpen(true);
+                    requestDelete(route("deliveries.destroy", delivery.id), delivery);
                 }
             }
         };
@@ -748,40 +755,7 @@ export default function CreateEdit({
         setIsGeneralCollapsed(true);
     };
 
-    const confirmDelete = (e) => {
-        if (e) e.preventDefault();
-        setDeleteError("");
-        setProcessingDelete(true);
-
-        router.post(
-            route("deliveries.destroy", delivery.id),
-            {
-                _method: "DELETE",
-                password: deletePassword,
-            },
-            {
-                onSuccess: () => {
-                    setIsDeleteModalOpen(false);
-                    setDeletePassword("");
-                    setProcessingDelete(false);
-                },
-                onError: (errs) => {
-                    setProcessingDelete(false);
-                    if (errs.error) {
-                        setDeleteError(errs.error);
-                    } else if (errs.password) {
-                        setDeleteError(errs.password);
-                    } else {
-                        setDeleteError(
-                            lang === "ar"
-                                ? "حدث خطأ ما."
-                                : "An error occurred.",
-                        );
-                    }
-                },
-            },
-        );
-    };
+    // confirmDelete logic handled by useSecureDelete hook
 
     const handleCreateDriver = (e) => {
         e.preventDefault();
@@ -2236,108 +2210,22 @@ export default function CreateEdit({
             </Modal>
 
             {/* Delete Confirmation Modal */}
-            <Modal
-                show={isDeleteModalOpen}
-                onClose={() => {
-                    setIsDeleteModalOpen(false);
-                    setDeletePassword("");
-                    setDeleteError("");
-                }}
-            >
-                <div
-                    className="p-6 font-main"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
-                >
-                    <div className="flex items-center gap-3 text-danger mb-4">
-                        <ShieldAlert className="h-6 w-6" />
-                        <h3 className="text-sm font-bold">
-                            {lang === "ar"
-                                ? "تأكيد حذف مسودة سند التسليم"
-                                : "Confirm Delete Draft Note"}
-                        </h3>
-                    </div>
-
-                    <p className="text-xs text-text mb-4">
-                        {lang === "ar"
-                            ? `هل أنت متأكد من رغبتك في حذف مسودة سند التسليم ${delivery?.serial_number} نهائياً؟`
-                            : `Are you sure you want to delete draft note ${delivery?.serial_number}?`}
-                    </p>
-
-                    <form onSubmit={confirmDelete} className="space-y-4">
-                        <div>
-                            <InputLabel
-                                value={
-                                    lang === "ar"
-                                        ? "رمز التأكيد الأمني (كلمة المرور)"
-                                        : "Security Password"
-                                }
-                            />
-                            <TextInput
-                                type="password"
-                                className="w-full text-xs mt-1"
-                                placeholder="••••••••"
-                                value={deletePassword}
-                                onChange={(e) =>
-                                    setDeletePassword(e.target.value)
-                                }
-                                required
-                            />
-                            {deleteError && (
-                                <span className="text-xs text-danger mt-1 block">
-                                    {deleteError}
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-2">
-                            <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsDeleteModalOpen(false);
-                                        setDeletePassword("");
-                                        setDeleteError("");
-                                    }}
-                                    className={`border border-border bg-surface text-text hover:bg-surface-muted rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
-                                >
-                                    <X className="h-4 w-4" />
-                                    {showButtonText && (
-                                        <span>
-                                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                                        </span>
-                                    )}
-                                </button>
-                            </Tooltip>
-                            <Tooltip
-                                text={
-                                    lang === "ar"
-                                        ? "تأكيد الحذف"
-                                        : "Confirm Delete"
-                                }
-                            >
-                                <button
-                                    type="submit"
-                                    disabled={processingDelete}
-                                    className={`bg-danger hover:bg-danger-hover text-white rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${showButtonText ? "px-3" : "w-[30px] p-0"} disabled:opacity-50`}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    {showButtonText && (
-                                        <span>
-                                            {processingDelete
-                                                ? lang === "ar"
-                                                    ? "جاري الحذف..."
-                                                    : "Deleting..."
-                                                : lang === "ar"
-                                                  ? "تأكيد الحذف"
-                                                  : "Confirm Delete"}
-                                        </span>
-                                    )}
-                                </button>
-                            </Tooltip>
-                        </div>
-                    </form>
-                </div>
-            </Modal>
+            <ConfirmationModal
+                show={!!deleteItem}
+                title={lang === "ar" ? "تأكيد حذف مسودة سند التسليم" : "Confirm Delete Draft Note"}
+                message={
+                    lang === "ar"
+                        ? `هل أنت متأكد من رغبتك في حذف مسودة سند التسليم ${delivery?.serial_number} نهائياً؟`
+                        : `Are you sure you want to delete draft note ${delivery?.serial_number}?`
+                }
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={processingDelete}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -28,6 +28,8 @@ import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
 import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 
 export default function Index({ deliveries = { data: [] }, customers = [], contracts = [], filters = {} }) {
     const { lang } = useLang();
@@ -41,11 +43,23 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
     const [dateFrom, setDateFrom] = useState(filters.date_from || "");
     const [dateTo, setDateTo] = useState(filters.date_to || "");
     
-    // Action security credentials modal
-    const [actionTarget, setActionTarget] = useState(null); // { type: 'delete'|'approve'|'reopen', item }
+    // Action security credentials modal (approve/reopen)
+    const [actionTarget, setActionTarget] = useState(null); // { type: 'approve'|'reopen', item }
     const [securePassword, setSecurePassword] = useState("");
     const [actionError, setActionError] = useState("");
     const [processingAction, setProcessingAction] = useState(false);
+
+    // Delete Hook
+    const {
+        itemToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: deleteProcessing,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -83,11 +97,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
         let url = "";
         let dataPayload = {};
 
-        if (type === "delete") {
-            url = route("deliveries.destroy", item.id);
-            dataPayload._method = "DELETE";
-            dataPayload.password = securePassword;
-        } else if (type === "approve") {
+        if (type === "approve") {
             url = route("deliveries.approve", item.id);
         } else if (type === "reopen") {
             url = route("deliveries.reopen", item.id);
@@ -377,7 +387,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                                 <Tooltip text={lang === "ar" ? "حذف السند" : "Delete Note"}>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setActionTarget({ type: 'delete', item })}
+                                                                        onClick={() => requestDelete(route("deliveries.destroy", item.id), item)}
                                                                         className={`p-1.5 text-danger hover:bg-danger/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-2.5' : 'w-[30px]'}`}
                                                                     >
                                                                         <Trash2 className="h-4 w-4" />
@@ -457,14 +467,12 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                     <div className="flex items-center gap-3 text-danger mb-4">
                         <ShieldAlert className="h-6 w-6" />
                         <h3 className="text-sm font-bold">
-                            {actionTarget?.type === "delete" && (lang === "ar" ? "تأكيد حذف سند التسليم" : "Confirm Delete")}
                             {actionTarget?.type === "approve" && (lang === "ar" ? "اعتماد سند الخروج" : "Approve Delivery Note")}
                             {actionTarget?.type === "reopen" && (lang === "ar" ? "إلغاء الاعتماد وإعادة السند لمسودة" : "Reopen Delivery Note")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text mb-4">
-                        {actionTarget?.type === "delete" && (lang === "ar" ? `هل أنت متأكد من رغبتك في حذف السند ${actionTarget?.item?.serial_number}؟` : `Are you sure you want to delete delivery note ${actionTarget?.item?.serial_number}?`)}
                         {actionTarget?.type === "approve" && (lang === "ar" ? `هل تريد اعتماد السند ${actionTarget?.item?.serial_number} نهائياً؟ هذا سيخصم الأرصدة من الطبالي ويغلق السند.` : `Are you sure you want to approve delivery note ${actionTarget?.item?.serial_number}? This will lock the document and deduct stocks.`)}
                         {actionTarget?.type === "reopen" && (lang === "ar" ? `هل تريد إلغاء اعتماد السند ${actionTarget?.item?.serial_number}؟ سيتم إرجاع السند لحالة المسودة وإمكانية تعديله.` : `Are you sure you want to revert delivery note ${actionTarget?.item?.serial_number} to draft?`)}
                     </p>
@@ -498,9 +506,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                             </Tooltip>
 
                             <Tooltip text={
-                                actionTarget?.type === "delete"
-                                    ? (lang === "ar" ? "تأكيد الحذف" : "Confirm Delete")
-                                    : actionTarget?.type === "approve"
+                                actionTarget?.type === "approve"
                                     ? (lang === "ar" ? "تأكيد الاعتماد" : "Confirm Approve")
                                     : (lang === "ar" ? "تأكيد إعادة الفتح" : "Confirm Reopen")
                             }>
@@ -508,14 +514,11 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                     type="submit"
                                     disabled={processingAction}
                                     className={`rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${
-                                        actionTarget?.type === "delete"
-                                            ? "bg-danger hover:bg-danger-hover text-white"
-                                            : actionTarget?.type === "approve"
+                                        actionTarget?.type === "approve"
                                             ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                                             : "bg-amber-600 hover:bg-amber-700 text-white"
                                     } ${showButtonText ? 'px-3' : 'w-[30px] p-0'} disabled:opacity-50`}
                                 >
-                                    {actionTarget?.type === "delete" && <Trash2 className="h-4 w-4" />}
                                     {actionTarget?.type === "approve" && <CheckCircle2 className="h-4 w-4" />}
                                     {actionTarget?.type === "reopen" && <Unlock className="h-4 w-4" />}
 
@@ -523,8 +526,6 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                         <span>
                                             {processingAction
                                                 ? (lang === "ar" ? "جاري المعالجة..." : "Processing...")
-                                                : actionTarget?.type === "delete"
-                                                ? (lang === "ar" ? "تأكيد الحذف" : "Confirm Delete")
                                                 : actionTarget?.type === "approve"
                                                 ? (lang === "ar" ? "تأكيد الاعتماد" : "Confirm Approve")
                                                 : (lang === "ar" ? "تأكيد إعادة الفتح" : "Confirm Reopen")}
@@ -536,6 +537,25 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                     </form>
                 </div>
             </Modal>
+
+            {/* Confirm Secure Delete Modal */}
+            <ConfirmationModal
+                show={!!itemToDelete}
+                title={lang === "ar" ? "تأكيد حذف سند التسليم" : "Confirm Delete"}
+                message={lang === "ar" 
+                    ? `هل أنت متأكد من رغبتك في حذف السند ${itemToDelete?.serial_number}؟ هذا الإجراء يتطلب كلمة مرور العمليات.` 
+                    : `Are you sure you want to delete delivery note ${itemToDelete?.serial_number}? This requires secure operations password.`}
+                confirmLabel={lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"}
+                cancelLabel={lang === "ar" ? "إلغاء" : "Cancel"}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                processing={deleteProcessing}
+                type="danger"
+            />
         </AuthenticatedLayout>
     );
 }

@@ -11,9 +11,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Traits\ValidatesSecureDeletion;
 
 class ExitAuthorizationController extends Controller
 {
+    use ValidatesSecureDeletion;
+
     public function index(Request $request)
     {
         $query = ExitAuthorization::with(['customer', 'contract', 'items.inventoryItem', 'items.inventoryItemVariant'])
@@ -267,18 +270,7 @@ class ExitAuthorizationController extends Controller
 
     public function destroy(Request $request, ExitAuthorization $exitAuthorization)
     {
-        $request->validate([
-            'password' => 'required|string',
-        ]);
-
-        $user = auth()->user();
-        if (empty($user->secure_password)) {
-            return redirect()->back()->with('error', 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.');
-        }
-
-        if (!Hash::check($request->password, $user->secure_password)) {
-            return redirect()->back()->with('error', 'كلمة مرور تأكيد الحذف غير صحيحة.');
-        }
+        $this->validateSecureDelete($request);
 
         if ($exitAuthorization->status !== 'pending') {
             return redirect()->back()->with('error', 'يمكن فقط حذف الأذونات المعلقة.');

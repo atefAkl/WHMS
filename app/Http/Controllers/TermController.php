@@ -6,10 +6,12 @@ use Inertia\Inertia;
 use App\Models\Term;
 use App\Models\Season;
 use App\Traits\ApiResponse;
+use App\Traits\ValidatesSecureDeletion;
 
 class TermController extends Controller
 {
     use ApiResponse;
+    use ValidatesSecureDeletion;
 
     public function index()
     {
@@ -42,8 +44,9 @@ class TermController extends Controller
         return $this->successResponse($term, 'Term updated successfully');
     }
 
-    public function destroy(Term $term)
+    public function destroy(Request $request, Term $term)
     {
+        $this->validateSecureDelete($request);
         $term->delete();
         return $this->successResponse(null, 'Term deleted successfully');
     }

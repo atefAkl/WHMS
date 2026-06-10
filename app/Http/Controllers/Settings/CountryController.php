@@ -7,9 +7,11 @@ use App\Models\Country;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Artisan;
+use App\Traits\ValidatesSecureDeletion;
 
 class CountryController extends Controller
 {
+    use ValidatesSecureDeletion;
     public function index(Request $request)
     {
         $query = Country::query();
@@ -57,8 +59,9 @@ class CountryController extends Controller
         return redirect()->back()->with('success', 'Country updated successfully.');
     }
 
-    public function destroy(Country $country)
+    public function destroy(Request $request, Country $country)
     {
+        $this->validateSecureDelete($request);
         $country->delete();
         return redirect()->back()->with('success', 'Country deleted successfully.');
     }

@@ -28,7 +28,10 @@ import {
     Activity,
     UserCircle,
     Banknote,
-    UsersRound
+    UsersRound,
+    FolderTree,
+    Scale,
+    PieChart
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -69,17 +72,21 @@ const tenantNavItems = [
             { name: { ar: 'العملاء', en: 'Customers' }, icon: UsersRound, route: 'customers.index', active: 'customers.*' },
             { name: { ar: 'العقود', en: 'Contracts' }, icon: FileText, route: 'contracts.index', active: 'contracts.*' },
             { name: { ar: 'الفواتير', en: 'Invoices' }, icon: Receipt, route: 'dashboard', active: 'invoices.*' },
-            { name: { ar: 'الخدمات', en: 'Services' }, icon: Wrench, route: 'dashboard', active: 'services.*' },
+            { name: { ar: 'الخدمات', en: 'Services' }, icon: Wrench, route: 'sales.services.index', active: 'sales.services.*' },
         ],
     },
     {
         name: { ar: 'المالية', en: 'Finance' },
         icon: CircleDollarSign,
-        active: 'finance.*',
+        active: 'accounting.*',
         children: [
-            { name: { ar: 'الحسابات العامة', en: 'General Ledger' }, icon: BookOpen, route: 'dashboard', active: 'accounts.*' },
-            { name: { ar: 'السندات', en: 'Vouchers' }, icon: FileSpreadsheet, route: 'dashboard', active: 'vouchers.*' },
-            { name: { ar: 'التقارير', en: 'Reports' }, icon: LineChart, route: 'dashboard', active: 'finance.reports.*' },
+            { name: { ar: 'الرئيسية', en: 'Dashboard' }, icon: LayoutDashboard, route: 'accounting.index', active: 'accounting.index' },
+            { name: { ar: 'السندات المالية', en: 'Financial Vouchers' }, icon: Receipt, route: 'accounting.financial-vouchers.index', active: 'accounting.financial-vouchers.*' },
+            { name: { ar: 'شجرة الحسابات', en: 'Chart of Accounts' }, icon: FolderTree, route: 'accounting.accounts.index', active: 'accounting.accounts.*' },
+            { name: { ar: 'القيود اليومية', en: 'Journal Entries' }, icon: BookOpen, route: 'accounting.journal-entries.index', active: 'accounting.journal-entries.*' },
+            { name: { ar: 'كشف حساب', en: 'Account Statement' }, icon: FileText, route: 'accounting.reports.account-statement', active: 'accounting.reports.account-statement' },
+            { name: { ar: 'ميزان المراجعة', en: 'Trial Balance' }, icon: Scale, route: 'accounting.reports.trial-balance', active: 'accounting.reports.trial-balance' },
+            { name: { ar: 'قائمة الدخل', en: 'Income Statement' }, icon: PieChart, route: 'accounting.reports.income-statement', active: 'accounting.reports.income-statement' },
         ],
     },
     {

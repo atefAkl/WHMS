@@ -8,9 +8,11 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 use App\Models\Term;
+use App\Traits\ValidatesSecureDeletion;
 
 class SeasonController extends Controller
 {
+    use ValidatesSecureDeletion;
     public function index(Request $request)
     {
         $seasons = Season::latest()->get();
@@ -132,8 +134,9 @@ class SeasonController extends Controller
         return redirect()->back()->with('success', 'تم تحديث جزء العقد بنجاح.');
     }
 
-    public function destroy(Season $season)
+    public function destroy(Request $request, Season $season)
     {
+        $this->validateSecureDelete($request);
         $season->delete();
         return redirect()->back()->with('success', 'تم حذف الموسم بنجاح.');
     }

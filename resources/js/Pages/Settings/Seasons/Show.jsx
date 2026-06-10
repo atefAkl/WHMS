@@ -28,6 +28,8 @@ import {
 import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
 import TextInput from "@/Components/TextInput";
@@ -142,6 +144,17 @@ export default function Show({ season, allTerms, settings, blocks }) {
         showForm: false,
     });
 
+    const {
+        itemToDelete: termToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: processingDelete,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
+
     const openEditTermModal = (term) => {
         setTermToEdit(term);
         setTermEditForm({
@@ -179,23 +192,7 @@ export default function Show({ season, allTerms, settings, blocks }) {
         }
     };
 
-    const deleteTerm = (termId) => {
-        if (
-            confirm(
-                lang === "ar"
-                    ? "هل أنت متأكد من حذف هذا الشرط من الموسم؟"
-                    : "Are you sure you want to delete this term from the season?",
-            )
-        ) {
-            router.delete(route("settings.terms.destroy", termId), {
-                onSuccess: () => {
-                    setSeasonTerms((prev) =>
-                        prev.filter((t) => t.id !== termId),
-                    );
-                },
-            });
-        }
-    };
+    // replaced by useSecureDelete requestDelete
 
     const saveNewTerm = (e) => {
         e.preventDefault();
@@ -941,9 +938,7 @@ export default function Show({ season, allTerms, settings, blocks }) {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() =>
-                                                                        deleteTerm(
-                                                                            term.id,
-                                                                        )
+                                                                        requestDelete(route("settings.terms.destroy", term.id), term)
                                                                     }
                                                                     className="p-1 rounded-md text-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors"
                                                                     title={
@@ -1316,6 +1311,24 @@ export default function Show({ season, allTerms, settings, blocks }) {
                     </div>
                 </form>
             </Modal>
+
+            {/* Term Delete Modal */}
+            <ConfirmationModal
+                show={!!termToDelete}
+                title={lang === "ar" ? "تأكيد حذف الشرط" : "Confirm Term Deletion"}
+                message={termToDelete?.text_ar || termToDelete?.text_en}
+                onConfirm={() => confirmDelete(() => {
+                    if (termToDelete) {
+                        setSeasonTerms((prev) => prev.filter((t) => t.id !== termToDelete.id));
+                    }
+                })}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={processingDelete}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -10,12 +10,11 @@ import {
     Trash2,
     Search,
     Filter,
-    ShieldAlert,
-    CheckCircle2,
     FileCheck,
     RefreshCw
 } from "lucide-react";
-import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
@@ -33,11 +32,16 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
     const [dateFrom, setDateFrom] = useState(filters.date_from || "");
     const [dateTo, setDateTo] = useState(filters.date_to || "");
     
-    // Deletion Security Password Modal
-    const [authToDelete, setAuthToDelete] = useState(null);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteError, setDeleteError] = useState("");
-    const [processingDelete, setProcessingDelete] = useState(false);
+    const {
+        itemToDelete: authToDelete,
+        deletePassword,
+        setDeletePassword,
+        deleteError,
+        processing: processingDelete,
+        requestDelete,
+        confirmDelete,
+        cancelDelete
+    } = useSecureDelete();
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -64,38 +68,6 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
         setDateTo("");
         router.get(route("exit-authorizations.index"));
     };
-
-    const confirmDelete = (e) => {
-        e.preventDefault();
-        setDeleteError("");
-        setProcessingDelete(true);
-
-        router.post(
-            route("exit-authorizations.destroy", authToDelete.id),
-            {
-                _method: "DELETE",
-                password: deletePassword,
-            },
-            {
-                onSuccess: () => {
-                    setAuthToDelete(null);
-                    setDeletePassword("");
-                    setProcessingDelete(false);
-                },
-                onError: (errs) => {
-                    setProcessingDelete(false);
-                    if (errs.error) {
-                        setDeleteError(errs.error);
-                    } else if (errs.password) {
-                        setDeleteError(errs.password);
-                    } else {
-                        setDeleteError(lang === "ar" ? "حدث خطأ ما." : "An error occurred.");
-                    }
-                },
-            }
-        );
-    };
-
     const breadcrumbs = (
         <div className="flex items-center gap-[6px] text-xs text-text-muted">
             <Home className="h-3.5 w-3.5" />
@@ -333,7 +305,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                                                 <Tooltip text={lang === "ar" ? "حذف الإذن" : "Delete Authorization"}>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => setAuthToDelete(item)}
+                                                                        onClick={() => requestDelete(route("exit-authorizations.destroy", item.id), item)}
                                                                         className="p-1.5 text-danger hover:bg-danger/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] w-[30px]"
                                                                     >
                                                                         <Trash2 className="h-4 w-4" />
@@ -387,47 +359,22 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                 )}
             </div>
 
-            {/* Deletion confirmation modal */}
-            <Modal show={!!authToDelete} onClose={() => { setAuthToDelete(null); setDeletePassword(""); setDeleteError(""); }}>
-                <div className="p-6 font-main" dir={lang === "ar" ? "rtl" : "ltr"}>
-                    <div className="flex items-center gap-3 text-danger mb-4">
-                        <ShieldAlert className="h-6 w-6" />
-                        <h3 className="text-sm font-bold">
-                            {lang === "ar" ? "تأكيد حذف إذن الخروج" : "Confirm Delete Authorization"}
-                        </h3>
-                    </div>
-
-                    <p className="text-xs text-text mb-4">
-                        {lang === "ar"
-                            ? `هل أنت متأكد من رغبتك في حذف إذن الخروج ${authToDelete?.serial_number}؟ لا يمكن التراجع عن هذا الإجراء.`
-                            : `Are you sure you want to delete authorization ${authToDelete?.serial_number}? This action cannot be undone.`}
-                    </p>
-
-                    <form onSubmit={confirmDelete} className="space-y-4">
-                        <div>
-                            <InputLabel value={lang === "ar" ? "رمز التأكيد الأمني (كلمة مرور الحفظ/الحذف)" : "Security Password"} />
-                            <TextInput
-                                type="password"
-                                className="w-full text-xs rounded-none mt-1"
-                                placeholder="••••••••"
-                                value={deletePassword}
-                                onChange={(e) => setDeletePassword(e.target.value)}
-                                required
-                            />
-                            {deleteError && <span className="text-xs text-danger mt-1 block">{deleteError}</span>}
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-2">
-                            <SecondaryButton onClick={() => { setAuthToDelete(null); setDeletePassword(""); setDeleteError(""); }}>
-                                {lang === "ar" ? "إلغاء" : "Cancel"}
-                            </SecondaryButton>
-                            <DangerButton type="submit" disabled={processingDelete}>
-                                {processingDelete ? (lang === "ar" ? "جاري الحذف..." : "Deleting...") : (lang === "ar" ? "تأكيد الحذف النهائي" : "Confirm Delete")}
-                            </DangerButton>
-                        </div>
-                    </form>
-                </div>
-            </Modal>
+            <ConfirmationModal
+                show={!!authToDelete}
+                title={lang === "ar" ? "تأكيد حذف إذن الخروج" : "Confirm Delete Authorization"}
+                message={
+                    lang === "ar"
+                        ? `هل أنت متأكد من رغبتك في حذف إذن الخروج ${authToDelete?.serial_number}؟ لا يمكن التراجع عن هذا الإجراء.`
+                        : `Are you sure you want to delete authorization ${authToDelete?.serial_number}? This action cannot be undone.`
+                }
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={processingDelete}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -15,9 +15,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Traits\ValidatesSecureDeletion;
 
 class DeliveryController extends Controller
 {
+    use ValidatesSecureDeletion;
+
     public function index(Request $request)
     {
         $query = Delivery::with(['customer', 'contract', 'driver', 'representative', 'period', 'exitAuthorization'])
@@ -281,18 +284,7 @@ class DeliveryController extends Controller
 
     public function destroy(Request $request, Delivery $delivery)
     {
-        $request->validate([
-            'password' => 'required|string',
-        ]);
-
-        $user = auth()->user();
-        if (empty($user->secure_password)) {
-            return redirect()->back()->with('error', 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.');
-        }
-
-        if (!Hash::check($request->password, $user->secure_password)) {
-            return redirect()->back()->with('error', 'كلمة مرور تأكيد الحذف غير صحيحة.');
-        }
+        $this->validateSecureDelete($request);
 
         DB::transaction(function () use ($delivery) {
             // If it was approved, and had an exit authorization, make exit auth pending again

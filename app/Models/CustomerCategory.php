@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomerCategory extends Model
 {
-    protected $fillable = ['parent_id', 'name_ar', 'name_en'];
+    protected $fillable = ['parent_id', 'name_ar', 'name_en', 'account_id'];
 
     public function parent()
     {
@@ -21,5 +21,10 @@ class CustomerCategory extends Model
     public function customers()
     {
         return $this->hasMany(Customer::class, 'category_id');
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class, 'account_id');
     }
 }

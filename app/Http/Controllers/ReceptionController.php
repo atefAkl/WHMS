@@ -13,9 +13,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Traits\ValidatesSecureDeletion;
 
 class ReceptionController extends Controller
 {
+    use ValidatesSecureDeletion;
+
     public function index(Request $request)
     {
         $query = Reception::with(['customer', 'contract', 'driver', 'representative', 'period'])
@@ -308,18 +311,7 @@ class ReceptionController extends Controller
 
     public function destroy(Request $request, Reception $reception)
     {
-        $request->validate([
-            'password' => 'required|string',
-        ]);
-
-        $user = auth()->user();
-        if (empty($user->secure_password)) {
-            return redirect()->back()->with('error', 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.');
-        }
-
-        if (!Hash::check($request->password, $user->secure_password)) {
-            return redirect()->back()->with('error', 'كلمة مرور تأكيد الحذف غير صحيحة.');
-        }
+        $this->validateSecureDelete($request);
 
         DB::transaction(function () use ($reception) {
             // Delete entries and reception

@@ -39,7 +39,7 @@ class ContractPeriod extends Model
 
     public function invoices()
     {
-        return $this->hasMany(ContractInvoice::class, 'period_id');
+        return $this->hasMany(SalesInvoice::class, 'period_id');
     }
 
     public function payments()

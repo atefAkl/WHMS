@@ -18,9 +18,12 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\ContractStoreRequest;
 use App\Services\ContractService;
+use App\Traits\ValidatesSecureDeletion;
 
 class ContractController extends Controller
 {
+    use ValidatesSecureDeletion;
+
     protected $contractService;
 
     public function __construct(ContractService $contractService)
@@ -145,6 +148,8 @@ class ContractController extends Controller
             'terms',
             'payments.period',
             'payments.invoice',
+            'vouchers.primaryAccount',
+            'vouchers.counterAccount',
             'periods.items.storageItem',
             'contractAgents.contact',
             'invoices.period',
@@ -182,6 +187,7 @@ class ContractController extends Controller
         $settings = ContractSetting::pluck('value', 'key')->all();
         $storageItems = StorageItem::where('is_active', true)->get();
         $allTerms = Term::orderBy('sort_order')->get();
+        $accounts = \App\Models\Account::where('is_transactional', true)->where('is_active', true)->orderBy('code')->get();
 
         $centralConnection = config('tenancy.database.central_connection');
         $centralTableColumns = DB::connection($centralConnection)->table('admin_settings')->where('key', 'admin_table_columns')->value('value');
@@ -194,7 +200,7 @@ class ContractController extends Controller
         ];
 
         return Inertia::render('Contracts/Show', [
-            ...compact('contract', 'settings', 'storageItems', 'allTerms', 'tableColumns'),
+            ...compact('contract', 'settings', 'storageItems', 'allTerms', 'tableColumns', 'accounts'),
             'translations' => __('contracts'),
         ]);
     }
@@ -287,8 +293,9 @@ class ContractController extends Controller
         return back()->with('success', __('contracts.messages.cancel_success'));
     }
 
-    public function destroy(Contract $contract)
+    public function destroy(Request $request, Contract $contract)
     {
+        $this->validateSecureDelete($request);
         $customerId = $contract->customer_id;
         $contract->delete();
         return redirect()->route('customers.show', $customerId)->with('success', __('contracts.messages.destroy_success'));
@@ -451,8 +458,9 @@ class ContractController extends Controller
         return back()->with('success', 'تم تحديث حالة الفترة بنجاح.');
     }
 
-    public function destroyPeriod(Contract $contract, ContractPeriod $period)
+    public function destroyPeriod(Request $request, Contract $contract, ContractPeriod $period)
     {
+        $this->validateSecureDelete($request);
         if ($period->contract_id !== $contract->id) {
             abort(404);
         }
@@ -531,7 +539,7 @@ class ContractController extends Controller
     {
         $validated = $request->validate([
             'period_id' => 'required|exists:contract_periods,id',
-            'invoice_number' => 'required|string|unique:contract_invoices,invoice_number',
+            'invoice_number' => 'required|string|unique:sales_invoices,invoice_number',
             'issue_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issue_date',
             'amount' => 'required|numeric|min:0.01',
@@ -547,56 +555,162 @@ class ContractController extends Controller
 
         return back()->with('success', 'تم إصدار الفاتورة بنجاح.');
     }
-
-    public function storePayment(Request $request, Contract $contract)
+    public function storeInvoiceFromPeriod(Request $request, Contract $contract)
     {
         $validated = $request->validate([
             'period_id' => 'required|exists:contract_periods,id',
+            'invoice_number' => 'nullable|string|unique:sales_invoices,invoice_number',
+            'date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        \DB::beginTransaction();
+        try {
+            $period = \App\Models\ContractPeriod::findOrFail($validated['period_id']);
+            $date = $validated['date'] ?? now()->format('Y-m-d');
+
+            $year = \Carbon\Carbon::parse($date)->format('y');
+            $month = \Carbon\Carbon::parse($date)->format('m');
+            
+            $lastInvoice = \App\Models\SalesInvoice::whereMonth('date', $month)
+                ->whereYear('date', \Carbon\Carbon::parse($date)->format('Y'))
+                ->orderBy('id', 'desc')
+                ->first();
+            
+            $serial = $lastInvoice ? intval(substr($lastInvoice->invoice_number, -4)) + 1 : 1;
+            $refNumber = $validated['invoice_number'] ?? ("INV-{$year}{$month}-" . str_pad($serial, 4, '0', STR_PAD_LEFT));
+
+            // Calculate subtotal from contract items (or period items if they exist)
+            $subtotal = $contract->items->sum(function ($item) {
+                return $item->price * $item->quantity;
+            }) ?: 0;
+            
+            $taxRate = 15;
+            $taxAmount = $subtotal * ($taxRate / 100);
+
+            $invoice = \App\Models\SalesInvoice::create([
+                'invoice_number' => $refNumber,
+                'customer_id' => $contract->customer_id,
+                'contract_id' => $contract->id,
+                'period_id' => $period->id,
+                'date' => $validated['date'],
+                'due_date' => clone \Carbon\Carbon::parse($validated['date'])->addDays(30),
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $subtotal + $taxAmount,
+                'status' => 'draft',
+                'created_by' => auth()->id(),
+            ]);
+
+            \App\Models\SalesInvoiceLine::create([
+                'sales_invoice_id' => $invoice->id,
+                'description' => $validated['description'],
+                'account_id' => $validated['revenue_account_id'],
+                'quantity' => 1,
+                'unit_price' => $subtotal,
+                'subtotal' => $subtotal,
+                'tax_rate' => $validated['tax_rate'],
+                'tax_amount' => $taxAmount,
+                'total' => $subtotal + $taxAmount,
+            ]);
+
+            \DB::commit();
+            return redirect()->back()->with('success', 'تم إصدار الفاتورة بنجاح كمسودة');
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء إصدار الفاتورة: ' . $e->getMessage());
+        }
+    }
+    public function storePayment(Request $request, Contract $contract)
+    {
+        $validated = $request->validate([
+            'period_id' => 'nullable|exists:contract_periods,id',
             'amount' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
             'method' => 'required|in:cash,bank_transfer,cheque',
             'reference' => 'nullable|string',
             'notes' => 'nullable|string',
-            'invoice_id' => 'nullable|exists:contract_invoices,id'
+            'invoice_id' => 'nullable|exists:sales_invoices,id',
+            'primary_account_id' => 'required|exists:accounts,id',
         ]);
 
-        $period = $contract->periods()->find($validated['period_id']);
-        if (!$period) {
-            return back()->withErrors(['period_id' => 'الفترة المختارة لا تتبع هذا العقد.']);
+        $period = null;
+        if (!empty($validated['period_id'])) {
+            $period = $contract->periods()->find($validated['period_id']);
+            if (!$period) {
+                return back()->withErrors(['period_id' => 'الفترة المحددة غير صالحة.']);
+            }
         }
 
         $invoice = null;
         if (!empty($validated['invoice_id'])) {
+            // Can pay invoices for this contract (not just this period)
             $invoice = $contract->invoices()
-                ->where('period_id', $validated['period_id'])
                 ->find($validated['invoice_id']);
 
             if (!$invoice) {
-                return back()->withErrors(['invoice_id' => 'الفاتورة المختارة لا تتبع نفس الفترة.']);
+                return back()->withErrors(['invoice_id' => 'الفاتورة المحددة غير صالحة.']);
             }
         }
 
-        $payment = $contract->payments()->create([
-            'period_id' => $validated['period_id'],
-            'invoice_id' => $validated['invoice_id'] ?? null,
-            'amount' => $validated['amount'],
-            'payment_date' => $validated['payment_date'],
-            'method' => $validated['method'],
-            'reference' => $validated['reference'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            // Counterpart account logic: Revenue if invoice selected, else Customer.
+            $customerAccount = \App\Models\Account::where('type', 'asset')->where('name', 'like', '%عملاء%')->first() 
+                ?? \App\Models\Account::where('is_transactional', true)->first();
+            $revenueAccount = \App\Models\Account::where('type', 'revenue')->first();
+            
+            $counterAccountId = ($invoice && $revenueAccount) ? $revenueAccount->id : ($customerAccount ? $customerAccount->id : null);
 
-        if ($invoice) {
-            $invoice->paid_amount += $validated['amount'];
-            if ($invoice->paid_amount >= $invoice->amount) {
-                $invoice->status = 'paid';
-            } elseif ($invoice->paid_amount > 0) {
-                $invoice->status = 'partially_paid';
+            // Generate Voucher Number
+            $year = \Carbon\Carbon::parse($validated['payment_date'])->format('y');
+            $month = \Carbon\Carbon::parse($validated['payment_date'])->format('m');
+            $lastVoucher = \App\Models\FinancialVoucher::where('type', 'receipt')
+                ->whereMonth('date', $month)
+                ->whereYear('date', \Carbon\Carbon::parse($validated['payment_date'])->format('Y'))
+                ->orderBy('id', 'desc')
+                ->first();
+            $serial = $lastVoucher ? intval(substr($lastVoucher->voucher_number, -4)) + 1 : 1;
+            $refNumber = "RV-{$year}{$month}-" . str_pad($serial, 4, '0', STR_PAD_LEFT);
+
+            $description = $validated['notes'] ?: "دفعة من العميل لعقد رقم {$contract->contract_number}";
+            if ($invoice) {
+                $description .= " - سداد فاتورة رقم {$invoice->invoice_number}";
             }
-            $invoice->save();
-        }
 
-        return back()->with('success', 'تم تسجيل الدفعة النقدية بنجاح.');
+            $voucher = \App\Models\FinancialVoucher::create([
+                'voucher_number' => $refNumber,
+                'type' => 'receipt',
+                'date' => $validated['payment_date'],
+                'amount' => $validated['amount'],
+                'primary_account_id' => $validated['primary_account_id'],
+                'counter_account_id' => $counterAccountId,
+                'reference' => $validated['reference'] ?? null,
+                'description' => $description,
+                'status' => 'draft',
+                'contract_id' => $contract->id,
+                'customer_id' => $contract->customer_id,
+                'created_by' => auth()->id(),
+            ]);
+
+            if ($invoice || $period) {
+                \App\Models\ContractPayment::create([
+                    'contract_id' => $contract->id,
+                    'period_id' => $period ? $period->id : ($invoice ? $invoice->period_id : null),
+                    'invoice_id' => $invoice ? $invoice->id : null,
+                    'voucher_id' => $voucher->id,
+                    'amount' => $validated['amount'],
+                    'payment_date' => $validated['payment_date'],
+                ]);
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'تم تسجيل الدفعة بنجاح.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return redirect()->back()->with('error', 'حدث خطأ أثناء التسجيل: ' . $e->getMessage());
+        }
     }
 
     public function update(Request $request, Contract $contract)

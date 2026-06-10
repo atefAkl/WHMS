@@ -130,6 +130,10 @@ class Contract extends Model
     {
         return $this->hasMany(ContractPayment::class);
     }
+    public function vouchers()
+    {
+        return $this->hasMany(FinancialVoucher::class);
+    }
     public function periods()
     {
         return $this->hasMany(ContractPeriod::class);
@@ -140,7 +144,7 @@ class Contract extends Model
     }
     public function invoices()
     {
-        return $this->hasMany(ContractInvoice::class);
+        return $this->hasMany(SalesInvoice::class);
     }
     public function season()
     {

@@ -14,6 +14,8 @@ import {
     FileText,
 } from "lucide-react";
 import Modal from "@/Components/Modal";
+import ConfirmationModal from "@/Components/ConfirmationModal";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
@@ -26,7 +28,11 @@ export default function Index({ seasons, openCreate = false }) {
     const { lang } = useLang();
     const [isCreateModalOpen, setCreateModalOpen] = useState(openCreate);
     const [itemToEdit, setItemToEdit] = useState(null);
-    const [itemToDelete, setItemToDelete] = useState(null);
+
+    const {
+        itemToDelete, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } =
         useForm({
@@ -68,12 +74,6 @@ export default function Index({ seasons, openCreate = false }) {
         e.preventDefault();
         put(route("settings.seasons.update", itemToEdit.id), {
             onSuccess: () => setItemToEdit(null),
-        });
-    };
-
-    const confirmDelete = () => {
-        router.delete(route("settings.seasons.destroy", itemToDelete.id), {
-            onSuccess: () => setItemToDelete(null),
         });
     };
 
@@ -250,11 +250,7 @@ export default function Index({ seasons, openCreate = false }) {
                                                     }
                                                 >
                                                     <button
-                                                        onClick={() =>
-                                                            setItemToDelete(
-                                                                season,
-                                                            )
-                                                        }
+                                                        onClick={() => requestDelete(route("settings.seasons.destroy", season.id), season)}
                                                         className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -462,39 +458,21 @@ export default function Index({ seasons, openCreate = false }) {
             </Modal>
 
             {/* Delete Modal */}
-            <Modal
+            <ConfirmationModal
                 show={!!itemToDelete}
-                onClose={() => setItemToDelete(null)}
-                maxWidth="sm"
-            >
-                <div className="p-6 text-center space-y-4">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-danger/10">
-                        <Trash2 className="h-6 w-6 text-danger" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-text">
-                            {lang === "ar" ? "حذف الموسم" : "Delete Season"}
-                        </h3>
-                        <p className="text-sm text-text-muted mt-2">
-                            {lang === "ar"
-                                ? "هل أنت متأكد من حذف"
-                                : "Are you sure you want to delete"}{" "}
-                            <span className="font-bold text-text">
-                                {itemToDelete?.name_ar}
-                            </span>
-                            ؟
-                        </p>
-                    </div>
-                    <div className="flex justify-center gap-3 pt-2">
-                        <SecondaryButton onClick={() => setItemToDelete(null)}>
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton onClick={confirmDelete}>
-                            {lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"}
-                        </DangerButton>
-                    </div>
-                </div>
-            </Modal>
+                title={lang === "ar" ? "حذف الموسم" : "Delete Season"}
+                message={
+                    (lang === "ar" ? "هل أنت متأكد من حذف " : "Are you sure you want to delete ") +
+                    (itemToDelete?.name_ar || "") + "؟"
+                }
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={deleteProcessing}
+            />
         </AuthenticatedLayout>
     );
 }

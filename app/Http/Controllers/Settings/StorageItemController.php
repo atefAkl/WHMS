@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\StorageItem;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Traits\ValidatesSecureDeletion;
 
 class StorageItemController extends Controller
 {
+    use ValidatesSecureDeletion;
     public function index()
     {
         $items = StorageItem::latest()->get();
@@ -43,8 +45,10 @@ class StorageItemController extends Controller
         return redirect()->back()->with('success', 'تم تحديث وحدة التخزين بنجاح.');
     }
 
-    public function destroy(StorageItem $storage_item)
+    public function destroy(Request $request, StorageItem $storage_item)
     {
+        $this->validateSecureDelete($request);
+        
         if ($storage_item->id <= 2) {
             return redirect()->back()->with('error', 'لا يمكن حذف الوحدات الأساسية.');
         }

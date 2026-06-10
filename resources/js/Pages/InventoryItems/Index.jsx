@@ -28,8 +28,10 @@ import InputError from "@/Components/InputError";
 import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
+import ConfirmationModal from "@/Components/ConfirmationModal";
 import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
+import { useSecureDelete } from "@/Hooks/useSecureDelete";
 
 export default function Index({ items = [], categories = [] }) {
     const { lang } = useLang();
@@ -47,9 +49,11 @@ export default function Index({ items = [], categories = [] }) {
     const [isQuickCategoryModalOpen, setQuickCategoryModalOpen] =
         useState(false);
     const [itemToEdit, setItemToEdit] = useState(null);
-    const [itemToDelete, setItemToDelete] = useState(null);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteError, setDeleteError] = useState("");
+
+    const {
+        itemToDelete, deletePassword, setDeletePassword, deleteError, processing: deleteProcessing,
+        requestDelete, confirmDelete, cancelDelete
+    } = useSecureDelete();
 
     // Form setup using Inertia useForm
     const { data, setData, post, processing, errors, reset, clearErrors } =
@@ -276,38 +280,6 @@ export default function Index({ items = [], categories = [] }) {
             forceFormData: true,
             onSuccess: () => setItemToEdit(null),
         });
-    };
-
-    const confirmDelete = (e) => {
-        e.preventDefault();
-        setDeleteError("");
-
-        router.post(
-            route("inventory-items.destroy", itemToDelete.id),
-            {
-                _method: "DELETE",
-                password: deletePassword,
-            },
-            {
-                onSuccess: () => {
-                    setItemToDelete(null);
-                    setDeletePassword("");
-                },
-                onError: (errs) => {
-                    if (errs.error) {
-                        setDeleteError(errs.error);
-                    } else if (errs.password) {
-                        setDeleteError(errs.password);
-                    } else {
-                        setDeleteError(
-                            lang === "ar"
-                                ? "حدث خطأ ما."
-                                : "An error occurred.",
-                        );
-                    }
-                },
-            },
-        );
     };
 
     const breadcrumbs = (
@@ -806,8 +778,9 @@ export default function Index({ items = [], categories = [] }) {
                                                 >
                                                     <button
                                                         onClick={() =>
-                                                            setItemToDelete(
-                                                                item,
+                                                            requestDelete(
+                                                                route("inventory-items.destroy", item.id),
+                                                                item
                                                             )
                                                         }
                                                         className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 border border-transparent hover:border-danger/20 transition-all rounded-none"
@@ -966,8 +939,9 @@ export default function Index({ items = [], categories = [] }) {
                                                         >
                                                             <button
                                                                 onClick={() =>
-                                                                    setItemToDelete(
-                                                                        item,
+                                                                    requestDelete(
+                                                                        route("inventory-items.destroy", item.id),
+                                                                        item
                                                                     )
                                                                 }
                                                                 className="p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 border border-transparent hover:border-danger/20 transition-all rounded-none inline-flex items-center"
@@ -1421,88 +1395,18 @@ export default function Index({ items = [], categories = [] }) {
             </Modal>
 
             {/* Secure Delete Modal (requires password verification) */}
-            <Modal
+            <ConfirmationModal
                 show={!!itemToDelete}
-                onClose={() => {
-                    setItemToDelete(null);
-                    setDeletePassword("");
-                    setDeleteError("");
-                }}
-                maxWidth="sm"
-            >
-                <form
-                    onSubmit={confirmDelete}
-                    className="p-6 text-center space-y-4"
-                >
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-none bg-danger/10 border border-danger/25">
-                        <ShieldAlert className="h-6 w-6 text-danger" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-text">
-                            {lang === "ar"
-                                ? "تأكيد حذف صنف آمن"
-                                : "Secure Deletion Confirmation"}
-                        </h3>
-                        <p className="text-sm text-text-muted mt-2">
-                            {lang === "ar"
-                                ? "أنت بصدد حذف صنف مخزني بالكامل وأشكاله المرتبطة."
-                                : "You are about to permanently delete an inventory item and all its variants."}
-                        </p>
-                        <p className="text-xs text-danger/80 font-bold bg-danger/5 p-2 border border-danger/10 mt-2 rounded-none">
-                            {lang === "ar"
-                                ? `الصنف المستهدف: ${getCategoryDisplayName(itemToDelete?.name)}`
-                                : `Target Item: ${getCategoryDisplayName(itemToDelete?.name)}`}
-                        </p>
-                    </div>
-
-                    {/* Secure Deletion Password Input */}
-                    <div className="text-start space-y-1">
-                        <InputLabel
-                            value={
-                                lang === "ar"
-                                    ? "كلمة مرور الحفظ/الحذف الآمنة للمدير *"
-                                    : "Secure Deletion Password *"
-                            }
-                        />
-                        <TextInput
-                            type="password"
-                            required
-                            placeholder={
-                                lang === "ar"
-                                    ? "أدخل كلمة مرور الحذف الآمنة"
-                                    : "Enter Secure password"
-                            }
-                            className="w-full text-sm rounded-none border-border"
-                            value={deletePassword}
-                            onChange={(e) => setDeletePassword(e.target.value)}
-                        />
-                        {deleteError && (
-                            <p className="text-xs text-danger font-bold mt-1">
-                                {deleteError}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="flex justify-center gap-3 pt-2">
-                        <SecondaryButton
-                            type="button"
-                            onClick={() => {
-                                setItemToDelete(null);
-                                setDeletePassword("");
-                                setDeleteError("");
-                            }}
-                            className="rounded-none"
-                        >
-                            {lang === "ar" ? "إلغاء" : "Cancel"}
-                        </SecondaryButton>
-                        <DangerButton type="submit" className="rounded-none">
-                            {lang === "ar"
-                                ? "تأكيد الحذف الآمن"
-                                : "Confirm Secure Delete"}
-                        </DangerButton>
-                    </div>
-                </form>
-            </Modal>
+                title={lang === "ar" ? "تأكيد حذف صنف آمن" : "Secure Deletion Confirmation"}
+                message={lang === "ar" ? "أنت بصدد حذف صنف مخزني بالكامل وأشكاله المرتبطة." : "You are about to permanently delete an inventory item and all its variants."}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={deleteProcessing}
+            />
         </AuthenticatedLayout>
     );
 }

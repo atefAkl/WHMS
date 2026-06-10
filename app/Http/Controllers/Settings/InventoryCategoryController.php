@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Traits\ValidatesSecureDeletion;
 
 class InventoryCategoryController extends Controller
 {
+    use ValidatesSecureDeletion;
     public function index()
     {
         $categories = InventoryCategory::with('parent')->latest()->get();
@@ -46,8 +48,10 @@ class InventoryCategoryController extends Controller
         return redirect()->back()->with('success', 'تم تحديث فئة الأصناف بنجاح.');
     }
 
-    public function destroy(InventoryCategory $inventory_category)
+    public function destroy(Request $request, InventoryCategory $inventory_category)
     {
+        $this->validateSecureDelete($request);
+
         if ($inventory_category->children()->count() > 0) {
             return redirect()->back()->with('error', 'لا يمكن حذف الفئة لأنها تحتوي على فئات فرعية.');
         }
