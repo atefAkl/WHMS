@@ -301,6 +301,9 @@ class ContractController extends Controller
         return redirect()->route('customers.show', $customerId)->with('success', __('contracts.messages.destroy_success'));
     }
 
+    /* 
+    ** Adding Contract Periods to manage storing timing and allocation items consumption
+     */
     public function addPeriod(Request $request, Contract $contract)
     {
         $validated = $request->validate([
@@ -311,6 +314,11 @@ class ContractController extends Controller
         $durationMonths = (int) $validated['duration_months'];
 
         $lastPeriod = $contract->periods()->with('items')->orderByDesc('period_number')->first();
+        // Count of stored tables in the last period
+        $lastPeriodUsedItems = $lastPeriod->items();
+
+        return var_dump($lastPeriodUsedItems);
+
         if (!$lastPeriod) {
             $contract->ensureMandatoryPeriod();
             $contract->syncFirstPeriodItems();
@@ -571,12 +579,12 @@ class ContractController extends Controller
 
             $year = \Carbon\Carbon::parse($date)->format('y');
             $month = \Carbon\Carbon::parse($date)->format('m');
-            
+
             $lastInvoice = \App\Models\SalesInvoice::whereMonth('date', $month)
                 ->whereYear('date', \Carbon\Carbon::parse($date)->format('Y'))
                 ->orderBy('id', 'desc')
                 ->first();
-            
+
             $serial = $lastInvoice ? intval(substr($lastInvoice->invoice_number, -4)) + 1 : 1;
             $refNumber = $validated['invoice_number'] ?? ("INV-{$year}{$month}-" . str_pad($serial, 4, '0', STR_PAD_LEFT));
 
@@ -584,7 +592,7 @@ class ContractController extends Controller
             $subtotal = $contract->items->sum(function ($item) {
                 return $item->price * $item->quantity;
             }) ?: 0;
-            
+
             $taxRate = 15;
             $taxAmount = $subtotal * ($taxRate / 100);
 
@@ -656,10 +664,10 @@ class ContractController extends Controller
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
             // Counterpart account logic: Revenue if invoice selected, else Customer.
-            $customerAccount = \App\Models\Account::where('type', 'asset')->where('name', 'like', '%عملاء%')->first() 
+            $customerAccount = \App\Models\Account::where('type', 'asset')->where('name', 'like', '%عملاء%')->first()
                 ?? \App\Models\Account::where('is_transactional', true)->first();
             $revenueAccount = \App\Models\Account::where('type', 'revenue')->first();
-            
+
             $counterAccountId = ($invoice && $revenueAccount) ? $revenueAccount->id : ($customerAccount ? $customerAccount->id : null);
 
             // Generate Voucher Number

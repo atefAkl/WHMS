@@ -108,7 +108,7 @@ export default function CreateEdit({
         processing: processingDelete,
         requestDelete,
         confirmDelete,
-        cancelDelete
+        cancelDelete,
     } = useSecureDelete();
 
     // Reset active index when search text changes or dropdown toggles
@@ -156,6 +156,12 @@ export default function CreateEdit({
         redirect_to_draft_id: "",
     });
 
+    const totalReception =
+        data.items?.reduce(
+            (sum, item) => sum + parseFloat(item.quantity_in || 0),
+            0,
+        ) || 0;
+
     // Bilingual display utility
     const displayBilingual = (rawText) => {
         if (!rawText) return "";
@@ -188,7 +194,10 @@ export default function CreateEdit({
                 e.preventDefault();
                 // Ctrl + D: Open delete confirmation modal
                 if (reception) {
-                    requestDelete(route("receptions.destroy", reception.id), reception);
+                    requestDelete(
+                        route("receptions.destroy", reception.id),
+                        reception,
+                    );
                 }
             }
         };
@@ -741,18 +750,34 @@ export default function CreateEdit({
                                         {/* Customer Autocomplete Field */}
                                         <div className="relative">
                                             <SearchableSelect
-                                                label={lang === "ar" ? "العميل *" : "Customer *"}
+                                                label={
+                                                    lang === "ar"
+                                                        ? "العميل *"
+                                                        : "Customer *"
+                                                }
                                                 items={customers}
                                                 value={data.customer_id}
                                                 onChange={(selected) => {
-                                                    setData("customer_id", selected ? selected.id : "");
+                                                    setData(
+                                                        "customer_id",
+                                                        selected
+                                                            ? selected.id
+                                                            : "",
+                                                    );
                                                 }}
-                                                placeholder={lang === "ar" ? "ابحث عن اسم العميل..." : "Type customer name..."}
-                                                searchKeys={['name']}
+                                                placeholder={
+                                                    lang === "ar"
+                                                        ? "ابحث عن اسم العميل..."
+                                                        : "Type customer name..."
+                                                }
+                                                searchKeys={["name"]}
                                                 displayFormat={(c) => c.name}
                                                 valueKey="id"
                                                 error={errors.customer_id}
-                                                disabled={reception?.status === "approved"}
+                                                disabled={
+                                                    reception?.status ===
+                                                    "approved"
+                                                }
                                             />
                                         </div>
 
@@ -1161,12 +1186,18 @@ export default function CreateEdit({
                                 {/* Item Autocomplete */}
                                 <div className="sm:col-span-3 relative">
                                     <SearchableSelect
-                                        label={lang === "ar" ? "الصنف المخزني *" : "Inventory Item *"}
+                                        label={
+                                            lang === "ar"
+                                                ? "الصنف المخزني *"
+                                                : "Inventory Item *"
+                                        }
                                         inputRef={itemSearchRef}
                                         items={inventoryItems}
                                         value={posItemId}
                                         onChange={(selected) => {
-                                            setPosItemId(selected ? selected.id : "");
+                                            setPosItemId(
+                                                selected ? selected.id : "",
+                                            );
                                             if (selected) {
                                                 // Using setTimeout to give the blur a chance to finish before jumping focus
                                                 setTimeout(() => {
@@ -1174,16 +1205,30 @@ export default function CreateEdit({
                                                 }, 10);
                                             }
                                         }}
-                                        placeholder={lang === "ar" ? "ابحث عن الصنف..." : "Search item..."}
-                                        searchKeys={['name', 'code']}
-                                        displayFormat={(item) => displayBilingual(item.name)}
+                                        placeholder={
+                                            lang === "ar"
+                                                ? "ابحث عن الصنف..."
+                                                : "Search item..."
+                                        }
+                                        searchKeys={["name", "code"]}
+                                        displayFormat={(item) =>
+                                            displayBilingual(item.name)
+                                        }
                                         valueKey="id"
                                         className="h-[38px] text-xs rounded-none border-border bg-surface text-text"
                                         error=""
                                         renderOption={(item, isActive) => (
                                             <>
-                                                <span>{displayBilingual(item.name)}</span>
-                                                <span className={`text-xs ml-2 ${isActive ? 'text-white/80' : 'text-text-muted'}`}>({item.code})</span>
+                                                <span>
+                                                    {displayBilingual(
+                                                        item.name,
+                                                    )}
+                                                </span>
+                                                <span
+                                                    className={`text-xs ml-2 ${isActive ? "text-white/80" : "text-text-muted"}`}
+                                                >
+                                                    ({item.code})
+                                                </span>
                                             </>
                                         )}
                                     />
@@ -1445,6 +1490,20 @@ export default function CreateEdit({
                                     {errors.items}
                                 </p>
                             )}
+
+                            <div className="flex justify-end gap-3 text-xs text-text-muted mt-2">
+                                <div className="font-bold text-text">
+                                    {lang === "ar"
+                                        ? "الإجمالي الكلي:"
+                                        : "Total:"}
+                                </div>
+                                <div className="font-mono font-semibold text-text">
+                                    {totalReception.toLocaleString(undefined, {
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 2,
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1771,10 +1830,16 @@ export default function CreateEdit({
             {/* Confirm Secure Delete Modal */}
             <ConfirmationModal
                 show={!!deleteItem}
-                title={lang === "ar" ? "تأكيد حذف سند الاستلام" : "Confirm Reception Deletion"}
-                message={lang === "ar"
-                            ? "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع."
-                            : "You are about to permanently delete this reception voucher and all associated inventory entries. This action cannot be undone."}
+                title={
+                    lang === "ar"
+                        ? "تأكيد حذف سند الاستلام"
+                        : "Confirm Reception Deletion"
+                }
+                message={
+                    lang === "ar"
+                        ? "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع."
+                        : "You are about to permanently delete this reception voucher and all associated inventory entries. This action cannot be undone."
+                }
                 onConfirm={() => confirmDelete()}
                 onCancel={cancelDelete}
                 requirePassword={true}

@@ -21,12 +21,15 @@ class ExitAuthorization extends Model
         'deliver_to_self',
         'notes',
         'status', // pending, completed, cancelled
+        'validity_days',
+        'expiry_date',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'deliver_to_self' => 'boolean',
+        'expiry_date' => 'date',
     ];
 
     public function period()
@@ -100,5 +103,23 @@ class ExitAuthorization extends Model
     public function editor()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function getIsExpiredAttribute()
+    {
+        if (!$this->expiry_date) {
+            return false;
+        }
+
+        return now()->greaterThan($this->expiry_date->endOfDay());
+    }
+
+    public function scopePendingActive($query)
+    {
+        return $query->where('status', 'pending')
+            ->where(function ($q) {
+                $q->whereNull('expiry_date')
+                    ->orWhereDate('expiry_date', '>=', now());
+            });
     }
 }

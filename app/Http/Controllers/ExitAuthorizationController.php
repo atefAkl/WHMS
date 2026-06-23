@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ContractSetting;
 use App\Models\ExitAuthorization;
 use App\Models\Customer;
 use App\Models\Contract;
@@ -10,7 +11,6 @@ use App\Models\InventoryItem;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use App\Traits\ValidatesSecureDeletion;
 
 class ExitAuthorizationController extends Controller
@@ -79,12 +79,18 @@ class ExitAuthorizationController extends Controller
 
         $drivers = \App\Models\Driver::where('is_active', true)->orderBy('name')->get();
 
+        $defaultValidityDays = (int) ContractSetting::where('key', 'exit_authorization_validity_days')->value('value');
+        if ($defaultValidityDays < 1) {
+            $defaultValidityDays = 30;
+        }
+
         return Inertia::render('Warehouse/ExitAuthorizations/CreateEdit', [
             'customers' => $customers,
             'inventoryItems' => $inventoryItems,
             'drivers' => $drivers,
             'isEdit' => false,
-            'authorization' => null
+            'authorization' => null,
+            'defaultValidityDays' => $defaultValidityDays,
         ]);
     }
 
@@ -123,7 +129,13 @@ class ExitAuthorizationController extends Controller
             $proofPath = '/uploads/documents/exit_proofs/' . $filename;
         }
 
-        $auth = DB::transaction(function () use ($request, $proofPath) {
+        $validityDays = (int) ContractSetting::where('key', 'exit_authorization_validity_days')->value('value');
+        if ($validityDays < 1) {
+            $validityDays = 30;
+        }
+        $expiryDate = now()->addDays($validityDays);
+
+        $auth = DB::transaction(function () use ($request, $proofPath, $validityDays, $expiryDate) {
             $auth = ExitAuthorization::create([
                 'customer_id' => $request->customer_id,
                 'contract_id' => $request->contract_id,
@@ -135,6 +147,8 @@ class ExitAuthorizationController extends Controller
                 'deliver_to_self' => $request->deliver_to_self ? true : false,
                 'notes'       => $request->notes,
                 'status'      => 'pending',
+                'validity_days' => $validityDays,
+                'expiry_date' => $expiryDate,
                 'created_by'  => auth()->id(),
                 'updated_by'  => auth()->id(),
             ]);
@@ -179,12 +193,18 @@ class ExitAuthorizationController extends Controller
 
         $drivers = \App\Models\Driver::where('is_active', true)->orderBy('name')->get();
 
+        $defaultValidityDays = (int) ContractSetting::where('key', 'exit_authorization_validity_days')->value('value');
+        if ($defaultValidityDays < 1) {
+            $defaultValidityDays = 30;
+        }
+
         return Inertia::render('Warehouse/ExitAuthorizations/CreateEdit', [
             'customers' => $customers,
             'inventoryItems' => $inventoryItems,
             'drivers' => $drivers,
             'isEdit' => true,
-            'authorization' => $exitAuthorization
+            'authorization' => $exitAuthorization,
+            'defaultValidityDays' => $defaultValidityDays,
         ]);
     }
 

@@ -39,6 +39,7 @@ export default function CreateEdit({
     drivers = [],
     isEdit = false,
     authorization = null,
+    defaultValidityDays = 30,
 }) {
     const { lang } = useLang();
 
@@ -109,6 +110,16 @@ export default function CreateEdit({
             return field;
         }
     };
+
+    const authorizationExpiryDate = authorization?.expiry_date
+        ? new Date(authorization.expiry_date)
+        : null;
+    const authorizationCreatedAt = authorization?.created_at
+        ? new Date(authorization.created_at)
+        : null;
+    const authorizationIsExpired = authorizationExpiryDate
+        ? authorizationExpiryDate < new Date()
+        : false;
 
     // Load contract stats
     const loadContractStats = (contractId) => {
@@ -910,6 +921,49 @@ export default function CreateEdit({
                                                 </div>
                                             )}
                                     </div>
+                                </div>
+
+                                <div className="rounded-none border border-primary/20 bg-primary/5 p-4 text-xs text-text-muted">
+                                    <div className="font-semibold text-primary text-sm mb-2">
+                                        {lang === "ar"
+                                            ? "صلاحية إذن الخروج"
+                                            : "Exit Authorization Validity"}
+                                    </div>
+                                    {isEdit && authorizationExpiryDate ? (
+                                        <div className="space-y-1">
+                                            <div>
+                                                {lang === "ar"
+                                                    ? "تاريخ الإنشاء:"
+                                                    : "Created at:"}{" "}
+                                                <span className="font-semibold text-text">
+                                                    {authorizationCreatedAt?.toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                {lang === "ar"
+                                                    ? "تاريخ الانتهاء:"
+                                                    : "Expiry date:"}{" "}
+                                                <span className="font-semibold text-text">
+                                                    {authorizationExpiryDate?.toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                {authorizationIsExpired
+                                                    ? lang === "ar"
+                                                        ? "هذا الإذن منتهي الصلاحية ولا يمكن استخدامه في سندات التسليم الجديدة."
+                                                        : "This authorization has expired and cannot be used for new delivery vouchers."
+                                                    : lang === "ar"
+                                                      ? `صلاحية هذا الإذن تصل إلى ${authorizationExpiryDate?.toLocaleDateString()}.`
+                                                      : `This authorization is valid until ${authorizationExpiryDate?.toLocaleDateString()}.`}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            {lang === "ar"
+                                                ? `سيتم تعيين مدة صلاحية إذن الخروج تلقائياً إلى ${defaultValidityDays} يوماً من تاريخ الإنشاء.`
+                                                : `The exit authorization will automatically expire ${defaultValidityDays} days after creation.`}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

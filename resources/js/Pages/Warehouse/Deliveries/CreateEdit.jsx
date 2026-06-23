@@ -114,7 +114,7 @@ export default function CreateEdit({
         processing: processingDelete,
         requestDelete,
         confirmDelete,
-        cancelDelete
+        cancelDelete,
     } = useSecureDelete();
 
     // Keyboard navigation refs
@@ -155,6 +155,12 @@ export default function CreateEdit({
               }))
             : [],
     });
+
+    const totalDelivery =
+        data.items?.reduce(
+            (sum, item) => sum + parseInt(item.quantity_out || 0, 10),
+            0,
+        ) || 0;
 
     // Sync items with delivery.inventory_entries when updated on the server
     useEffect(() => {
@@ -222,7 +228,10 @@ export default function CreateEdit({
             } else if (e.code === "KeyD") {
                 e.preventDefault();
                 if (delivery) {
-                    requestDelete(route("deliveries.destroy", delivery.id), delivery);
+                    requestDelete(
+                        route("deliveries.destroy", delivery.id),
+                        delivery,
+                    );
                 }
             }
         };
@@ -1927,6 +1936,17 @@ export default function CreateEdit({
                                     </tbody>
                                 </table>
                             </div>
+
+                            <div className="flex justify-end gap-3 text-xs text-text-muted mt-2">
+                                <div className="font-bold text-text">
+                                    {lang === "ar"
+                                        ? "الإجمالي الكلي:"
+                                        : "Total:"}
+                                </div>
+                                <div className="font-mono font-semibold text-text">
+                                    {totalDelivery.toLocaleString()}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2212,7 +2232,11 @@ export default function CreateEdit({
             {/* Delete Confirmation Modal */}
             <ConfirmationModal
                 show={!!deleteItem}
-                title={lang === "ar" ? "تأكيد حذف مسودة سند التسليم" : "Confirm Delete Draft Note"}
+                title={
+                    lang === "ar"
+                        ? "تأكيد حذف مسودة سند التسليم"
+                        : "Confirm Delete Draft Note"
+                }
                 message={
                     lang === "ar"
                         ? `هل أنت متأكد من رغبتك في حذف مسودة سند التسليم ${delivery?.serial_number} نهائياً؟`

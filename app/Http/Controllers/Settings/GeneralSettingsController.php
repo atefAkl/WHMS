@@ -41,6 +41,7 @@ class GeneralSettingsController extends Controller
             'app_timezone'    => 'nullable|string|max:100',
             'app_currency'    => 'nullable|string|max:50',
             'app_pagination'  => 'nullable|integer|min:5|max:100',
+            'exit_authorization_validity_days' => 'nullable|integer|min:1|max:365',
 
             // Quality System (QMS)
             'show_quality_data'  => 'nullable|boolean',
@@ -86,7 +87,7 @@ class GeneralSettingsController extends Controller
         $file = $request->file('file');
         $category = $request->input('category');
         $customCategory = $request->input('custom_category');
-        
+
         $categoryNames = [
             'cr'               => 'السجل التجاري',
             'vat'              => 'الشهادة الضريبية',

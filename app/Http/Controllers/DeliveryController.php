@@ -114,7 +114,17 @@ class DeliveryController extends Controller
             ->get(['id', 'serial_number', 'customer_id', 'contract_id']);
 
         // Load exit authorizations for contract selection dropdown
-        $exitAuthorizations = ExitAuthorization::where('status', 'pending')
+        $exitAuthorizations = ExitAuthorization::where(function ($query) use ($delivery) {
+            $query->where('status', 'pending')
+                ->where(function ($sub) {
+                    $sub->whereNull('expiry_date')
+                        ->orWhereDate('expiry_date', '>=', now());
+                });
+
+            if (!empty($delivery->exit_authorization_id)) {
+                $query->orWhere('id', $delivery->exit_authorization_id);
+            }
+        })
             ->with(['customer', 'contract', 'items.inventoryItem', 'items.inventoryItemVariant'])
             ->get();
 
@@ -165,6 +175,30 @@ class DeliveryController extends Controller
         if (!$isDraft && empty($request->exit_authorization_id) && empty($request->written_reference)) {
             return redirect()->back()->withErrors([
                 'written_reference' => 'يجب إدخال المرجع الخطي في حال عدم اختيار إذن خروج.'
+            ])->withInput();
+        }
+
+        if (!empty($request->exit_authorization_id)) {
+            $exitAuth = ExitAuthorization::find($request->exit_authorization_id);
+            if (!$exitAuth || $exitAuth->status !== 'pending') {
+                return redirect()->back()->withErrors([
+                    'exit_authorization_id' => 'إذن الخروج المحدد غير صالح أو غير متاح.'
+                ])->withInput();
+            }
+            if ($exitAuth->is_expired) {
+                return redirect()->back()->withErrors([
+                    'exit_authorization_id' => 'هذا الإذن منتهي الصلاحية ولا يمكن استخدامه.'
+                ])->withInput();
+            }
+        }
+
+        // if delivery date is in active storing period
+        $activeStoringPeriod = ContractPeriod::find($request->period_id);
+        if ($activeStoringPeriod && (
+            $request->delivery_date < $activeStoringPeriod->start_date ||
+            $request->delivery_date > $activeStoringPeriod->end_date)) {
+            return redirect()->back()->withErrors([
+                'delivery_date' => 'تاريخ السند لا يمكن أن يكون قبل تاريخ بداية فترة التخزين النشطة للعقد.'
             ])->withInput();
         }
 
@@ -314,6 +348,16 @@ class DeliveryController extends Controller
 
         if (empty($delivery->exit_authorization_id) && empty($delivery->written_reference)) {
             return redirect()->back()->with('error', 'لا يمكن اعتماد السند بدون إذن خروج أو مرجع خطي.');
+        }
+
+        if (!empty($delivery->exit_authorization_id)) {
+            $exitAuth = ExitAuthorization::find($delivery->exit_authorization_id);
+            if (!$exitAuth || $exitAuth->status !== 'pending') {
+                return redirect()->back()->with('error', 'إذن الخروج المحدد غير صالح أو غير متاح.');
+            }
+            if ($exitAuth->is_expired) {
+                return redirect()->back()->with('error', 'هذا الإذن منتهي الصلاحية ولا يمكن اعتماد السند باستخدامه.');
+            }
         }
 
         DB::transaction(function () use ($delivery) {

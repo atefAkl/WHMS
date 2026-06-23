@@ -64,6 +64,8 @@ export default function General({ settings }) {
         app_timezone: settings?.app_timezone || "Asia/Riyadh",
         app_currency: settings?.app_currency || "SAR",
         app_pagination: settings?.app_pagination || 10,
+        exit_authorization_validity_days:
+            settings?.exit_authorization_validity_days || 30,
 
         // Quality System
         show_quality_data:
@@ -113,7 +115,7 @@ export default function General({ settings }) {
         processing: processingDelete,
         requestDelete,
         confirmDelete,
-        cancelDelete
+        cancelDelete,
     } = useSecureDelete();
 
     const handleFileChange = (e) => {
@@ -747,6 +749,48 @@ export default function General({ settings }) {
                                                         errors.app_timezone
                                                     }
                                                 />
+                                            </div>
+
+                                            <div>
+                                                <InputLabel
+                                                    value={
+                                                        lang === "ar"
+                                                            ? "مدة صلاحية إذن الخروج (باليوم)"
+                                                            : "Exit Authorization Validity (Days)"
+                                                    }
+                                                />
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="365"
+                                                    className="mt-0.5 block w-full rounded-md border border-border bg-surface text-sm py-1.5 px-2 focus:border-primary focus:ring-primary shadow-sm"
+                                                    value={
+                                                        data.exit_authorization_validity_days
+                                                    }
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            "exit_authorization_validity_days",
+                                                            e.target.value ===
+                                                                ""
+                                                                ? ""
+                                                                : parseInt(
+                                                                      e.target
+                                                                          .value,
+                                                                      10,
+                                                                  ),
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={
+                                                        errors.exit_authorization_validity_days
+                                                    }
+                                                />
+                                                <p className="text-[11px] text-text-muted mt-1">
+                                                    {lang === "ar"
+                                                        ? "عدد أيام صلاحية إذن الخروج من تاريخ إنشائه."
+                                                        : "Number of days the exit authorization remains valid from its creation date."}
+                                                </p>
                                             </div>
 
                                             <div>
@@ -1669,7 +1713,15 @@ export default function General({ settings }) {
                                                                     <ExternalLink className="h-3.5 w-3.5" />
                                                                 </a>
                                                                 <button
-                                                                    onClick={() => requestDelete(route("settings.general.files.destroy", file.id), file)}
+                                                                    onClick={() =>
+                                                                        requestDelete(
+                                                                            route(
+                                                                                "settings.general.files.destroy",
+                                                                                file.id,
+                                                                            ),
+                                                                            file,
+                                                                        )
+                                                                    }
                                                                     className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                                     title={
                                                                         lang ===
@@ -1696,7 +1748,11 @@ export default function General({ settings }) {
                 {/* Delete File Modal */}
                 <ConfirmationModal
                     show={!!fileToDelete}
-                    title={lang === "ar" ? "تأكيد حذف المستند" : "Confirm Document Deletion"}
+                    title={
+                        lang === "ar"
+                            ? "تأكيد حذف المستند"
+                            : "Confirm Document Deletion"
+                    }
                     message={fileToDelete?.name}
                     onConfirm={() => confirmDelete()}
                     onCancel={cancelDelete}
