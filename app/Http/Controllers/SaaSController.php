@@ -15,7 +15,16 @@ class SaaSController extends Controller
     private function ensureCentralContext(): void
     {
         if (function_exists('tenancy') && tenancy()->initialized) {
-            tenancy()->end();
+            try {
+                tenancy()->end();
+            } catch (\Exception $e) {
+                // Ignore filesystem errors when ending tenancy
+                if (str_contains($e->getMessage(), 'Undefined array key')) {
+                    // Continue without error
+                } else {
+                    throw $e;
+                }
+            }
         }
     }
 
