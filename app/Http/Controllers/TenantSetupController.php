@@ -46,7 +46,7 @@ class TenantSetupController extends Controller
             'company_additional_files' => 'nullable|array',
 
             // المرحلة 3: المستخدمين وجهات الاتصال
-            'users'                    => 'required|array|min:3',
+            'users'                    => 'required|array|min:1',
             'users.*.name'             => 'required|string|max:255',
             'users.*.job_title'        => 'required|string|max:255',
             'users.*.id_number'        => 'required|string|max:255',
@@ -104,12 +104,11 @@ class TenantSetupController extends Controller
         }
         $validated['company_additional_files'] = json_encode($additionalFiles, JSON_UNESCAPED_UNICODE);
 
-        // 4. حفظ كافة الحقول كإعدادات عامة في جدول contract_settings
         $settingFields = [
             'company_name', 'company_slogan', 'company_phone', 'company_logo',
             'company_cr', 'company_vat', 'company_address', 'company_license',
             'company_cr_file', 'company_vat_file', 'company_license_file',
-            'company_additional_files', 'company_email', 'company_contacts'
+            'company_additional_files', 'company_email'
         ];
 
         foreach ($settingFields as $field) {

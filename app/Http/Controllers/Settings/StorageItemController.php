@@ -20,10 +20,11 @@ class StorageItemController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name_ar'       => 'required|string|max:255',
-            'name_en'       => 'nullable|string|max:255',
-            'default_price' => 'required|numeric|min:0',
-            'is_active'     => 'boolean',
+            'name_ar'              => 'required|string|max:255',
+            'name_en'              => 'nullable|string|max:255',
+            'default_price'        => 'required|numeric|min:0',
+            'is_active'            => 'boolean',
+            'max_discount_percent' => 'nullable|numeric|min:0|max:100',
         ]);
 
         StorageItem::create($validated);
@@ -34,10 +35,11 @@ class StorageItemController extends Controller
     public function update(Request $request, StorageItem $storage_item)
     {
         $validated = $request->validate([
-            'name_ar'       => 'required|string|max:255',
-            'name_en'       => 'nullable|string|max:255',
-            'default_price' => 'required|numeric|min:0',
-            'is_active'     => 'boolean',
+            'name_ar'              => 'required|string|max:255',
+            'name_en'              => 'nullable|string|max:255',
+            'default_price'        => 'required|numeric|min:0',
+            'is_active'            => 'boolean',
+            'max_discount_percent' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $storage_item->update($validated);

@@ -4,11 +4,13 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import { Transition } from '@headlessui/react';
 import { useForm, usePage } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
+import { Save } from 'lucide-react';
 
 export default function UpdatePreferencesForm({ className = '' }) {
     const { lang } = useLang();
     const { auth } = usePage().props;
     const user = auth.user;
+    const showButtonText = user?.preferences?.show_button_text ?? false;
     
     const isCentral = typeof route !== 'undefined' && (
         route().current('saas.*') || 
@@ -60,8 +62,13 @@ export default function UpdatePreferencesForm({ className = '' }) {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>
-                        {lang === 'ar' ? 'حفظ التفضيلات' : 'Save Preferences'}
+                    <PrimaryButton 
+                        disabled={processing}
+                        className="flex items-center gap-1.5 text-xs"
+                        tooltip={!showButtonText ? (lang === 'ar' ? 'حفظ التفضيلات' : 'Save Preferences') : undefined}
+                    >
+                        <Save className="h-4 w-4" />
+                        {showButtonText && (lang === 'ar' ? 'حفظ التفضيلات' : 'Save Preferences')}
                     </PrimaryButton>
 
                     <Transition

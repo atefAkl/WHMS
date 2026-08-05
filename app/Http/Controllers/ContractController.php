@@ -162,7 +162,7 @@ class ContractController extends Controller
             $contract->load('periods.items.storageItem');
         }
 
-        $contract->load('items');
+        $contract->load('items.storageItem');
         $contract->syncFirstPeriodItems();
         $contract->load('periods.items.storageItem');
 
@@ -409,9 +409,7 @@ class ContractController extends Controller
                 return back()->withErrors(['items' => 'تم العثور على عنصر غير تابع للفترة المحددة.']);
             }
 
-            if ((int) $itemPayload['unit_count'] < (int) $periodItem->unit_count) {
-                return back()->withErrors(['items' => 'يمكن تعديل أصناف الفترة بالزيادة فقط.']);
-            }
+
 
             $periodItem->update([
                 'unit_count' => (int) $itemPayload['unit_count'],
@@ -806,8 +804,8 @@ class ContractController extends Controller
                 $contract->items()->delete();
 
                 foreach ($validated['items'] as $item) {
-                    $total_inclusive = ($item['unit_count'] * $contract->mandatory_period * $item['monthly_rent']) - ($item['discount'] ?? 0);
-                    $total_before_vat = $total_inclusive / 1.15;
+                    $total_inclusive = $contract->mandatory_period * $item['unit_count'] * $item['monthly_rent'] * (1 - (($item['discount'] ?? 0) / 100));
+                    $total_before_vat = ($total_inclusive * 100) / 115;
 
                     $contract->items()->create([
                         'storage_item_id'     => $item['storage_item_id'],
@@ -820,7 +818,7 @@ class ContractController extends Controller
                     ]);
                 }
 
-                $contract->load('items');
+                $contract->load('items.storageItem');
                 $contract->syncFirstPeriodItems();
             }
 

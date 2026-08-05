@@ -46,13 +46,24 @@ class CustomerCategoryController extends Controller
         return redirect()->back()->with('success', 'Category created successfully.');
     }
 
+    private function isSystemCategory(CustomerCategory $category): bool
+    {
+        $nameEn = strtolower($category->name_en);
+        $nameAr = $category->name_ar;
+        return in_array($nameEn, ['individual', 'individuals', 'business', 'businesses']) ||
+               in_array($nameAr, ['أفراد', 'أعمال']);
+    }
+
     public function update(Request $request, CustomerCategory $category)
     {
+        if ($this->isSystemCategory($category)) {
+            return redirect()->back()->withErrors(['error' => 'لا يمكن تعديل التصنيفات الأساسية للنظام (أفراد / أعمال).']);
+        }
+
         $validated = $request->validate([
             'name_ar' => 'required|string|max:255',
             'name_en' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:customer_categories,id',
-            'account_id' => 'nullable|exists:accounts,id',
             'account_id' => 'nullable|exists:accounts,id',
         ]);
 
@@ -63,6 +74,10 @@ class CustomerCategoryController extends Controller
 
     public function destroy(Request $request, CustomerCategory $category)
     {
+        if ($this->isSystemCategory($category)) {
+            return redirect()->back()->withErrors(['error' => 'لا يمكن حذف التصنيفات الأساسية للنظام (أفراد / أعمال).']);
+        }
+
         $this->validateSecureDelete($request);
 
         // Check if has children or customers before deleting

@@ -269,26 +269,32 @@ export default function CreateEdit({
                             contract.contract_agents?.[0]?.id || "",
                     }));
                 }
-
-                // Fetch occupancy stats
-                setLoadingStats(true);
-                axios
-                    .get(route("api.contracts.occupancy-stats", contract.id))
-                    .then((res) => {
-                        setContractStats(res.data);
-                        setLoadingStats(false);
-                    })
-                    .catch((err) => {
-                        console.error(err);
-                        setLoadingStats(false);
-                    });
             }
         } else {
             setAvailablePeriods([]);
             setAvailableRepresentatives([]);
-            setContractStats(null);
         }
     }, [data.contract_id, availableContracts]);
+
+    // Fetch contract occupancy stats
+    useEffect(() => {
+        if (data.contract_id) {
+            setLoadingStats(true);
+            axios
+                .get(route("api.contracts.occupancy-stats", data.contract_id))
+                .then((res) => {
+                    setContractStats(res.data);
+                    setLoadingStats(false);
+                })
+                .catch((err) => {
+                    console.error(err);
+                    setContractStats(null);
+                    setLoadingStats(false);
+                });
+        } else {
+            setContractStats(null);
+        }
+    }, [data.contract_id]);
 
     // Autocomplete filter for customer
     const filteredCustomers = customers.filter((c) =>

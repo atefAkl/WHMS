@@ -29,10 +29,16 @@ class DatabaseSeeder extends Seeder
                 SeasonSeeder::class,
                 CountrySeeder::class,
                 CustomerCategorySeeder::class,
+                WarehouseSeeder::class,
+                LocationSeeder::class,
                 PalletSeeder::class,
                 InventoryCategorySeeder::class,
                 InventoryItemSeeder::class,
                 ChartOfAccountsSeeder::class,
+                TermsSeeder::class,
+                PaymentMethodSeeder::class,
+                UnitOfMeasureSeeder::class,
+                TenantRolesAndPermissionsSeeder::class,
             ]);
         }
     }

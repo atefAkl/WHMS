@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +22,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'is_admin',
         'password',
         'username',
         'phone',
@@ -50,8 +52,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'preferences' => 'array',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -62,12 +64,29 @@ class User extends Authenticatable
      */
     public function getPermissions(): array
     {
-        return [
-            'contracts.view',
-            'contracts.create',
-            'contracts.edit',
-            'contracts.delete',
-            'contracts.activate',
-        ];
+        // 1. المسؤولين لديهم كافة الصلاحيات تلقائياً
+        $isManager = (bool) $this->is_admin;
+
+        if ($isManager) {
+            return [
+                'contracts.view', 'contracts.create', 'contracts.edit', 'contracts.delete', 'contracts.activate',
+                'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+                'pallets.view', 'pallets.create', 'pallets.edit', 'pallets.delete',
+                'inventory-items.view', 'inventory-items.create', 'inventory-items.edit', 'inventory-items.delete',
+                'receptions.view', 'receptions.create', 'receptions.edit', 'receptions.delete', 'receptions.approve',
+                'exit_authorizations.view', 'exit_authorizations.create', 'exit_authorizations.edit', 'exit_authorizations.delete', 'exit_authorizations.approve',
+                'deliveries.view', 'deliveries.create', 'deliveries.edit', 'deliveries.delete', 'deliveries.approve',
+                'accounting.view', 'accounting.create', 'accounting.edit', 'accounting.delete', 'accounting.approve',
+                'settings.view', 'settings.edit',
+                'employees.view', 'employees.create', 'employees.edit', 'employees.delete'
+            ];
+        }
+
+        // 2. الموظفون العاديون نقوم بجلب صلاحياتهم من الحزمة القياسية Spatie
+        try {
+            return $this->getAllPermissions()->pluck('name')->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 }

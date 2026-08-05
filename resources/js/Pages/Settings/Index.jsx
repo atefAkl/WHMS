@@ -74,7 +74,7 @@ export default function Index() {
                 title: lang === 'ar' ? 'الأدوار والصلاحيات' : 'Roles & Permissions',
                 desc: lang === 'ar' ? 'إدارة المستخدمين' : 'Manage users access',
                 icon: Shield,
-                route: '#', // placeholder
+                route: route('settings.roles-permissions'),
                 color: 'text-rose-500',
                 bg: 'bg-rose-500/10'
             },

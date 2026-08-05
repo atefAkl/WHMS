@@ -38,11 +38,13 @@ class NewPasswordController extends Controller
             'token' => 'required',
             'email' => 'required|email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'email.required' => 'يرجى إدخال البريد الإلكتروني.',
+            'email.email' => 'يرجى إدخال بريد إلكتروني صحيح.',
+            'password.required' => 'يرجى إدخال كلمة المرور الجديدة.',
+            'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request) {
@@ -55,15 +57,12 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
         if ($status == Password::PASSWORD_RESET) {
-            return redirect()->route('login')->with('status', __($status));
+            return redirect('/login')->with('status', 'تمت إعادة تعيين كلمة المرور بنجاح! يمكنك التسجيل بكلمة المرور الجديدة الآن.');
         }
 
         throw ValidationException::withMessages([
-            'email' => [trans($status)],
+            'email' => [trans($status) ?: 'تعذرت إعادة تعيين كلمة المرور. قد يكون الرابط منتهي الصلاحية.'],
         ]);
     }
 }

@@ -17,10 +17,10 @@ return [
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
     'central_domains' => [
+        parse_url(env('APP_URL', 'http://whms.test'), PHP_URL_HOST),
         'whms.test',
         'www.whms.test',
-        'whms.loc',
-        'www.whms.loc',
+        'whms.ag-stores.com',
         '127.0.0.1',
         'localhost',
     ],
@@ -65,7 +65,8 @@ return [
             'sqlite' => Stancl\Tenancy\TenantDatabaseManagers\SQLiteDatabaseManager::class,
             'mysql' => Stancl\Tenancy\TenantDatabaseManagers\MySQLDatabaseManager::class,
             'mariadb' => Stancl\Tenancy\TenantDatabaseManagers\MySQLDatabaseManager::class,
-            'pgsql' => Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLDatabaseManager::class,
+            // 'pgsql' => Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLDatabaseManager::class,
+            'pgsql' => Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLSchemaManager::class, // Separate by schema instead of database
 
             /**
          * Use this database manager for MySQL to have a DB user created for each tenant database.

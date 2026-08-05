@@ -103,6 +103,15 @@ class ReceptionController extends Controller
             return back()->withErrors(['period_id' => 'يجب اختيار فترة نشطة تابعة للعقد.'])->withInput();
         }
 
+        $activeStoringPeriod = \App\Models\ContractPeriod::find($request->period_id);
+        if ($activeStoringPeriod && (
+            $request->reception_date < $activeStoringPeriod->start_date ||
+            $request->reception_date > $activeStoringPeriod->end_date)) {
+            return redirect()->back()->withErrors([
+                'reception_date' => 'تاريخ السند لا يمكن أن يكون خارج نطاق تاريخ فترة التخزين النشطة للعقد.'
+            ])->withInput();
+        }
+
         $reception = DB::transaction(function () use ($request) {
             $reception = Reception::create([
                 'customer_id'       => $request->customer_id,
@@ -247,6 +256,15 @@ class ReceptionController extends Controller
             return back()->withErrors(['period_id' => 'يجب اختيار فترة نشطة تابعة للعقد.'])->withInput();
         }
 
+        $activeStoringPeriod = \App\Models\ContractPeriod::find($request->period_id);
+        if ($activeStoringPeriod && (
+            $request->reception_date < $activeStoringPeriod->start_date ||
+            $request->reception_date > $activeStoringPeriod->end_date)) {
+            return redirect()->back()->withErrors([
+                'reception_date' => 'تاريخ السند لا يمكن أن يكون خارج نطاق تاريخ فترة التخزين النشطة للعقد.'
+            ])->withInput();
+        }
+
         DB::transaction(function () use ($request, $reception) {
             $reason = $request->modification_reason ?: 'تعديل وحفظ مسودة';
 
@@ -379,8 +397,11 @@ class ReceptionController extends Controller
             'inventoryEntries.pallet'
         ]);
 
+        $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+
         return Inertia::render('Warehouse/Receptions/Print', [
-            'reception' => $reception
+            'reception' => $reception,
+            'companySettings' => $companySettings,
         ]);
     }
 

@@ -31,17 +31,59 @@ Route::middleware([
 
     require base_path('routes/auth.php');
 
+    Route::get('/run-updates', function() {
+        try {
+            echo "<pre>Clearing cache...\n";
+            \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+            echo \Illuminate\Support\Facades\Artisan::output() . "\n\n";
+
+            echo "Running tenant migrations...\n";
+            \Illuminate\Support\Facades\Artisan::call('tenants:migrate');
+            echo \Illuminate\Support\Facades\Artisan::output() . "\n\n";
+
+            echo "All updates completed successfully!</pre>";
+        } catch (\Exception $e) {
+            echo "Error: " . $e->getMessage();
+        }
+    });
+
     Route::middleware('guest')->group(function () {
         Route::get('/setup-password', [\App\Http\Controllers\TenantPasswordSetupController::class, 'show'])->name('tenant.password.setup');
         Route::post('/setup-password', [\App\Http\Controllers\TenantPasswordSetupController::class, 'store'])->name('tenant.password.store');
     });
 
-    Route::middleware('auth')->group(function () {
+    Route::middleware(['auth', 'permission.check'])->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
         Route::post('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences');
         Route::post('/profile/secure-password', [ProfileController::class, 'updateSecurePassword'])->name('profile.secure-password.update');
+
+        // Employee Management CRUD
+        Route::resource('employees', \App\Http\Controllers\Tenant\EmployeeController::class)->except(['create', 'edit']);
+        Route::put('employees/{employee}/password', [\App\Http\Controllers\Tenant\EmployeeController::class, 'updatePassword'])->name('employees.password.update');
+        Route::put('employees/{employee}/preferences', [\App\Http\Controllers\Tenant\EmployeeController::class, 'updatePreferences'])->name('employees.preferences.update');
+        Route::get('settings/roles-permissions', [\App\Http\Controllers\Tenant\EmployeeController::class, 'rolesPermissions'])->name('settings.roles-permissions');
+        Route::post('settings/roles', [\App\Http\Controllers\Tenant\RoleController::class, 'store'])->name('settings.roles.store');
+        Route::put('settings/roles/{role}', [\App\Http\Controllers\Tenant\RoleController::class, 'update'])->name('settings.roles.update');
+        Route::delete('settings/roles/{role}', [\App\Http\Controllers\Tenant\RoleController::class, 'destroy'])->name('settings.roles.destroy');
+
+        // Notifications Center
+        Route::get('notifications', function() {
+            $user = auth()->user();
+            $user->unreadNotifications->markAsRead();
+            return Inertia::render('Tenant/Notifications/Index', [
+                'notifications' => $user->notifications()->latest()->paginate(15)
+            ]);
+        })->name('notifications.index');
+        Route::post('notifications/mark-all-read', function() {
+            auth()->user()->unreadNotifications->markAsRead();
+            return redirect()->back()->with('success', 'تم تحديد جميع التنبيهات كمقروءة.');
+        })->name('notifications.markAllRead');
+        Route::delete('notifications/clear-all', function() {
+            auth()->user()->notifications()->delete();
+            return redirect()->back()->with('success', 'تم حذف جميع التنبيهات.');
+        })->name('notifications.clearAll');
 
         // Tenant Onboarding / Setup
         Route::get('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'create'])->name('tenant.setup');
@@ -115,6 +157,13 @@ Route::middleware([
                 // Drivers API
                 Route::get('api/drivers', [\App\Http\Controllers\DriverController::class, 'index'])->name('api.drivers.index');
                 Route::post('api/drivers', [\App\Http\Controllers\DriverController::class, 'store'])->name('api.drivers.store');
+
+                // Queue Tickets
+                Route::get('queue-tickets', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'index'])->name('queue-tickets.index');
+                Route::post('queue-tickets', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'store'])->name('queue-tickets.store');
+                Route::get('queue-tickets/{queueTicket}/print', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'print'])->name('queue-tickets.print');
+                Route::get('api/contracts/{contract}/queue-info', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getContractInfo'])->name('api.contracts.queue-info');
+                Route::get('api/customers/{customer}/contracts', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getCustomerContracts'])->name('api.customers.contracts');
 
                 // Receptions Vouchers
                 Route::post('receptions/{reception}/approve', [\App\Http\Controllers\ReceptionController::class, 'approve'])->name('receptions.approve');

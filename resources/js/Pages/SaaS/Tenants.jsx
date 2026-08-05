@@ -129,6 +129,47 @@ export default function Tenants({
         });
     };
 
+    const handleDisable = (id) => {
+        setConfirmModal({
+            show: true,
+            title: lang === "ar" ? "تعطيل المستأجر" : "Disable Tenant",
+            message:
+                lang === "ar"
+                    ? "هل أنت متأكد من تعطيل هذا المستأجر؟ سيصبح غير قادر على تسجيل الدخول لكنه سيبقى في النظام."
+                    : "Are you sure you want to disable this tenant? They won't be able to log in but data will be preserved.",
+            confirmLabel: lang === "ar" ? "تعطيل" : "Disable",
+            cancelLabel: lang === "ar" ? "إلغاء" : "Cancel",
+            type: "warning",
+            onConfirm: () => {
+                post(route("saas.tenants.disable", id), {
+                    onFinish: () =>
+                        setConfirmModal((prev) => ({ ...prev, show: false })),
+                });
+            },
+        });
+    };
+
+    const handleDelete = (id) => {
+        setConfirmModal({
+            show: true,
+            title: lang === "ar" ? "حذف المستأجر" : "Delete Tenant",
+            message:
+                lang === "ar"
+                    ? "تحذير: حذف المستأجر سيؤدي إلى فقدان جميع بياناته. هل أنت متأكد؟"
+                    : "Warning: Deleting the tenant will permanently remove all data. Are you sure?",
+            confirmLabel: lang === "ar" ? "حذف نهائي" : "Delete",
+            cancelLabel: lang === "ar" ? "إلغاء" : "Cancel",
+            type: "danger",
+            onConfirm: () => {
+                post(route("saas.tenants.destroy", id), {
+                    data: { _method: "DELETE" },
+                    onFinish: () =>
+                        setConfirmModal((prev) => ({ ...prev, show: false })),
+                });
+            },
+        });
+    };
+
     const breadcrumbs = (
         <div className="flex items-center gap-2 text-[12px] text-text-muted">
             <Home className="h-3.5 w-3.5" />
@@ -424,17 +465,33 @@ export default function Tenants({
                                                         </span>
                                                     </td>
                                                     <td className="py-4 px-6 text-left">
-                                                        <PrimaryButton
-                                                            onClick={() =>
-                                                                handleSimulate(
-                                                                    tenant,
-                                                                )
-                                                            }
-                                                            className="px-3 py-1.5 text-[10px]"
-                                                        >
-                                                            <ExternalLink className="h-3.5 w-3.5 me-1.5" />
-                                                            محاكاة
-                                                        </PrimaryButton>
+                                                        <div className="flex items-center gap-2">
+                                                            <PrimaryButton
+                                                                onClick={() =>
+                                                                    handleSimulate(
+                                                                        tenant,
+                                                                    )
+                                                                }
+                                                                className="px-3 py-1.5 text-[10px]"
+                                                            >
+                                                                <ExternalLink className="h-3.5 w-3.5 me-1.5" />
+                                                                محاكاة
+                                                            </PrimaryButton>
+
+                                                            <button
+                                                                onClick={() => handleDisable(tenant.id)}
+                                                                className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold"
+                                                            >
+                                                                تعطيل
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => handleDelete(tenant.id)}
+                                                                className="px-3 py-1.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold"
+                                                            >
+                                                                حذف
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}

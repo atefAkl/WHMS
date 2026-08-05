@@ -74,10 +74,23 @@ export default function Topbar({ header }) {
                 </button>
 
                 {/* Notifications */}
-                <button className="relative rounded-full p-2 text-text-muted hover:bg-surface-muted transition-colors" title={lang === 'ar' ? 'الإشعارات' : 'Notifications'}>
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger"></span>
-                </button>
+                {(() => {
+                    const unread = usePage().props.auth?.unread_notifications_count ?? 0;
+                    return (
+                        <Link
+                            href={route('notifications.index')}
+                            className="relative rounded-full p-2 text-text-muted hover:bg-surface-muted transition-colors"
+                            title={lang === 'ar' ? 'الإشعارات' : 'Notifications'}
+                        >
+                            <Bell className="h-5 w-5" />
+                            {unread > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] font-black flex items-center justify-center px-1 leading-none">
+                                    {unread > 99 ? '99+' : unread}
+                                </span>
+                            )}
+                        </Link>
+                    );
+                })()}
 
                 {/* Divider */}
                 <div className="mx-2 h-6 w-px bg-border" />

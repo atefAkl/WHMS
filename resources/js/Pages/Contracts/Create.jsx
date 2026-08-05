@@ -822,10 +822,10 @@ export default function Create({
                                                     data.mandatory_period,
                                                 ) || 1;
                                             const totalInclusiveVat =
+                                                mandatoryPeriod *
                                                 item.unit_count *
-                                                    mandatoryPeriod *
-                                                    item.monthly_rent -
-                                                (item.discount || 0);
+                                                item.monthly_rent *
+                                                (1 - (parseFloat(item.discount || 0) / 100));
 
                                             return (
                                                 <tr key={index}>
@@ -945,18 +945,14 @@ export default function Create({
                                                                 item.discount
                                                             }
                                                             onChange={(e) => {
-                                                                const newItems =
-                                                                    [
-                                                                        ...data.items,
-                                                                    ];
-                                                                newItems[
-                                                                    index
-                                                                ].discount =
-                                                                    e.target.value;
-                                                                setData(
-                                                                    "items",
-                                                                    newItems,
-                                                                );
+                                                                const val = parseFloat(e.target.value) || 0;
+                                                                const selectedStorageItem = storageItems.find(s => s.id === parseInt(item.storage_item_id));
+                                                                const maxDiscount = parseFloat(selectedStorageItem?.max_discount_percent || 0);
+                                                                const finalVal = (maxDiscount > 0 && val > maxDiscount) ? maxDiscount : val;
+
+                                                                const newItems = [...data.items];
+                                                                newItems[index].discount = finalVal;
+                                                                setData("items", newItems);
                                                             }}
                                                         />
                                                     </td>

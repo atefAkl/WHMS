@@ -58,6 +58,23 @@ class ContractTemplateEngine
             $customer = $contractOrData->customer;
             $contact  = $contractOrData->contact;
             
+            // Resolve customer nationality
+            $custNationality = '';
+            if ($customer && $customer->country) {
+                $custNationality = $customer->country->name_ar ?? '';
+            }
+            if (empty($custNationality)) {
+                $custNationality = 'سعودي';
+            }
+
+            // Delegate / agent resolver
+            $delegateName = $contact->name ?? $contractOrData->contractAgents->first()->name ?? '';
+            $delegatePhone = $contact->phone_number ?? $contractOrData->contractAgents->first()->phone_number ?? '';
+            $delegateId = $contact->id_number ?? $contractOrData->contractAgents->first()->id_number ?? '';
+
+            // Check if business (has commercial registration number)
+            $isBusiness = ($customer && !empty($customer->cr_number));
+
             $contractData = [
                 'contract_number'  => $contractOrData->contract_number ?? '',
                 'write_date'       => $contractOrData->write_date ?? '',
@@ -70,22 +87,46 @@ class ContractTemplateEngine
                 'renewal_period'   => $contractOrData->renewal_period ?? '', // alias
 
                 // Customer
-                'customer_name'      => $customer->name ?? '',
-                'customer_phone'     => $customer->phone_number ?? '',
-                'customer_cr'        => $customer->cr_number ?? '',
-                'customer_id_number' => $customer->id_number ?? $customer->cr_number ?? '',
-                'customer_id_type'   => !empty($customer->cr_number) ? 'سجل تجاري' : 'هوية وطنية',
+                'customer_name'        => $customer->name ?? '',
+                'customer_phone'       => $customer->phone_number ?? '',
+                'customer_cr'          => $customer->cr_number ?? '',
+                'customer_id'          => $customer->id_number ?? '',
+                'customer_id_number'   => $customer->id_number ?? $customer->cr_number ?? '',
+                'customer_id_type'     => $isBusiness ? 'سجل تجاري' : 'هوية وطنية',
+                'customer_nationality' => $custNationality,
 
                 // Contact / Delegate
-                'contact_name'      => $contact->name ?? $contractOrData->contractAgents->first()->name ?? '',
-                'contact_phone'     => $contact->phone_number ?? $contractOrData->contractAgents->first()->phone_number ?? '',
-                'contact_id_number' => $contact->id_number ?? $contractOrData->contractAgents->first()->id_number ?? '',
+                'contact_name'      => $delegateName,
+                'contact_phone'     => $delegatePhone,
+                'contact_id_number' => $delegateId,
+
+                // Delegate specific mappings
+                'customer_delegate_name'        => $delegateName,
+                'customer_delegate_id'          => $delegateId,
+                'customer_delegate_nationality' => $custNationality,
 
                 // Financials
                 'grand_total' => $contractOrData->items ? $contractOrData->items->sum('subtotal') : 0,
             ];
 
-            return array_merge($data, $contractData);
+            // Merge everything to allow recursion
+            $merged = array_merge($data, $contractData);
+
+            // Generate introduction dynamically based on Business vs Individual classification
+            if ($isBusiness) {
+                $introTemplate = "بعون الله وتوفيقه، فى يوم {\$write_date} م، الموافق {\$write_date_hijri} هـ ، قد اجتمع كل من:-\n" .
+                    "{\$company_name} سجل تجاري {\$company_cr}، ويمثلها المدير العام - {\$company_gm} وعنوانها الوطنى: {\$company_address}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n" .
+                    "و{\$customer_name}، سجل تجاري: {\$customer_cr}، هاتف: {\$customer_phone}، ويمثلها {\$customer_delegate_name}، هوية/اقامة رقم {\$customer_delegate_id}، الجنسية {\$customer_delegate_nationality}، طرف ثان.";
+            } else {
+                $introTemplate = "بعون الله وتوفيقه، فى يوم {\$write_date} م، الموافق {\$write_date_hijri} هـ ، قد اجتمع كل من:-\n" .
+                    "{\$company_name} سجل تجاري {\$company_cr}، ويمثلها المدير العام - {\$company_gm} وعنوانها الوطنى: {\$company_address}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n" .
+                    "و{\$customer_name}، هاتف: {\$customer_phone}، هوية رقم {\$customer_id}، الجنسية {\$customer_nationality} طرف ثان.";
+            }
+
+            // Render variables nested within the introduction template
+            $merged['contract_introduction'] = self::render($introTemplate, $merged);
+
+            return $merged;
         }
 
         return $data;

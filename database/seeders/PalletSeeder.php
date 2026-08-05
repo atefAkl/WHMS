@@ -19,26 +19,31 @@ class PalletSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Create Warehouse
-        $warehouse = Warehouse::create([
-            'code' => 'WH-01',
-            'name' => 'مستودع الرياض الرئيسي',
-            'description' => 'المستودع المركزي لخدمات التخزين',
-        ]);
+        // 1. Get or Create Warehouse
+        $warehouse = Warehouse::firstOrCreate(
+            ['code' => 'WH-01'],
+            [
+                'name' => 'مستودع الرياض الرئيسي',
+                'description' => 'المستودع المركزي لخدمات التخزين',
+            ]
+        );
 
-        // 2. Create Locations
-        $zones = ['A', 'B', 'C'];
-        foreach ($zones as $zone) {
-            for ($row = 1; $row <= 5; $row++) {
-                for ($slot = 1; $slot <= 4; $slot++) {
-                    Location::create([
-                        'warehouse_id' => $warehouse->id,
-                        'code' => "WH-01-{$zone}-R" . str_pad($row, 2, '0', STR_PAD_LEFT) . "-S" . str_pad($slot, 2, '0', STR_PAD_LEFT),
-                        'zone' => $zone,
-                        'row' => "R{$row}",
-                        'slot' => "S{$slot}",
-                        'status' => 'available',
-                    ]);
+        // 2. Create Locations (only if not already created by LocationSeeder)
+        $existingLocations = Location::where('warehouse_id', $warehouse->id)->count();
+        if ($existingLocations === 0) {
+            $zones = ['A', 'B', 'C'];
+            foreach ($zones as $zone) {
+                for ($row = 1; $row <= 5; $row++) {
+                    for ($slot = 1; $slot <= 4; $slot++) {
+                        Location::create([
+                            'warehouse_id' => $warehouse->id,
+                            'code' => "WH-01-{$zone}-R" . str_pad($row, 2, '0', STR_PAD_LEFT) . "-S" . str_pad($slot, 2, '0', STR_PAD_LEFT),
+                            'zone' => $zone,
+                            'row' => "R{$row}",
+                            'slot' => "S{$slot}",
+                            'status' => 'available',
+                        ]);
+                    }
                 }
             }
         }
@@ -47,25 +52,25 @@ class PalletSeeder extends Seeder
         $saudiArabia = \App\Models\Country::where('code', 'SA')->first();
         $businessCategory = \App\Models\CustomerCategory::where('name_en', 'Business')->first();
         $companyCat = \App\Models\CustomerCategory::where('name_en', 'Company')->where('parent_id', $businessCategory->id)->first();
-        
+
         // 3. Create Customers
         $customers = [
             [
-                'name' => 'شركة الأغذية المتحدة', 
+                'name' => 'شركة الأغذية المتحدة',
                 'email' => 'info@food.com',
                 'phone_number' => '+966500000001',
                 'country_id' => $saudiArabia->id,
                 'category_id' => $companyCat->id,
             ],
             [
-                'name' => 'مؤسسة التوريدات اللوجستية', 
+                'name' => 'مؤسسة التوريدات اللوجستية',
                 'email' => 'sales@logistics.com',
                 'phone_number' => '+966500000002',
                 'country_id' => $saudiArabia->id,
                 'category_id' => $companyCat->id,
             ],
             [
-                'name' => 'مصنع البلاستيك الوطني', 
+                'name' => 'مصنع البلاستيك الوطني',
                 'email' => 'contact@plastic.com',
                 'phone_number' => '+966500000003',
                 'country_id' => $saudiArabia->id,

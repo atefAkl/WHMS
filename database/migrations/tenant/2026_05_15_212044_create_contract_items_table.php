@@ -14,13 +14,9 @@ return new class extends Migration {
             $table->decimal('monthly_rent', 10, 2); // per unit per month
             $table->decimal('discount', 5, 2)->default(0);
             $table->decimal('vat_rate', 5, 2)->default(15);
-            $table->decimal('subtotal_before_vat', 10, 2)->storedAs(
-                'ROUND(unit_count * monthly_rent * (1 - discount / 100), 2)'
-            );
+            $table->decimal('subtotal_before_vat', 10, 2)->default(0);
             // subtotal after VAT stored as well for quick retrieval
-            $table->decimal('subtotal', 10, 2)->storedAs(
-                'ROUND(unit_count * monthly_rent * (1 - discount / 100) * (1 + vat_rate / 100), 2)'
-            );
+            $table->decimal('subtotal', 10, 2)->default(0);
             $table->timestamps();
         });
     }

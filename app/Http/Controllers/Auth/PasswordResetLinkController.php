@@ -31,21 +31,30 @@ class PasswordResetLinkController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
+        ], [
+            'email.required' => 'يرجى إدخال البريد الإلكتروني.',
+            'email.email' => 'يرجى إدخال بريد إلكتروني صحيح.',
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
+        // 1. التأكد أولاً أن البريد مسجل ضمن مستخدمي هذا المستأجر تحديداً
+        $user = \App\Models\User::where('email', $request->email)->first();
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['البريد الإلكتروني المدخل غير مسجل ضمن مستخدمي هذا النظام.'],
+            ]);
+        }
+
+        // 2. إرسال رابط إعادة التعيين عبر لارافل
         $status = Password::sendResetLink(
             $request->only('email')
         );
 
         if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
+            return back()->with('status', 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني بنجاح. يرجى مراجعة صندوق الوارد.');
         }
 
         throw ValidationException::withMessages([
-            'email' => [trans($status)],
+            'email' => [trans($status) ?: 'تعذر إرسال رابط إعادة التعيين. يرجى المحاولة لاحقاً.'],
         ]);
     }
 }

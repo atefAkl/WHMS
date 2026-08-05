@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Stancl\Tenancy\Exceptions\TenantCouldNotBeIdentifiedOnDomainException;
+use Inertia\Inertia;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -32,7 +34,17 @@ class HandleInertiaRequests extends Middleware
             app()->setLocale($locale);
         }
 
-        return parent::handle($request, $next);
+        try {
+            return parent::handle($request, $next);
+        } catch (TenantCouldNotBeIdentifiedOnDomainException $e) {
+            // Show a friendly Inertia page instead of an exception dump
+            $msg = $e->getMessage();
+            // extract domain from message if possible
+            preg_match('/domain\s+(\S+)/', $msg, $m);
+            $domain = $m[1] ?? null;
+
+            return Inertia::render('Errors/TenantNotFound', ['domain' => $domain])->toResponse($request)->setStatusCode(404);
+        }
     }
 
     /**
@@ -58,13 +70,14 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'active_season_name' => session('active_season_name'),
                 'permissions' => $request->user() ? $request->user()->getPermissions() : [],
+                'unread_notifications_count' => ($request->user() && \Illuminate\Support\Facades\Schema::hasTable('notifications')) ? $request->user()->unreadNotifications()->count() : 0,
             ],
             'flash' => [
-                'success'      => fn () => $request->session()->get('success'),
-                'error'        => fn () => $request->session()->get('error'),
-                'warning'      => fn () => $request->session()->get('warning'),
-                'info'         => fn () => $request->session()->get('info'),
-                'mail_warning' => fn () => $request->session()->get('mail_warning'),
+                'success'      => fn() => $request->session()->get('success'),
+                'error'        => fn() => $request->session()->get('error'),
+                'warning'      => fn() => $request->session()->get('warning'),
+                'info'         => fn() => $request->session()->get('info'),
+                'mail_warning' => fn() => $request->session()->get('mail_warning'),
             ],
             'translations' => $translations,
             'locale' => $locale,

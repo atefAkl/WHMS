@@ -31,7 +31,9 @@ import {
     UsersRound,
     FolderTree,
     Scale,
-    PieChart
+    PieChart,
+    Shield,
+    Ticket
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -107,6 +109,7 @@ const tenantNavItems = [
         icon: Activity,
         active: 'operations.*',
         children: [
+            { name: { ar: 'تذاكر الانتظار', en: 'Queue Tickets' }, icon: Ticket, route: 'queue-tickets.index', active: 'queue-tickets.*' },
             { name: { ar: 'سندات الاستلام', en: 'Reception Vouchers' }, icon: FileText, route: 'receptions.index', active: 'receptions.*' },
             { name: { ar: 'أذونات الخروج', en: 'Exit Permits' }, icon: FileText, route: 'exit-authorizations.index', active: 'exit-authorizations.*' },
             { name: { ar: 'سندات التسليم', en: 'Delivery Notes' }, icon: FileText, route: 'deliveries.index', active: 'deliveries.*' }
@@ -117,7 +120,8 @@ const tenantNavItems = [
         icon: Users,
         active: 'hr.*',
         children: [
-            { name: { ar: 'الموظفين', en: 'Employees' }, icon: UserCircle, route: 'dashboard', active: 'employees.*' },
+            { name: { ar: 'الموظفين', en: 'Employees' }, icon: UserCircle, route: 'employees.index', active: 'employees.*' },
+            { name: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' }, icon: Shield, route: 'settings.roles-permissions', active: 'settings.roles-permissions' },
             { name: { ar: 'الرواتب', en: 'Payroll' }, icon: Banknote, route: 'dashboard', active: 'payroll.*' },
             { name: { ar: 'البصمة', en: 'Attendance' }, icon: MapPin, route: 'dashboard', active: 'attendance.*' },
         ]

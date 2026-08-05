@@ -1804,7 +1804,7 @@ export default function ContractSettings({
                                         </div>
 
                                         {/* Quill Container */}
-                                        <div className="border border-border rounded-none overflow-hidden mt-1">
+                                        <div className="border border-border rounded-none mt-1">
                                             <div
                                                 ref={quillRef}
                                                 className="min-h-[350px] text-xs bg-surface text-text"

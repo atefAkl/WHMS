@@ -226,7 +226,7 @@ export default function Index({ items = [], categories = [] }) {
             sales_category_id: String(item.sales_category_id || ""),
             type: item.type,
             default_price: item.default_price,
-            description_ar: item.description_ar_ar || "",
+            description_ar: item.description_ar || "",
             is_active: item.is_active,
         });
         setItemToEdit(item);
@@ -995,7 +995,7 @@ export default function Index({ items = [], categories = [] }) {
                                 step="0.01"
                                 className="mt-1 w-full text-sm rounded-none border-border font-mono"
                                 value={data.default_price}
-                                onChange={(e) => setData("price", e.target.value)}
+                                onChange={(e) => setData("default_price", e.target.value)}
                                 required
                             />
                             <InputError message={errors.default_price} className="mt-1" />
@@ -1006,10 +1006,10 @@ export default function Index({ items = [], categories = [] }) {
                             <textarea
                                 className="mt-1 block w-full border-border bg-surface text-text text-sm focus:border-primary focus:ring-primary rounded-none p-3"
                                 rows="3"
-                                value={data.description}
-                                onChange={(e) => setData("description", e.target.value)}
+                                value={data.description_ar}
+                                onChange={(e) => setData("description_ar", e.target.value)}
                             ></textarea>
-                            <InputError message={errors.description} className="mt-1" />
+                            <InputError message={errors.description_ar} className="mt-1" />
                         </div>
 
                         <div>

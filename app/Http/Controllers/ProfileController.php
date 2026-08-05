@@ -19,9 +19,29 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
+        $avatarFiles = [];
+        $avatarDir = public_path('uploads/avatars');
+        if (file_exists($avatarDir)) {
+            $files = glob($avatarDir . '/*.{jpg,jpeg,png,gif,webp}', GLOB_BRACE);
+            if ($files) {
+                foreach ($files as $file) {
+                    $avatarFiles[] = '/uploads/avatars/' . basename($file);
+                }
+            }
+        }
+        $gallery = array_values(array_unique(array_filter(array_merge(
+            $avatarFiles,
+            \App\Models\User::whereNotNull('avatar')->pluck('avatar')->toArray(),
+            \App\Models\Employee::whereNotNull('avatar')->pluck('avatar')->toArray()
+        ))));
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'avatarGallery' => $gallery,
+            'assignedRoles' => $user->roles->pluck('name')->toArray(),
         ]);
     }
 
@@ -30,15 +50,41 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $avatarPath = $user->avatar;
+        if ($request->has('avatar_gallery')) {
+            $avatarPath = $request->input('avatar_gallery');
+        }
+        if ($request->hasFile('avatar')) {
+            if ($user->avatar && file_exists(public_path($user->avatar))) {
+                @unlink(public_path($user->avatar));
+            }
+            $file = $request->file('avatar');
+            $filename = time() . '_avatar_' . $file->getClientOriginalName();
+            $file->move(public_path('uploads/avatars'), $filename);
+            $avatarPath = '/uploads/avatars/' . $filename;
         }
 
-        $request->user()->save();
+        $updateData = [];
+        $fields = ['name', 'email', 'phone', 'id_number', 'job_title'];
+        foreach ($fields as $field) {
+            if ($request->has($field)) {
+                $updateData[$field] = $validated[$field];
+            }
+        }
+        $updateData['avatar'] = $avatarPath;
 
-        return Redirect::route('profile.edit');
+        $user->fill($updateData);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+
+        return Redirect::route('profile.edit')->with('success', 'تم تحديث البيانات بنجاح.');
     }
 
     /**

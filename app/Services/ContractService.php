@@ -59,8 +59,8 @@ class ContractService
             // items
             if (!empty($data['items'])) {
                 foreach ($data['items'] as $item) {
-                    $total_inclusive = ($item['unit_count'] * $data['mandatory_period'] * $item['monthly_rent']) - ($item['discount'] ?? 0);
-                    $total_before_vat = $total_inclusive / 1.15;
+                    $total_inclusive = $data['mandatory_period'] * $item['unit_count'] * $item['monthly_rent'] * (1 - (($item['discount'] ?? 0) / 100));
+                    $total_before_vat = ($total_inclusive * 100) / 115;
 
                     $contract->items()->create([
                         'storage_item_id'     => $item['storage_item_id'],

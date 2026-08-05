@@ -49,6 +49,15 @@ function Toast({ message, type = "success", onClose }) {
 }
 
 export default function Welcome({ auth, flash }) {
+    const getBaseDomain = () => {
+        if (typeof window === 'undefined') return 'ag-stores.com';
+        const hostname = window.location.hostname;
+        if (hostname.includes('ag-stores.com')) return 'ag-stores.com';
+        if (hostname.includes('whms.loc')) return 'whms.loc';
+        return 'whms.test';
+    };
+    const baseDomain = getBaseDomain();
+
     const [toast, setToast] = useState(
         flash?.success
             ? { message: flash.success, type: "success" }
@@ -337,7 +346,7 @@ export default function Welcome({ auth, flash }) {
                                                 placeholder="almutahida"
                                             />
                                             <span className="absolute left-3 top-3 text-sm text-slate-400 font-mono">
-                                                .whms.test
+                                                .{baseDomain}
                                             </span>
                                         </div>
                                         <InputError

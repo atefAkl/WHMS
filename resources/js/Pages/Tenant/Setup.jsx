@@ -36,9 +36,7 @@ export default function Setup({ settings, registration }) {
 
         // المرحلة 3: المستخدمين وجهات الاتصال
         users: [
-            { name: '', job_title: 'المدير العام', id_number: '', phone: '', email: '', password: '', username: 'general_manager', avatar: null, avatar_preview: null },
-            { name: '', job_title: 'نائب المدير العام', id_number: '', phone: '', email: '', password: '', username: 'deputy_gm', avatar: null, avatar_preview: null },
-            { name: '', job_title: 'مدير التطبيق (المشرف)', id_number: '', phone: '', email: '', password: '', username: 'app_admin', avatar: null, avatar_preview: null }
+            { name: '', job_title: 'المدير العام', id_number: '', phone: '', email: '', password: '', username: 'general_manager', avatar: null, avatar_preview: null }
         ],
 
         // المرحلة 4: قنوات الاتصال الإضافية
@@ -127,8 +125,8 @@ export default function Setup({ settings, registration }) {
     };
 
     const removeUser = (index) => {
-        // نمنع حذف الموظفين الثلاثة الأساسيين
-        if (index < 3) return;
+        // نمنع حذف المدير العام الأساسي
+        if (index < 1) return;
         const updatedUsers = data.users.filter((_, i) => i !== index);
         setData('users', updatedUsers);
     };
@@ -177,7 +175,7 @@ export default function Setup({ settings, registration }) {
             }
         } else if (currentStep === 3) {
             // تحقق من تعبئة مستخدمي الإدارة
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 1; i++) {
                 const u = data.users[i];
                 if (!u.name.trim() || !u.username.trim() || !u.phone.trim() || !u.email.trim() || !u.id_number.trim()) {
                     alert(lang === 'ar' ? `الرجاء إكمال كافة بيانات: ${u.job_title}!` : `Please complete all details for: ${u.job_title}!`);

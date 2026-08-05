@@ -535,6 +535,23 @@ export default function Show({
     const replaceVariables = (text) => {
         if (!text) return "";
         let result = text;
+
+        const custNationality = contract?.customer?.country?.name_ar || "سعودي";
+        const delegateName = contract?.contact?.name || contract?.contract_agents?.[0]?.name || "";
+        const delegateId = contract?.contact?.id_number || contract?.contract_agents?.[0]?.id_number || "";
+        const isBusiness = !!contract?.customer?.cr_number;
+
+        let introText = "";
+        if (isBusiness) {
+            introText = `بعون الله وتوفيقه، فى يوم ${contract?.write_date || ""} م، الموافق ${contract?.write_date_hijri || ""} هـ ، قد اجتمع كل من:-\n` +
+                `${settings?.company_name || ""} سجل تجاري ${settings?.company_cr || ""}، ويمثلها المدير العام - ${settings?.company_gm || ""} وعنوانها الوطنى: ${settings?.company_address || ""}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n` +
+                `و${contract?.customer?.name || ""}، سجل تجاري: ${contract?.customer?.cr_number || ""}، هاتف: ${contract?.customer?.phone_number || ""}، ويمثلها ${delegateName}، هوية/اقامة رقم ${delegateId}، الجنسية ${custNationality}، طرف ثان.`;
+        } else {
+            introText = `بعون الله وتوفيقه، فى يوم ${contract?.write_date || ""} م، الموافق ${contract?.write_date_hijri || ""} هـ ، قد اجتمع كل من:-\n` +
+                `${settings?.company_name || ""} سجل تجاري ${settings?.company_cr || ""}، ويمثلها المدير العام - ${settings?.company_gm || ""} وعنوانها الوطنى: ${settings?.company_address || ""}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n` +
+                `و${contract?.customer?.name || ""}، هاتف: ${contract?.customer?.phone_number || ""}، هوية رقم ${contract?.customer?.id_number || ""}، الجنسية ${custNationality} طرف ثان.`;
+        }
+
         const vars = {
             "{$company_name}": settings?.company_name || "",
             "{$company_slogan}": settings?.company_slogan || "",
@@ -559,6 +576,11 @@ export default function Show({
             "{$write_date_hijri}": contract?.write_date_hijri || "",
             "{$start_date_hijri}": contract?.start_date_hijri || "",
             "{$terms_count}": contract?.terms?.length || 0,
+            "{$customer_nationality}": custNationality,
+            "{$customer_delegate_name}": delegateName,
+            "{$customer_delegate_id}": delegateId,
+            "{$customer_delegate_nationality}": custNationality,
+            "{$contract_introduction}": introText,
         };
         Object.entries(vars).forEach(([key, val]) => {
             result = result.replaceAll(key, val);
@@ -626,11 +648,38 @@ export default function Show({
         };
 
         const activeColsCount = [
+            true, // Index
             showItem,
             showQty,
+            true, // Period
             showRent,
             showDiscount,
+            true, // VAT Column
+            showTotal,
         ].filter(Boolean).length;
+
+        const duration = parseInt(contract.mandatory_period || 0) || 1;
+        const firstPeriod = contract.periods?.find(p => p.period_number === 1);
+        const sourceItems = firstPeriod?.items || contract.items || [];
+
+        const processedItems = sourceItems.map(item => {
+            const qty = parseFloat(item.unit_count || 0);
+            const rent = parseFloat(item.monthly_rent || 0);
+            const disc = parseFloat(item.discount || 0);
+            const subtotal = qty * duration * (rent - disc);
+            const vatRate = parseFloat(item.vat_rate || 0) || 15;
+            const subtotal_before_vat = (subtotal * 100) / (100 + vatRate);
+
+            return {
+                ...item,
+                subtotal: subtotal.toFixed(2),
+                subtotal_before_vat: subtotal_before_vat.toFixed(2)
+            };
+        });
+
+        const totalBeforeVat = processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal_before_vat || 0), 0) || 0;
+        const totalInclusive = processedItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0) || 0;
+        const totalVat = totalInclusive - totalBeforeVat;
 
         // Table Html
         const tableHtml = (
@@ -641,6 +690,7 @@ export default function Show({
                 <table className="w-full text-xs text-start border-collapse border border-black">
                     <thead className="bg-gray-100 text-black uppercase font-bold">
                         <tr>
+                            <th className="border border-black px-2 py-2 text-center w-8">#</th>
                             {showItem && (
                                 <th className="border border-black px-3 py-2 text-start">
                                     {getColTitle(
@@ -655,12 +705,15 @@ export default function Show({
                                     {getColTitle("qty", "الكمية", "Qty")}
                                 </th>
                             )}
+                            <th className="border border-black px-3 py-2 text-center w-20">
+                                {lang === "ar" ? "المدة" : "Period"}
+                            </th>
                             {showRent && (
                                 <th className="border border-black px-3 py-2 text-center w-28">
                                     {getColTitle(
                                         "rent",
-                                        "الإيجار الشهري",
-                                        "Monthly Rent",
+                                        "سعر الوحدة (قبل الضريبة)",
+                                        "Unit Price (Ex. VAT)",
                                     )}
                                 </th>
                             )}
@@ -673,84 +726,94 @@ export default function Show({
                                     )}
                                 </th>
                             )}
+                            <th className="border border-black px-3 py-2 text-center w-24">
+                                {lang === "ar" ? "الضريبة (15%)" : "VAT (15%)"}
+                            </th>
                             {showTotal && (
                                 <th className="border border-black px-3 py-2 text-end w-32">
                                     {getColTitle(
                                         "total",
-                                        "الإجمالي شامل الضريبة",
-                                        "Total with VAT",
+                                        "الإجمالي (قبل الضريبة)",
+                                        "Total (Ex. VAT)",
                                     )}
                                 </th>
                             )}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-300">
-                        {contract.items?.map((item) => (
-                            <tr key={item.id}>
-                                {showItem && (
-                                    <td className="border border-black px-3 py-2 font-bold text-start">
-                                        {lang === "ar"
-                                            ? item.storage_item?.name_ar
-                                            : item.storage_item?.name_en ||
-                                              item.storage_item?.name_ar}
-                                    </td>
-                                )}
-                                {showQty && (
+                        {processedItems?.map((item, idx) => {
+                            const priceExVat = (parseFloat(item.monthly_rent || 0) / 1.15).toFixed(2);
+                            const rowVat = (parseFloat(item.subtotal || 0) - parseFloat(item.subtotal_before_vat || 0)).toFixed(2);
+                            
+                            return (
+                                <tr key={item.id}>
+                                    <td className="border border-black px-2 py-2 text-center font-mono font-bold">{idx + 1}</td>
+                                    {showItem && (
+                                        <td className="border border-black px-3 py-2 font-bold text-start">
+                                            {lang === "ar"
+                                                ? (item.storage_item?.name_ar || item.storageItem?.name_ar || "")
+                                                : (item.storage_item?.name_en || item.storageItem?.name_en || item.storage_item?.name_ar || item.storageItem?.name_ar || "")}
+                                        </td>
+                                    )}
+                                    {showQty && (
+                                        <td className="border border-black px-3 py-2 text-center font-mono">
+                                            {item.unit_count}
+                                        </td>
+                                    )}
                                     <td className="border border-black px-3 py-2 text-center font-mono">
-                                        {item.unit_count}
+                                        {contract.mandatory_period} {lang === "ar" ? "أشهر" : "Months"}
                                     </td>
-                                )}
-                                {showRent && (
-                                    <td
-                                        className="border border-black px-3 py-2 text-center font-mono"
-                                        dir="ltr"
-                                    >
-                                        {item.monthly_rent}
+                                    {showRent && (
+                                        <td
+                                            className="border border-black px-3 py-2 text-center font-mono"
+                                            dir="ltr"
+                                        >
+                                            {priceExVat}
+                                        </td>
+                                    )}
+                                    {showDiscount && (
+                                        <td
+                                            className="border border-black px-3 py-2 text-center font-mono text-red-700"
+                                            dir="ltr"
+                                        >
+                                            {item.discount > 0
+                                                ? `-${item.discount}`
+                                                : "0"}
+                                        </td>
+                                    )}
+                                    <td className="border border-black px-3 py-2 text-center font-mono font-semibold" dir="ltr">
+                                        {rowVat}
                                     </td>
-                                )}
-                                {showDiscount && (
-                                    <td
-                                        className="border border-black px-3 py-2 text-center font-mono text-red-700"
-                                        dir="ltr"
-                                    >
-                                        {item.discount > 0
-                                            ? `-${item.discount}`
-                                            : "0"}
-                                    </td>
-                                )}
-                                {showTotal && (
-                                    <td
-                                        className="border border-black px-3 py-2 text-end font-mono font-bold"
-                                        dir="ltr"
-                                    >
-                                        {item.subtotal}
-                                    </td>
-                                )}
-                            </tr>
-                        ))}
+                                    {showTotal && (
+                                        <td
+                                            className="border border-black px-3 py-2 text-end font-mono font-bold"
+                                            dir="ltr"
+                                        >
+                                            {item.subtotal_before_vat}
+                                        </td>
+                                    )}
+                                </tr>
+                            );
+                        })}
                     </tbody>
                     <tfoot className="bg-gray-100 font-bold border-t-2 border-black">
                         <tr>
-                            <td
-                                colSpan={activeColsCount}
-                                className="border border-black px-3 py-2 text-end uppercase"
-                            >
-                                {t("show.grand_total")}
+                            <td colSpan={activeColsCount} className="border border-black px-3 py-2">
+                                <div className="flex justify-between items-center text-xs">
+                                    <div>
+                                        <span className="text-zinc-700 bg-zinc-200/50 px-1.5 py-0.5 rounded font-bold me-1">Total</span>
+                                        <span className="font-mono text-sm">{totalBeforeVat.toFixed(2)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-zinc-700 bg-zinc-200/50 px-1.5 py-0.5 rounded font-bold me-1">VAT</span>
+                                        <span className="font-mono text-sm">{totalVat.toFixed(2)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-zinc-700 bg-zinc-200/50 px-1.5 py-0.5 rounded font-bold me-1">Total With VAT</span>
+                                        <span className="font-mono text-sm">{totalInclusive.toFixed(2)}</span>
+                                    </div>
+                                </div>
                             </td>
-                            {showTotal && (
-                                <td
-                                    className="border border-black px-3 py-2 text-end font-mono text-sm"
-                                    dir="ltr"
-                                >
-                                    {contract.items
-                                        ?.reduce(
-                                            (sum, item) =>
-                                                sum + parseFloat(item.subtotal),
-                                            0,
-                                        )
-                                        .toFixed(2)}
-                                </td>
-                            )}
                         </tr>
                     </tfoot>
                 </table>
@@ -764,7 +827,7 @@ export default function Show({
         if (evaluatedText.includes("[ITEMS_TABLE]")) {
             const parts = evaluatedText.split("[ITEMS_TABLE]");
             parsedContent = (
-                <div className="text-start whitespace-pre-line leading-relaxed text-black">
+                <div className="text-start whitespace-pre-line leading-relaxed text-black contract-rich-text">
                     <div dangerouslySetInnerHTML={{ __html: parts[0] }} />
                     {tableHtml}
                     <div dangerouslySetInnerHTML={{ __html: parts[1] }} />
@@ -772,7 +835,7 @@ export default function Show({
             );
         } else {
             parsedContent = (
-                <div className="space-y-4">
+                <div className="space-y-4 contract-rich-text">
                     <div
                         className="text-start whitespace-pre-line leading-relaxed text-black"
                         dangerouslySetInnerHTML={{ __html: evaluatedText }}
@@ -782,9 +845,146 @@ export default function Show({
             );
         }
 
+        if (isPrint) {
+            return (
+                <div className="w-full bg-white text-black font-sans text-start print-page-wrapper">
+                    <table className="w-full border-0 print-layout-table">
+                        <thead>
+                            <tr>
+                                <td className="p-0 border-0 pb-6">
+                                    {/* Boxed Header */}
+                                    <div className="flex justify-between items-stretch gap-4 mb-4">
+                                        {/* Left Box: Company Info */}
+                                        <div className="flex-1 pb-3 border-b border-black flex items-center gap-4 text-xs">
+                                            {logoSrc ? (
+                                                <img
+                                                    src={logoSrc}
+                                                    alt="Logo"
+                                                    className="h-14 w-auto object-contain p-1"
+                                                />
+                                            ) : (
+                                                <div className="h-14 w-14 border border-zinc-300 flex items-center justify-center text-[10px] font-bold">
+                                                    شعار
+                                                </div>
+                                            )}
+                                            <div className="space-y-0.5 text-start font-bold">
+                                                <h2 className="text-sm font-extrabold text-black">
+                                                    {settings?.company_name}
+                                                </h2>
+                                                <p className="text-[10px] font-medium text-zinc-700">
+                                                    {settings?.company_slogan}
+                                                </p>
+                                                <p className="text-[10px] font-medium text-zinc-700">
+                                                    {t("show.cr_short")} {settings?.company_cr} | {t("show.phone")} {settings?.company_phone}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Box: Contract Details */}
+                                        <div className="w-1/3 pb-3 border-b border-black flex flex-col justify-center items-center text-center">
+                                            <div className="font-extrabold text-xs uppercase text-black">
+                                                {contract.contract_title || t("show.contract_title")}
+                                            </div>
+                                            {showContractSerial && (
+                                                <div className="mt-1 text-xs font-mono font-extrabold text-black">
+                                                    {t("show.contract_no")} {contract.contract_number}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="p-0 border-0">
+                                    {/* Unified Body Content */}
+                                    <div className="text-xs text-black leading-relaxed space-y-4">
+                                        {parsedContent}
+
+                                        {/* Boxed Signatures Section */}
+                                        <div className="mt-8 text-xs text-black border-t border-black pt-6">
+                                            <div className="font-extrabold text-start text-xs uppercase mb-4">
+                                                {lang === "ar" ? "توقيع الأطراف" : "Parties Signature"}
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-12 divide-x divide-x-reverse divide-zinc-200">
+                                                {/* First Party */}
+                                                <div className="space-y-2 text-start">
+                                                    <p className="font-extrabold pb-1 border-b border-zinc-200">
+                                                        {lang === "ar" ? "الطرف الأول" : "First Party"}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-semibold">{t("show.company")}</span> {settings?.company_name}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-semibold">{t("show.name")}</span> {settings?.company_gm || t("show.general_manager")}
+                                                    </p>
+                                                    <p className="pt-4">
+                                                        <span className="font-semibold">{t("show.signature")}</span> ___________________________
+                                                    </p>
+                                                    <p className="text-[10px] text-zinc-500 font-bold">
+                                                        {t("show.official_stamp")}
+                                                    </p>
+                                                </div>
+
+                                                {/* Second Party */}
+                                                <div className="space-y-2 text-start">
+                                                    <p className="font-extrabold pb-1 border-b border-zinc-200">
+                                                        {lang === "ar" ? "الطرف الثاني" : "Second Party"}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-semibold">{t("show.customer_label")}</span> {contract.customer?.name}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-semibold">{t("show.name")}</span> {contract.contract_agents?.[0]?.name || contract.customer?.name}
+                                                    </p>
+                                                    <p className="pt-4">
+                                                        <span className="font-semibold">{t("show.signature")}</span> ___________________________
+                                                    </p>
+
+                                                    {(settings?.include_second_party_proxy === "1" || settings?.include_second_party_proxy === true) && contract.contract_agents?.[1] && (
+                                                        <div className="pt-2 mt-2 border-t border-dashed border-zinc-200 space-y-1">
+                                                            <p className="font-bold text-[10px] text-zinc-800">
+                                                                {lang === "ar" ? "ينوب عنه في التوقيع:" : "Proxy Signatory:"}
+                                                            </p>
+                                                            <p className="text-[10px]">
+                                                                <span className="font-semibold">{t("show.name")}</span> {contract.contract_agents[1].name}
+                                                            </p>
+                                                            {contract.contract_agents[1].job_title && (
+                                                                <p className="text-[10px]">
+                                                                    <span className="font-semibold">{lang === "ar" ? "الصفة:" : "Job Title:"}</span> {contract.contract_agents[1].job_title}
+                                                                </p>
+                                                            )}
+                                                            <p className="pt-2 text-[10px]">
+                                                                <span className="font-semibold">{t("show.signature")}</span> __________________
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td className="p-0 border-0 pt-6">
+                                    {/* Boxed Footer */}
+                                    <div className="border-t border-zinc-300 pt-3 text-center text-[10px] text-zinc-500 font-semibold">
+                                        {settings?.company_address} | {t("show.phone")} {settings?.company_phone} | {t("show.email")} {settings?.company_email}
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            );
+        }
+
         return (
             <div
-                className={`w-full bg-white text-black font-sans text-start ${isPrint ? "" : "p-8 border border-zinc-200 shadow-sm max-w-4xl mx-auto rounded-xl"}`}
+                className="w-full bg-white text-black font-sans text-start p-8 border border-zinc-200 shadow-sm max-w-4xl mx-auto rounded-xl contract-view-wrapper"
             >
                 {/* ──────── RENDER HEADER DESIGN (1-5) ──────── */}
                 {headerDesign === "1" && (
@@ -2286,22 +2486,15 @@ export default function Show({
                                                             data.items?.map(
                                                                 (item, idx) => {
                                                                     const rowSubtotal =
+                                                                        parseInt(
+                                                                            data.mandatory_period ||
+                                                                                0,
+                                                                        ) *
                                                                         parseFloat(
                                                                             item.unit_count ||
                                                                                 0,
                                                                         ) *
-                                                                            parseInt(
-                                                                                data.mandatory_period ||
-                                                                                    0,
-                                                                            ) *
-                                                                            parseFloat(
-                                                                                item.monthly_rent ||
-                                                                                    0,
-                                                                            ) -
-                                                                        parseFloat(
-                                                                            item.discount ||
-                                                                                0,
-                                                                        );
+                                                                        (parseFloat(item.monthly_rent || 0) - parseFloat(item.discount || 0));
                                                                     return (
                                                                         <tr
                                                                             key={
@@ -2400,25 +2593,24 @@ export default function Show({
                                                                             <td className="px-4 py-2">
                                                                                 <TextInput
                                                                                     type="number"
-                                                                                    step="0.01"
+                                                                                    step="0.1"
                                                                                     className="w-full text-xs text-danger"
                                                                                     value={
                                                                                         item.discount
                                                                                     }
                                                                                     onChange={(
                                                                                         e,
-                                                                                    ) =>
+                                                                                    ) => {
+                                                                                        const val = parseFloat(e.target.value) || 0;
+                                                                                        const selectedStorageItem = storageItems.find(s => s.id === parseInt(item.storage_item_id));
+                                                                                        const maxDiscount = parseFloat(selectedStorageItem?.max_discount_percent || 0);
+                                                                                        const finalVal = (maxDiscount > 0 && val > maxDiscount) ? maxDiscount : val;
                                                                                         updateItemField(
                                                                                             idx,
                                                                                             "discount",
-                                                                                            parseFloat(
-                                                                                                e
-                                                                                                    .target
-                                                                                                    .value,
-                                                                                            ) ||
-                                                                                                0,
-                                                                                        )
-                                                                                    }
+                                                                                            finalVal,
+                                                                                        );
+                                                                                    }}
                                                                                 />
                                                                             </td>
                                                                             <td
@@ -7047,9 +7239,82 @@ export default function Show({
 
             {/* A4 Print View Container (Hidden on screen, visible on print) */}
             <div
-                className="hidden print:block print:w-full print:bg-white print:text-black print:p-8 font-sans"
+                className="hidden print:block print:w-full print:bg-white print:text-black print:p-8 font-sans contract-print-area"
                 dir={lang === "ar" ? "rtl" : "ltr"}
             >
+                <style dangerouslySetInnerHTML={{ __html: `
+                    /* Screen & Print List Styles */
+                    .contract-rich-text ol, .contract-view-wrapper ol, .contract-print-area ol {
+                        list-style-type: decimal !important;
+                        margin-right: 25px !important;
+                        margin-left: 25px !important;
+                        padding-right: 5px !important;
+                        padding-left: 5px !important;
+                        list-style-position: outside !important;
+                        display: block !important;
+                    }
+                    .contract-rich-text ul, .contract-view-wrapper ul, .contract-print-area ul {
+                        list-style-type: disc !important;
+                        margin-right: 25px !important;
+                        margin-left: 25px !important;
+                        padding-right: 5px !important;
+                        padding-left: 5px !important;
+                        list-style-position: outside !important;
+                        display: block !important;
+                    }
+                    .contract-rich-text li, .contract-view-wrapper li, .contract-print-area li {
+                        display: list-item !important;
+                        margin-bottom: 4px !important;
+                    }
+                    
+                    @media print {
+                        @page {
+                            size: A4;
+                            margin: 15mm 15mm 15mm 15mm;
+                        }
+                        body {
+                            background-color: #fff !important;
+                            color: #000 !important;
+                        }
+                        body * {
+                            visibility: hidden !important;
+                        }
+                        .contract-print-area, .contract-print-area * {
+                            visibility: visible !important;
+                        }
+                        .contract-print-area {
+                            position: absolute !important;
+                            left: 0 !important;
+                            top: 0 !important;
+                            width: 100% !important;
+                            padding: 0px !important;
+                            margin: 0 !important;
+                            background: white !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                        .print-layout-table {
+                            width: 100% !important;
+                            border-collapse: collapse !important;
+                            border: none !important;
+                        }
+                        .print-layout-table thead {
+                            display: table-header-group !important;
+                        }
+                        .print-layout-table tfoot {
+                            display: table-footer-group !important;
+                        }
+                        .print-layout-table tr {
+                            page-break-inside: avoid !important;
+                        }
+                        .contract-print-area .border {
+                            page-break-inside: avoid !important;
+                        }
+                        .print\\:hidden {
+                            display: none !important;
+                        }
+                    }
+                `}} />
                 {renderUnifiedLayout(true)}
             </div>
 

@@ -333,18 +333,10 @@ export default function CreateEdit({
                             contract.contract_agents?.[0]?.id || "",
                     }));
                 }
-
-                // Fetch occupancy stats
-                loadContractStats(contract.id);
-
-                // Load pallets with balance > 0
-                loadPallets(contract.id);
             }
         } else {
             setAvailablePeriods([]);
             setAvailableRepresentatives([]);
-            setContractStats(null);
-            setPosPallets([]);
         }
         setPosPalletId("");
         setPalletSearch("");
@@ -354,6 +346,17 @@ export default function CreateEdit({
         setPosQuantity("");
         setPosRowError("");
     }, [data.contract_id, availableContracts]);
+
+    // Fetch contract occupancy stats & pallets
+    useEffect(() => {
+        if (data.contract_id) {
+            loadContractStats(data.contract_id);
+            loadPallets(data.contract_id);
+        } else {
+            setContractStats(null);
+            setPosPallets([]);
+        }
+    }, [data.contract_id]);
 
     // Fetch items when pallet selection changes
     useEffect(() => {

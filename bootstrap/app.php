@@ -24,8 +24,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'season' => \App\Http\Middleware\EnsureSeasonIsSelected::class,
             'tenant' => \App\Http\Middleware\EnsureTenantIsConfigured::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission.check' => \App\Http\Middleware\EnsureUserHasPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Database\QueryException $e, \Illuminate\Http\Request $request) {
+            // 23503 is the SQLSTATE code for foreign key violation in PostgreSQL and MySQL
+            if (
+                $e->getCode() == '23503' || 
+                str_contains($e->getMessage(), '23503') || 
+                str_contains($e->getMessage(), 'foreign key') || 
+                str_contains($e->getMessage(), 'constraint fails')
+            ) {
+                return back()->with('error', 'لا يمكن حذف هذا السجل لارتباطه ببيانات وسجلات أخرى في النظام.');
+            }
+        });
     })->create();

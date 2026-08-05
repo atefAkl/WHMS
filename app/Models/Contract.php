@@ -185,12 +185,6 @@ class Contract extends Model
             $existing = $existingItems->get($item->storage_item_id);
 
             if ($existing) {
-                $existing->update([
-                    'unit_count' => $item->unit_count,
-                    'monthly_rent' => $item->monthly_rent,
-                    'discount' => $item->discount,
-                    'vat_rate' => $item->vat_rate,
-                ]);
                 continue;
             }
 

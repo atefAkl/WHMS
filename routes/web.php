@@ -5,7 +5,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-$centralDomains = config('tenancy.central_domains', ['whm.apl', 'www.whm.apl', 'localhost', '127.0.0.1']);
+// Ensure domains list is unique to avoid duplicate route names when caching routes
+$centralDomains = array_unique(config('tenancy.central_domains', ['whm.apl', 'www.whm.apl', 'localhost', '127.0.0.1']));
 
 foreach ($centralDomains as $domain) {
     Route::domain($domain)->group(function () {
@@ -33,13 +34,16 @@ foreach ($centralDomains as $domain) {
             Route::get('/requests', [\App\Http\Controllers\SaaSController::class, 'index'])->name('saas.tenants.requests');
             Route::post('/requests/{tenantRequest}/approve', [\App\Http\Controllers\SaaSController::class, 'approveRequest'])->name('saas.tenants.approve');
             Route::post('/requests/{tenantRequest}/reject', [\App\Http\Controllers\SaaSController::class, 'rejectRequest'])->name('saas.tenants.reject');
+            // Tenant management: disable or delete tenant
+            Route::post('/tenants/{tenant}/disable', [\App\Http\Controllers\SaaSController::class, 'disableTenant'])->name('saas.tenants.disable');
+            Route::delete('/tenants/{tenant}', [\App\Http\Controllers\SaaSController::class, 'destroyTenant'])->name('saas.tenants.destroy');
 
             // Central SaaS Settings (SaaSSettingController)
             Route::get('/settings', [\App\Http\Controllers\SaaSSettingController::class, 'settingsIndex'])->name('saas.settings.index');
-            
+
             Route::get('/settings/tenants', [\App\Http\Controllers\SaaSSettingController::class, 'tenantSettings'])->name('saas.settings.tenants');
             Route::post('/settings/tenants', [\App\Http\Controllers\SaaSSettingController::class, 'updateTenantSettings'])->name('saas.settings.tenants.update');
-            
+
             Route::get('/settings/terms', [\App\Http\Controllers\SaaSSettingController::class, 'termsSettings'])->name('saas.settings.terms');
             Route::post('/settings/terms', [\App\Http\Controllers\SaaSSettingController::class, 'updateGlobalTerms'])->name('saas.settings.terms.update');
 
@@ -51,6 +55,25 @@ foreach ($centralDomains as $domain) {
             Route::get('/settings/themes', [\App\Http\Controllers\SaaSSettingController::class, 'themesSettings'])->name('saas.settings.themes');
             Route::get('/settings/notifications', [\App\Http\Controllers\SaaSSettingController::class, 'notificationsSettings'])->name('saas.settings.notifications');
             Route::get('/settings/roles-permissions', [\App\Http\Controllers\SaaSSettingController::class, 'rolesPermissions'])->name('saas.settings.roles');
+        });
+
+        // Deployment Helpers for cPanel (without SSH)
+        Route::get('/deploy-migrations-90083', function () {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                return "Migrations Run Success:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
+            } catch (\Exception $e) {
+                return "Error: " . $e->getMessage();
+            }
+        });
+
+        Route::get('/deploy-seed-90083', function () {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+                return "Seeding Success:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
+            } catch (\Exception $e) {
+                return "Error: " . $e->getMessage();
+            }
         });
 
         require __DIR__ . '/auth.php';

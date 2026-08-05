@@ -29,6 +29,7 @@ export default function StorageItems({ items }) {
         name_en: '',
         default_price: 0,
         is_active: true,
+        max_discount_percent: 0,
     });
 
     const openCreateModal = () => {
@@ -44,6 +45,7 @@ export default function StorageItems({ items }) {
             name_en: item.name_en || '',
             default_price: item.default_price,
             is_active: item.is_active,
+            max_discount_percent: item.max_discount_percent || 0,
         });
         setItemToEdit(item);
     };
@@ -98,6 +100,7 @@ export default function StorageItems({ items }) {
                                     <th className="px-4 py-3">{lang === 'ar' ? 'الاسم (عربي)' : 'Name (Arabic)'}</th>
                                     <th className="px-4 py-3">{lang === 'ar' ? 'الاسم (إنجليزي)' : 'Name (English)'}</th>
                                     <th className="px-4 py-3">{lang === 'ar' ? 'السعر الافتراضي' : 'Default Price'}</th>
+                                    <th className="px-4 py-3">{lang === 'ar' ? 'الخصم الأقصى لمندوب البيع' : 'Max Agent Discount'}</th>
                                     <th className="px-4 py-3 text-center">{lang === 'ar' ? 'الحالة' : 'Status'}</th>
                                     <th className="px-4 py-3 w-20"></th>
                                 </tr>
@@ -115,6 +118,7 @@ export default function StorageItems({ items }) {
                                             <td className="px-4 py-3 font-medium text-text">{item.name_ar}</td>
                                             <td className="px-4 py-3 text-text-muted">{item.name_en || '—'}</td>
                                             <td className="px-4 py-3 font-mono text-emerald-600 font-bold" dir="ltr">{parseFloat(item.default_price).toFixed(2)}</td>
+                                            <td className="px-4 py-3 font-mono font-bold text-red-600">{item.max_discount_percent ? `${parseFloat(item.max_discount_percent).toFixed(1)}%` : '0.0%'}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${item.is_active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-gray-500/10 text-gray-500'}`}>
                                                     {item.is_active ? (lang === 'ar' ? 'نشط' : 'Active') : (lang === 'ar' ? 'غير نشط' : 'Inactive')}
@@ -170,6 +174,23 @@ export default function StorageItems({ items }) {
                             <InputLabel value={lang === 'ar' ? 'السعر الافتراضي *' : 'Default Price *'} />
                             <TextInput type="number" min="0" step="0.01" className="mt-1 w-full text-sm font-mono" value={data.default_price} onChange={e => setData('default_price', e.target.value)} dir="ltr" required />
                             <InputError message={errors.default_price} className="mt-1" />
+                            {parseFloat(data.default_price || 0) > 0 && (
+                                <div className="mt-1.5 flex gap-4 text-xs font-semibold text-zinc-500 bg-zinc-50 p-2 rounded">
+                                    <span>
+                                        {lang === 'ar' ? 'السعر قبل الضريبة: ' : 'Price ex. VAT: '}
+                                        <span className="font-mono text-emerald-600 font-bold">{(parseFloat(data.default_price || 0) / 1.15).toFixed(2)}</span>
+                                    </span>
+                                    <span>
+                                        {lang === 'ar' ? 'قيمة الضريبة: ' : 'VAT (15%): '}
+                                        <span className="font-mono text-emerald-600 font-bold">{(parseFloat(data.default_price || 0) - (parseFloat(data.default_price || 0) / 1.15)).toFixed(2)}</span>
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <InputLabel value={lang === 'ar' ? 'الخصم الأقصى لمندوب البيع (%)' : 'Max Allowed Agent Discount (%)'} />
+                            <TextInput type="number" min="0" max="100" step="0.1" className="mt-1 w-full text-sm font-mono" value={data.max_discount_percent} onChange={e => setData('max_discount_percent', e.target.value)} dir="ltr" />
+                            <InputError message={errors.max_discount_percent} className="mt-1" />
                         </div>
                         <div className="flex items-center gap-2">
                             <input type="checkbox" id="is_active" className="rounded border-border text-primary focus:ring-primary h-4 w-4" checked={data.is_active} onChange={e => setData('is_active', e.target.checked)} />

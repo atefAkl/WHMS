@@ -10,6 +10,7 @@ import {
     Home,
     ChevronRight,
     FolderTree,
+    Lock,
 } from "lucide-react";
 import Pagination from "@/Components/Pagination";
 import Modal from "@/Components/Modal";
@@ -25,6 +26,19 @@ import Tooltip from "@/Components/Tooltip";
 
 export default function Categories({ auth, categories, parentCategories, accounts }) {
     const { lang } = useLang();
+
+    const isSystemCategory = (cat) => {
+        const nameEn = String(cat.name_en || "").toLowerCase();
+        const nameAr = String(cat.name_ar || "");
+        return (
+            nameEn === "individual" || 
+            nameEn === "individuals" || 
+            nameAr === "أفراد" || 
+            nameEn === "business" || 
+            nameEn === "businesses" || 
+            nameAr === "أعمال"
+        );
+    };
 
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [categoryToEdit, setCategoryToEdit] = useState(null);
@@ -247,44 +261,52 @@ export default function Categories({ auth, categories, parentCategories, account
                                                         )}
                                                     </td>
                                                     <td className="whitespace-nowrap px-6 py-4 text-end text-sm font-medium">
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <Tooltip
-                                                                text={
-                                                                    lang ===
-                                                                    "ar"
-                                                                        ? "تعديل"
-                                                                        : "Edit"
-                                                                }
-                                                            >
-                                                                <button
-                                                                    onClick={() =>
-                                                                        openEditModal(
-                                                                            category,
-                                                                        )
+                                                        {isSystemCategory(category) ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200">
+                                                                <Lock className="h-3 w-3" />
+                                                                {lang === "ar" ? "تصنيف نظام" : "System Category"}
+                                                            </span>
+                                                        ) : (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Tooltip
+                                                                    text={
+                                                                        lang ===
+                                                                        "ar"
+                                                                            ? "تعديل"
+                                                                            : "Edit"
                                                                     }
-                                                                    className="p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-primary/10 transition-colors"
                                                                 >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </button>
-                                                            </Tooltip>
-                                                            <Tooltip
-                                                                text={
-                                                                    lang ===
-                                                                    "ar"
-                                                                        ? "حذف"
-                                                                        : "Delete"
-                                                                }
-                                                            >
-                                                                <button
-                                                                    onClick={() =>
-                                                                        requestDelete(route("settings.categories.destroy", category.id), category)
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            openEditModal(
+                                                                                category,
+                                                                            )
+                                                                        }
+                                                                        className="p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-primary/10 transition-colors"
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </button>
+                                                                </Tooltip>
+                                                                <Tooltip
+                                                                    text={
+                                                                        lang ===
+                                                                        "ar"
+                                                                            ? "حذف"
+                                                                            : "Delete"
                                                                     }
-                                                                    className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                                                                 >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </button>
-                                                            </Tooltip>
-                                                        </div>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            requestDelete(route("settings.categories.destroy", category.id), category)
+                                                                        }
+                                                                        className="p-1.5 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                                                                        disabled={deleteProcessing}
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                </Tooltip>
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             ))}

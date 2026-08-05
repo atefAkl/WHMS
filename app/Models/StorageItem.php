@@ -15,7 +15,8 @@ class StorageItem extends Model
         'description_ar',
         'description_en',
         'sales_category_id',
-        'type'
+        'type',
+        'max_discount_percent'
     ];
 
     protected $casts = [

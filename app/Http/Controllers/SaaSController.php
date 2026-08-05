@@ -103,6 +103,7 @@ class SaaSController extends Controller
 
             $appDomain = config('app.domain', 'whms.test');
 
+            $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'http';
             $tenants[] = [
                 'id' => $tenant->id,
                 'company_name' => $data['company_name'] ?? ('شركة ' . ucfirst($tenant->id)),
@@ -115,7 +116,7 @@ class SaaSController extends Controller
                 'expiry_date' => $data['expiry_date'] ?? date('Y-m-d', strtotime($tenant->created_at . ' +1 year')),
                 'status' => $data['status'] ?? 'نشط',
                 'setup_token' => $setupToken,
-                'activation_link' => $setupToken ? "http://{$tenant->id}.{$appDomain}/setup-password?token={$setupToken}" : null,
+                'activation_link' => $setupToken ? "{$scheme}://{$tenant->id}.{$appDomain}/setup-password?token={$setupToken}" : null,
             ];
         }
 
@@ -175,6 +176,18 @@ class SaaSController extends Controller
             // ③ تشغيل المايجريشن (ينشئ قاعدة بيانات التينانت)
             Artisan::call('tenants:migrate', ['--tenants' => [$tenant->id]]);
 
+            // ③.b تشغيل Seeder الخاص بالأدوار والصلاحيات داخل قاعدة التينانت
+            // نحتاج لأن يحصل المستأجر الأول على دور Super Admin
+            try {
+                Artisan::call('tenants:seed', [
+                    '--tenants' => [$tenant->id],
+                    '--class' => 'Database\\Seeders\\TenantRolesAndPermissionsSeeder',
+                ]);
+            } catch (\Throwable $seedEx) {
+                // Seed failure shouldn't completely block tenant creation; سجل التحذير
+                \Illuminate\Support\Facades\Log::warning('Tenant roles seeding failed', ['tenant' => $tenant->id, 'message' => $seedEx->getMessage()]);
+            }
+
             // Fetch central global terms
             $globalTermsSetting = \App\Models\AdminSetting::where('key', 'global_terms')->value('value');
             $globalTerms = $globalTermsSetting ? json_decode($globalTermsSetting, true) : [];
@@ -183,7 +196,7 @@ class SaaSController extends Controller
             $setupToken = \Illuminate\Support\Str::random(40);
 
             $tenant->run(function () use ($tenantRequest, $setupToken, $globalTerms) {
-                \App\Models\User::updateOrCreate(
+                $user = \App\Models\User::updateOrCreate(
                     ['email' => $tenantRequest->email],
                     [
                         'name'        => $tenantRequest->company_name . ' Admin',
@@ -192,12 +205,25 @@ class SaaSController extends Controller
                     ]
                 );
 
-                foreach ([
-                    'company_name'  => $tenantRequest->company_name,
-                    'company_email' => $tenantRequest->email,
-                    'company_phone' => $tenantRequest->phone,
-                    'company_plan'  => $tenantRequest->plan,
-                ] as $key => $value) {
+                // ضمان تعيين دور المدير الكامل للمستخدم الأول
+                try {
+                    if (method_exists($user, 'assignRole')) {
+                        $user->assignRole('Super Admin');
+                    }
+                    $user->is_admin = true;
+                    $user->save();
+                } catch (\Throwable $roleEx) {
+                    \Illuminate\Support\Facades\Log::warning('Failed to assign Super Admin role to tenant user', ['tenant' => $tenant->id, 'email' => $tenantRequest->email, 'message' => $roleEx->getMessage()]);
+                }
+
+                foreach (
+                    [
+                        'company_name'  => $tenantRequest->company_name,
+                        'company_email' => $tenantRequest->email,
+                        'company_phone' => $tenantRequest->phone,
+                        'company_plan'  => $tenantRequest->plan,
+                    ] as $key => $value
+                ) {
                     \App\Models\ContractSetting::updateOrCreate(
                         ['key' => $key],
                         ['value' => $value ?? '']
@@ -222,7 +248,8 @@ class SaaSController extends Controller
 
             // ⑤ بناء رابط التفعيل وحفظ حالة الموافقة في قاعدة البيانات
             $appDomain      = config('app.domain', 'whms.test');
-            $activationLink = "http://{$tenantRequest->requested_subdomain}.{$appDomain}/setup-password?token={$setupToken}";
+            $scheme         = parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'http';
+            $activationLink = "{$scheme}://{$tenantRequest->requested_subdomain}.{$appDomain}/setup-password?token={$setupToken}";
 
             $tenantRequest->setConnection($this->centralConnection());
             $tenantRequest->update([
@@ -230,7 +257,6 @@ class SaaSController extends Controller
                 'setup_token'     => $setupToken,
                 'activation_link' => $activationLink,
             ]);
-
         } catch (\Throwable $e) {
             // ══ Compensating Actions ══════════════════════════════════════
             // نتراجع عن كل ما تم إنشاؤه في Phase 1
@@ -264,10 +290,10 @@ class SaaSController extends Controller
             \Illuminate\Support\Facades\Mail::to($tenantRequest->email)
                 ->send(new \App\Mail\TenantActivationMail($activationLink, $tenantRequest->company_name));
 
-            return back()->with('success',
+            return back()->with(
+                'success',
                 'تم إنشاء حساب العميل بنجاح وإرسال رابط التفعيل إلى ' . $tenantRequest->email . '.'
             );
-
         } catch (\Throwable $mailEx) {
             \Illuminate\Support\Facades\Log::warning('Activation email failed after successful tenant approval', [
                 'request_id' => $tenantRequest->id,
@@ -291,5 +317,50 @@ class SaaSController extends Controller
         $tenantRequest->update(['status' => 'rejected']);
 
         return back()->with('success', 'تم رفض الطلب بنجاح.');
+    }
+
+    /**
+     * Disable a tenant (soft-disable by setting status in data)
+     */
+    public function disableTenant(string $tenantId)
+    {
+        $this->ensureCentralContext();
+
+        $tenant = Tenant::find($tenantId);
+        if (! $tenant) {
+            return back()->with('error', 'المستأجر غير موجود.');
+        }
+
+        $data = $tenant->data ?? [];
+        $data['status'] = 'موقوف';
+        $tenant->data = $data;
+        $tenant->save();
+
+        return back()->with('success', 'تم تعطيل المستأجر بنجاح.');
+    }
+
+    /**
+     * Permanently delete a tenant and its domains/databases
+     */
+    public function destroyTenant(string $tenantId)
+    {
+        $this->ensureCentralContext();
+
+        $tenant = Tenant::find($tenantId);
+        if (! $tenant) {
+            return back()->with('error', 'المستأجر غير موجود.');
+        }
+
+        try {
+            // Delete domains first
+            $tenant->domains()->delete();
+            // Deleting the tenant model triggers Stancl tenancy cleanup (databases)
+            $tenant->delete();
+
+            return back()->with('success', 'تم حذف المستأجر بنجاح.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to delete tenant', ['id' => $tenantId, 'message' => $e->getMessage()]);
+            return back()->with('error', 'فشل حذف المستأجر: ' . $e->getMessage());
+        }
     }
 }
