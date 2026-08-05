@@ -301,10 +301,60 @@ class QueueTicketController extends Controller
             $queueTicket->update(['pallet_balances' => $balances]);
         }
 
+        $queueTicket->zpl_code = $this->generateZplCode($queueTicket);
+
         return Inertia::render('Warehouse/QueueTickets/Print', [
             'ticket'          => $queueTicket,
             'companySettings' => $companySettings,
         ]);
+    }
+
+    public function generateZplCode(QueueTicket $ticket)
+    {
+        $smallCount    = $ticket->pallet_balances['small'] ?? 140;
+        $largeCount    = $ticket->pallet_balances['large'] ?? 120;
+        $sequenceNo    = str_pad($ticket->daily_sequence, 2, '0', STR_PAD_LEFT);
+        $contractNo    = $ticket->contract_number_suffix ?? '236';
+        $driverName    = $ticket->driver_name ?? 'Driver';
+        $estimatedLoad = $ticket->estimated_load ? " | Load: " . $ticket->estimated_load : '';
+        $customerName  = $ticket->customer ? $ticket->customer->name : '';
+        $dateTime      = $ticket->day_time_str ?? '';
+        $gregDate      = $ticket->ticket_date ? (is_string($ticket->ticket_date) ? $ticket->ticket_date : $ticket->ticket_date->format('Y-m-d')) : '';
+        $hijriDate     = $ticket->date_hijri ?? '';
+
+        return "^XA
+^PW1200
+^LL800
+^LH0,0
+
+;--- SM Pallets Box ---
+^FO40,30^GB180,130,3,B,4^FS
+^FO65,15^FR^FO70,18^A0N,22,22^FDSM^FS
+^FO65,60^A0N,70,60^FD{$smallCount}^FS
+
+;--- LG Pallets Box ---
+^FO240,30^GB180,130,3,B,4^FS
+^FO265,15^FR^FO270,18^A0N,22,22^FDLG^FS
+^FO265,60^A0N,70,60^FD{$largeCount}^FS
+
+;--- Sequence Box (01) ---
+^FO40,190^GB380,310,4,B,6^FS
+^FO70,230^A0N,180,150^FD{$sequenceNo}^FS
+
+;--- Contract Suffix Box (236) ---
+^FO450,190^GB710,530,5,B,8^FS
+^FO480,240^A0N,240,210^FD{$contractNo}^FS
+
+;--- Dates ---
+^FO60,530^A0N,45,45^FD{$gregDate}^FS
+^FO60,600^A0N,45,45^FD{$hijriDate}^FS
+
+;--- Driver & Customer Details ---
+^FO460,40^A0N,32,32^FDDriver: {$driverName}{$estimatedLoad}^FS
+^FO460,90^A0N,42,42^FD{$dateTime}^FS
+^FO460,145^A0N,30,30^FDCustomer: {$customerName}^FS
+
+^XZ";
     }
 
     private function getHijriDate($date)

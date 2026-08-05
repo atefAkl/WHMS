@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
-import { Printer, ArrowRight } from "lucide-react";
+import { Printer, ArrowRight, Zap } from "lucide-react";
+import { printZplDirectly } from "@/Services/qzPrintService";
 
 /**
  * مكون وثيقة ورقة الانتظار (Waiting Ticket Document)
@@ -151,37 +152,68 @@ export default function Print({ ticket = {}, companySettings = {} }) {
   const gregorianDate = toWesternDigits(ticket.ticket_date || "05/08/2026");
   const hijriDate = toWesternDigits(ticket.date_hijri || "22/03/1448");
 
+  const [printingZpl, setPrintingZpl] = useState(false);
+  const [zplStatus, setZplStatus] = useState("");
+
+  const handleZebraDirectPrint = async () => {
+    if (!ticket.zpl_code) return;
+    setPrintingZpl(true);
+    setZplStatus("جاري الاتصال بطابعة Zebra عبر QZ Tray...");
+    const res = await printZplDirectly(ticket.zpl_code, 'Zebra');
+    setPrintingZpl(false);
+    if (res.success) {
+      setZplStatus("✅ تمت الطباعة الحرارية الصامتة بنجاح!");
+      setTimeout(() => setZplStatus(""), 5000);
+    } else {
+      setZplStatus("⚠️ تعذر الاتصال بـ QZ Tray: تأكد من تشغيل البرنامج بجانب الساعة.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-200 p-4 sm:p-8 font-sans flex flex-col items-center justify-center">
       <Head title={`طباعة ورقة الانتظار: ${sequenceNo}`} />
 
       {/* Print Control Bar - Hidden when printing */}
-      <div className="print:hidden mb-6 flex justify-between items-center bg-white p-3 border border-gray-300 rounded-xl w-full max-w-[540px] shadow-sm">
-        <span className="text-xs font-bold text-gray-800">
-          معاينة ورقة الانتظار (استيكر 10 × 15 سم)
-        </span>
-        <div className="flex items-center gap-2">
-          <Link
-            href={route("queue-tickets.index")}
-            className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
-          >
-            <ArrowRight className="h-4 w-4" />
-            <span>العودة إلى قائمة التذاكر</span>
-          </Link>
-          <button
-            onClick={handlePrint}
-            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
-          >
-            <Printer className="h-4 w-4" />
-            <span>طباعة الاستيكر</span>
-          </button>
-          <button
-            onClick={handleClose}
-            className="px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition-all"
-          >
-            إغلاق النافذة
-          </button>
+      <div className="print:hidden mb-6 flex flex-col gap-2 w-full max-w-[560px]" dir="rtl">
+        <div className="flex justify-between items-center bg-white p-3 border border-gray-300 rounded-xl shadow-sm">
+          <span className="text-xs font-bold text-gray-800">
+            معاينة ورقة الانتظار (استيكر 10 × 15 سم)
+          </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href={route("queue-tickets.index")}
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
+            >
+              <ArrowRight className="h-4 w-4" />
+              <span>العودة</span>
+            </Link>
+
+            {/* Direct USB ZPL Print Button */}
+            <button
+              onClick={handleZebraDirectPrint}
+              disabled={printingZpl}
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-50"
+              title="طباعة صامتة فورية لطابعة Zebra USB عبر QZ Tray"
+            >
+              <Zap className="h-4 w-4 text-yellow-300 animate-pulse" />
+              <span>{printingZpl ? "جاري الطباعة..." : "طباعة Zebra صامتة"}</span>
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
+            >
+              <Printer className="h-4 w-4" />
+              <span>طباعة العادية</span>
+            </button>
+          </div>
         </div>
+
+        {zplStatus && (
+          <div className="text-center text-xs font-bold p-2 rounded-lg bg-white border border-gray-300 text-gray-900 shadow-sm transition-all">
+            {zplStatus}
+          </div>
+        )}
       </div>
 
       {/* Waiting Ticket Container */}
