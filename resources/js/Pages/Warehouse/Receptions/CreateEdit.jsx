@@ -7,6 +7,7 @@ import {
     ChevronRight,
     Plus,
     Trash2,
+    Edit,
     Save,
     ArrowRight,
     UserPlus,
@@ -88,6 +89,7 @@ export default function CreateEdit({
     const [posQuantity, setPosQuantity] = useState("");
     const [posRowError, setPosRowError] = useState("");
     const [loadingPallet, setLoadingPallet] = useState(false);
+    const [editingRowIndex, setEditingRowIndex] = useState(null);
 
     // Active autocomplete indexes for ArrowUp/ArrowDown selection
     const [customerActiveIndex, setCustomerActiveIndex] = useState(-1);
@@ -431,7 +433,7 @@ export default function CreateEdit({
         handleFormSubmitWithStatus(data.status);
     };
 
-    // Add POS Row to reception items array
+    // Add or Update POS Row in reception items array
     const handleAddPOSRow = () => {
         setPosRowError("");
         if (!posPalletNumber.trim()) {
@@ -471,8 +473,8 @@ export default function CreateEdit({
             return;
         }
 
-        // Add to items
         const newItem = {
+            id: editingRowIndex !== null ? data.items[editingRowIndex]?.id : undefined,
             inventory_item_id: parseInt(posItemId),
             inventory_item_variant_id: parseInt(posVariantId),
             pallet_number: posPalletNumber.trim(),
@@ -480,15 +482,54 @@ export default function CreateEdit({
             quantity_in: parseFloat(posQuantity),
         };
 
-        setData("items", [...data.items, newItem]);
+        if (editingRowIndex !== null) {
+            const updated = [...data.items];
+            updated[editingRowIndex] = newItem;
+            setData("items", updated);
+            setEditingRowIndex(null);
+        } else {
+            setData("items", [...data.items, newItem]);
+        }
 
-        // Retain old values to speed up sequential entry (do not reset fields)
-        // Focus back to Pallet Number input and highlight/select its content for quick overwrite
         palletInputRef.current?.focus();
         palletInputRef.current?.select();
     };
 
+    const handleEditItemRow = (index) => {
+        const itemToEdit = data.items[index];
+        if (!itemToEdit) return;
+
+        setEditingRowIndex(index);
+        setPosPalletNumber(itemToEdit.pallet_number || "");
+        setPosPalletSize(itemToEdit.pallet_size || "وسط");
+        setPosItemId(itemToEdit.inventory_item_id ? String(itemToEdit.inventory_item_id) : "");
+        setPosVariantId(itemToEdit.inventory_item_variant_id ? String(itemToEdit.inventory_item_variant_id) : "");
+        setPosQuantity(itemToEdit.quantity_in ? String(itemToEdit.quantity_in) : "");
+
+        const itemObj = inventoryItems.find((i) => i.id === itemToEdit.inventory_item_id);
+        if (itemObj) {
+            setPosItemSearch(itemObj.name);
+        }
+
+        setPosRowError("");
+        palletInputRef.current?.focus();
+        palletInputRef.current?.select();
+    };
+
+    const handleCancelEditRow = () => {
+        setEditingRowIndex(null);
+        setPosRowError("");
+        setPosPalletNumber("");
+        setPosItemSearch("");
+        setPosItemId("");
+        setPosVariantId("");
+        setPosQuantity("");
+    };
+
     const handleRemoveItemRow = (index) => {
+        if (editingRowIndex === index) {
+            handleCancelEditRow();
+        }
         const updated = [...data.items];
         updated.splice(index, 1);
         setData("items", updated);
@@ -1330,13 +1371,17 @@ export default function CreateEdit({
                                     />
                                 </div>
 
-                                {/* Add Button */}
-                                <div className="sm:col-span-1">
+                                {/* Add / Update Button */}
+                                <div className={editingRowIndex !== null ? "sm:col-span-2 flex gap-1" : "sm:col-span-1"}>
                                     <button
                                         ref={addButtonRef}
                                         type="button"
                                         onClick={handleAddPOSRow}
-                                        className="w-full bg-primary hover:bg-primary/95 text-white text-xs font-bold h-[38px] flex items-center justify-center rounded-none transition-all"
+                                        className={`w-full text-white text-xs font-bold h-[38px] flex items-center justify-center rounded-none transition-all gap-1 ${
+                                            editingRowIndex !== null
+                                                ? "bg-amber-600 hover:bg-amber-700"
+                                                : "bg-primary hover:bg-primary/95"
+                                        }`}
                                         onKeyDown={(e) =>
                                             handleKeyNavigation(
                                                 e,
@@ -1345,8 +1390,28 @@ export default function CreateEdit({
                                             )
                                         }
                                     >
-                                        {lang === "ar" ? "إدراج" : "Insert"}
+                                        {editingRowIndex !== null ? (
+                                            <>
+                                                <Edit className="h-3.5 w-3.5" />
+                                                <span>{lang === "ar" ? "تحديث البند" : "Update"}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plus className="h-3.5 w-3.5" />
+                                                <span>{lang === "ar" ? "إدراج" : "Insert"}</span>
+                                            </>
+                                        )}
                                     </button>
+                                    {editingRowIndex !== null && (
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelEditRow}
+                                            className="px-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold h-[38px] flex items-center justify-center rounded-none transition-all shrink-0"
+                                            title={lang === "ar" ? "إلغاء التعديل" : "Cancel Edit"}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -1440,7 +1505,11 @@ export default function CreateEdit({
                                                 return (
                                                     <tr
                                                         key={index}
-                                                        className="hover:bg-slate-50 transition-colors"
+                                                        className={`transition-colors ${
+                                                            editingRowIndex === index
+                                                                ? "bg-amber-500/10 border-2 border-amber-400"
+                                                                : "hover:bg-slate-50"
+                                                        }`}
                                                     >
                                                         <td className="px-3 py-2.5 font-mono text-text-muted">
                                                             {index + 1}
@@ -1471,7 +1540,23 @@ export default function CreateEdit({
                                                                 item.quantity_in,
                                                             ).toFixed(2)}
                                                         </td>
-                                                        <td className="px-3 py-2.5 text-center">
+                                                        <td className="px-3 py-2.5 text-center space-x-1 rtl:space-x-reverse">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    handleEditItemRow(
+                                                                        index,
+                                                                    )
+                                                                }
+                                                                className="p-1 text-text-muted hover:text-amber-600 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/25 transition-all rounded-none inline-flex items-center"
+                                                                title={
+                                                                    lang === "ar"
+                                                                        ? "تعديل البند"
+                                                                        : "Edit Row"
+                                                                }
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() =>
@@ -1480,6 +1565,11 @@ export default function CreateEdit({
                                                                     )
                                                                 }
                                                                 className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 border border-transparent hover:border-danger/25 transition-all rounded-none inline-flex items-center"
+                                                                title={
+                                                                    lang === "ar"
+                                                                        ? "حذف البند"
+                                                                        : "Delete Row"
+                                                                }
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
                                                             </button>
