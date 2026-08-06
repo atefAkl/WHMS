@@ -465,82 +465,108 @@ class ReceptionController extends Controller
 
     public function getOccupancyStats(Contract $contract)
     {
-        // 1. Booked pallets (total_capacity)
-        $bookedPallets = $contract->total_capacity ?: 0;
+        try {
+            // 1. Booked pallets (total_capacity)
+            $bookedPallets = $contract->total_capacity ?: 0;
 
-        // 2. Utilized pallets (pallets under contract with balance > 0)
-        $utilizedPallets = \App\Models\InventoryEntry::where(function ($q) use ($contract) {
-            $q->where(function ($q1) use ($contract) {
-                $q1->where('voucher_type', \App\Models\Reception::class)
-                    ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contract->id)->pluck('id'));
-            })->orWhere(function ($q2) use ($contract) {
-                $q2->where('voucher_type', \App\Models\Delivery::class)
-                    ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contract->id)->pluck('id'));
+            // 2. Utilized pallets (pallets under contract with balance > 0)
+            $utilizedPallets = \App\Models\InventoryEntry::where(function ($q) use ($contract) {
+                $q->where(function ($q1) use ($contract) {
+                    $q1->where('voucher_type', \App\Models\Reception::class)
+                        ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contract->id)->pluck('id'));
+                })->orWhere(function ($q2) use ($contract) {
+                    $q2->where('voucher_type', \App\Models\Delivery::class)
+                        ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contract->id)->pluck('id'));
+                });
+            })
+                ->select('pallet_id')
+                ->groupBy('pallet_id')
+                ->having(\Illuminate\Support\Facades\DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
+                ->get()
+                ->count();
+
+            // 3. Available pallets (booked - utilized)
+            $availablePallets = max(0, $bookedPallets - $utilizedPallets);
+
+            // Financial / Invoice stats
+            $totalInvoiced = (float) $contract->invoices()->sum('total_amount');
+            $totalPaid = (float) $contract->invoices()->sum('paid_amount');
+            $totalDues = max(0.0, $totalInvoiced - $totalPaid);
+            $invoices = $contract->invoices()->orderBy('due_date', 'asc')->get()->map(function ($inv) {
+                return [
+                    'id' => $inv->id,
+                    'invoice_number' => $inv->invoice_number,
+                    'issue_date' => $inv->date ? $inv->date->toDateString() : null,
+                    'due_date' => $inv->due_date ? $inv->due_date->toDateString() : null,
+                    'amount' => $inv->total_amount,
+                    'paid_amount' => $inv->paid_amount,
+                    'status' => $inv->status,
+                ];
             });
-        })
-            ->select('pallet_id')
-            ->groupBy('pallet_id')
-            ->having(\Illuminate\Support\Facades\DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
-            ->get()
-            ->count();
 
-        // 3. Available pallets (booked - utilized)
-        $availablePallets = max(0, $bookedPallets - $utilizedPallets);
+            $payments = $contract->payments()->orderBy('payment_date', 'desc')->get()->map(function ($pay) {
+                return [
+                    'id' => $pay->id,
+                    'payment_date' => $pay->payment_date ? $pay->payment_date->toDateString() : null,
+                    'amount' => $pay->amount,
+                    'method' => $pay->method,
+                    'reference' => $pay->reference,
+                    'notes' => $pay->notes,
+                ];
+            });
 
-        // Financial / Invoice stats
-        $totalInvoiced = (float) $contract->invoices()->sum('amount');
-        $totalPaid = (float) $contract->invoices()->sum('paid_amount');
-        $totalDues = max(0.0, $totalInvoiced - $totalPaid);
-        $invoices = $contract->invoices()->orderBy('due_date', 'asc')->get()->map(function ($inv) {
-            return [
-                'id' => $inv->id,
-                'invoice_number' => $inv->invoice_number,
-                'issue_date' => $inv->issue_date ? $inv->issue_date->toDateString() : null,
-                'due_date' => $inv->due_date ? $inv->due_date->toDateString() : null,
-                'amount' => $inv->amount,
-                'paid_amount' => $inv->paid_amount,
-                'status' => $inv->status,
-            ];
-        });
-
-        $payments = $contract->payments()->orderBy('payment_date', 'desc')->get()->map(function ($pay) {
-            return [
-                'id' => $pay->id,
-                'payment_date' => $pay->payment_date ? $pay->payment_date->toDateString() : null,
-                'amount' => $pay->amount,
-                'method' => $pay->method,
-                'reference' => $pay->reference,
-                'notes' => $pay->notes,
-            ];
-        });
-
-        return response()->json([
-            // Standard/Legacy fields for Receptions compatibility
-            'total_capacity' => $bookedPallets,
-            'currently_in_warehouse' => $utilizedPallets,
-            'remaining' => $availablePallets,
-
-            // New fields for Deliveries compatibility
-            'booked_capacity' => $bookedPallets,
-            'booked_pallets' => $bookedPallets,
-
-            'current_utilized' => $utilizedPallets,
-            'utilized_pallets' => $utilizedPallets,
-
-            'capacity_balance' => $availablePallets,
-            'available_pallets' => $availablePallets,
-
-            'end_date' => $contract->end_date ? $contract->end_date->toDateString() : null,
-
-            // Financial stats
-            'financial' => [
+            return response()->json([
+                'total_capacity' => $bookedPallets,
+                'currently_in_warehouse' => $utilizedPallets,
+                'available_pallets' => $availablePallets,
+                'booked_capacity' => $bookedPallets,
+                'booked_pallets' => $bookedPallets,
+                'current_utilized' => $utilizedPallets,
+                'utilized_pallets' => $utilizedPallets,
+                'capacity_balance' => $availablePallets,
+                'remaining' => $availablePallets,
+                'end_date' => $contract->end_date ? $contract->end_date->toDateString() : null,
                 'total_invoiced' => $totalInvoiced,
                 'total_paid' => $totalPaid,
                 'total_dues' => $totalDues,
                 'invoices' => $invoices,
                 'payments' => $payments,
-            ]
-        ]);
+                'financial' => [
+                    'total_invoiced' => $totalInvoiced,
+                    'total_paid' => $totalPaid,
+                    'total_dues' => $totalDues,
+                    'invoices' => $invoices,
+                    'payments' => $payments,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('getOccupancyStats error: ' . $e->getMessage());
+            $bookedPallets = $contract->total_capacity ?: 0;
+            return response()->json([
+                'total_capacity' => $bookedPallets,
+                'currently_in_warehouse' => 0,
+                'available_pallets' => $bookedPallets,
+                'booked_capacity' => $bookedPallets,
+                'booked_pallets' => $bookedPallets,
+                'current_utilized' => 0,
+                'utilized_pallets' => 0,
+                'capacity_balance' => $bookedPallets,
+                'remaining' => $bookedPallets,
+                'end_date' => $contract->end_date ? $contract->end_date->toDateString() : null,
+                'total_invoiced' => 0,
+                'total_paid' => 0,
+                'total_dues' => 0,
+                'invoices' => [],
+                'payments' => [],
+                'financial' => [
+                    'total_invoiced' => 0,
+                    'total_paid' => 0,
+                    'total_dues' => 0,
+                    'invoices' => [],
+                    'payments' => [],
+                ]
+            ]);
+        }
     }
 
     private function isActiveContractPeriod($contractId, $periodId): bool
