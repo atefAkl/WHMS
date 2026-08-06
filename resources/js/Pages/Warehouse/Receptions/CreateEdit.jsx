@@ -1103,54 +1103,6 @@ export default function CreateEdit({
                             )}
                         </div>
 
-                        {/* Live Contract Pallet Balance Banner upon Contract / Period Selection */}
-                        {data.contract_id && contractStats && (
-                            <div className="bg-emerald-500/10 border-2 border-emerald-500/40 p-4 rounded-none space-y-3 shadow-sm">
-                                <div className="flex flex-wrap items-center justify-between gap-4 text-xs">
-                                    <div className="flex items-center gap-2 font-black text-emerald-900 text-sm">
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                                        <span>
-                                            {lang === "ar" ? "إحصائيات إشغال ورصيد العقد المتاح:" : "Live Contract Occupancy & Balance Stats:"}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-5 text-xs font-mono font-bold">
-                                        <div className="text-gray-800">
-                                            {lang === "ar" ? "إجمالي الإشغال المحجوز:" : "Booked Capacity:"}{" "}
-                                            <span className="text-black font-black text-sm">{contractStats.total_capacity || 0}</span> طبلية
-                                        </div>
-                                        <div className="text-amber-800">
-                                            {lang === "ar" ? "المشغول حالياً بالمخزن:" : "Utilized in Warehouse:"}{" "}
-                                            <span className="font-black text-sm text-amber-900">{liveCurrentlyInWarehouse}</span> طبلية
-                                        </div>
-                                        <div className="text-emerald-800 bg-white px-3 py-1.5 border border-emerald-500 shadow-sm text-xs">
-                                            {lang === "ar" ? "الإجمالي المتبقي المتاح للإدخال:" : "Available Pallet Balance:"}{" "}
-                                            <span className="text-emerald-700 font-black text-base">{liveRemaining}</span> طبلية
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Size / Short Name Detailed Breakdown Cards */}
-                                {contractStats.items_breakdown && contractStats.items_breakdown.length > 0 && (
-                                    <div className="pt-2 border-t border-emerald-500/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                        {contractStats.items_breakdown.map((item, idx) => (
-                                            <div key={idx} className="bg-white/80 border border-emerald-300 p-2 text-xs flex items-center justify-between font-mono">
-                                                <span className="font-bold text-gray-800 font-sans truncate" title={item.full_name}>
-                                                    📦 {item.label}
-                                                </span>
-                                                <div className="flex items-center gap-2 text-[11px] font-bold">
-                                                    <span className="text-gray-600" title="المحجوز">محجوز:{item.booked}</span>
-                                                    <span className="text-amber-700" title="المشغول">مشغول:{item.utilized}</span>
-                                                    <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 border border-emerald-200 font-extrabold" title="المتبقي المتاح">
-                                                        متبقي:{item.available}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
                         {/* POS Row Input Bar */}
                         <div className="bg-surface border border-primary/20 p-5 shadow-sm rounded-none space-y-4">
                             <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider flex items-center gap-1.5">
@@ -1667,6 +1619,30 @@ export default function CreateEdit({
                                                             ? "السعة كافية والربط القانوني والفوترة سليم للاستلام."
                                                             : "Capacity is sufficient for receiving pallets under contract."}
                                                     </span>
+                                                </div>
+                                            )}
+
+                                            {contractStats.items_breakdown && contractStats.items_breakdown.length > 0 && (
+                                                <div className="space-y-2 pt-3 border-t border-border mt-3">
+                                                    <h4 className="font-bold text-[11px] text-primary uppercase">
+                                                        {lang === "ar" ? "مقاصة الأصناف بحسب الحجم:" : "Item Size Breakdown:"}
+                                                    </h4>
+                                                    <div className="space-y-2">
+                                                        {contractStats.items_breakdown.map((item, idx) => (
+                                                            <div key={idx} className="bg-surface-muted border border-border p-2 text-xs rounded-none space-y-1.5 font-mono shadow-2xs">
+                                                                <div className="flex justify-between items-center font-sans font-bold text-text">
+                                                                    <span className="truncate max-w-[130px]" title={item.full_name}>📦 {item.label}</span>
+                                                                    <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 border border-emerald-300 font-mono text-[10px] font-bold">
+                                                                        متبقي: {item.available}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex justify-between text-[11px] text-text-muted">
+                                                                    <span>محجوز: <strong className="text-text font-bold">{item.booked}</strong></span>
+                                                                    <span className="text-amber-700 font-bold">مشغول: <strong>{item.utilized}</strong></span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

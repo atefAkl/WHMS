@@ -207,6 +207,7 @@ export default function Index({ items = [], categories = [] }) {
         setData({
             name_ar: "",
             name_en: "",
+            short_name: "",
             code: "",
             sales_category_id: selectedAsString,
             type: "item",
@@ -222,6 +223,7 @@ export default function Index({ items = [], categories = [] }) {
         setData({
             name_ar: item.name_ar,
             name_en: item.name_en || "",
+            short_name: item.short_name || "",
             code: item.code || "",
             sales_category_id: String(item.sales_category_id || ""),
             type: item.type,
@@ -941,6 +943,17 @@ export default function Index({ items = [], categories = [] }) {
                                 />
                                 <InputError message={errors.name_en} className="mt-1" />
                             </div>
+                        </div>
+
+                        <div>
+                            <InputLabel value={lang === "ar" ? "الاسم المختصر / فئة الحجم المعيارية (مثال: طبلية كبيرة)" : "Short Name / Size Category (e.g. Large Pallet)"} />
+                            <TextInput
+                                className="mt-1 w-full text-sm rounded-none border-border"
+                                value={data.short_name || ""}
+                                onChange={(e) => setData("short_name", e.target.value)}
+                                placeholder={lang === "ar" ? "طبلية كبيرة، طبلية صغيرة، طبلية 260ك..." : "e.g. Large Pallet..."}
+                            />
+                            <InputError message={errors.short_name} className="mt-1" />
                         </div>
 
                         <div>
