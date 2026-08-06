@@ -320,20 +320,21 @@ class DeliveryController extends Controller
     {
         $this->validateSecureDelete($request);
 
-        DB::transaction(function () use ($delivery) {
-            // If it was approved, and had an exit authorization, make exit auth pending again
-            if ($delivery->status === 'approved' && !empty($delivery->exit_authorization_id)) {
-                $exitAuth = ExitAuthorization::find($delivery->exit_authorization_id);
-                if ($exitAuth) {
-                    $exitAuth->update(['status' => 'pending']);
-                }
-            }
+        // Security Enforcement Rule 1: Prevent deleting approved vouchers
+        if ($delivery->status === 'approved') {
+            return redirect()->back()->with('error', 'إجراء مرفوض أمنياً: لا يمكن حذف سند معتمد نهائياً! يجب إلغاء اعتماده أولاً.');
+        }
 
-            $delivery->inventoryEntries()->delete();
+        // Security Enforcement Rule 2: Prevent deleting vouchers containing inventory records
+        if ($delivery->inventoryEntries()->count() > 0) {
+            return redirect()->back()->with('error', 'إجراء مرفوض أمنياً: لا يمكن حذف سند يحتوي على مدخلات أو حركات مخزنية! يجب إفراغ الأصناف المسجلة داخل السند وتفريغ محتوياته أولاً قبل الحذف.');
+        }
+
+        DB::transaction(function () use ($delivery) {
             $delivery->delete();
         });
 
-        return redirect()->route('deliveries.index')->with('success', 'تم حذف سند الخروج بنجاح.');
+        return redirect()->route('deliveries.index')->with('success', 'تم حذف سند الخروج الخالي بنجاح.');
     }
 
     public function approve(Request $request, Delivery $delivery)

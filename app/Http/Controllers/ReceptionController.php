@@ -331,13 +331,21 @@ class ReceptionController extends Controller
     {
         $this->validateSecureDelete($request);
 
+        // Security Enforcement Rule 1: Prevent deleting approved vouchers
+        if ($reception->status === 'approved') {
+            return redirect()->back()->with('error', 'إجراء مرفوض أمنياً: لا يمكن حذف سند معتمد نهائياً! يجب إلغاء اعتماده أولاً.');
+        }
+
+        // Security Enforcement Rule 2: Prevent deleting vouchers containing inventory records
+        if ($reception->inventoryEntries()->count() > 0) {
+            return redirect()->back()->with('error', 'إجراء مرفوض أمنياً: لا يمكن حذف سند يحتوي على مدخلات أو حركات مخزنية! يجب إفراغ الأصناف المسجلة داخل السند وتفريغ محتوياته أولاً قبل الحذف.');
+        }
+
         DB::transaction(function () use ($reception) {
-            // Delete entries and reception
-            $reception->inventoryEntries()->delete();
             $reception->delete();
         });
 
-        return redirect()->route('receptions.index')->with('success', 'تم حذف سند الاستلام بنجاح.');
+        return redirect()->route('receptions.index')->with('success', 'تم حذف سند الاستلام الخالي بنجاح.');
     }
 
     public function approve(Reception $reception)

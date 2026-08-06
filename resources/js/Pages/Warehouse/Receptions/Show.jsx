@@ -371,14 +371,33 @@ export default function Show({ reception }) {
                                 </a>
                             </Tooltip>
 
-                            <Tooltip text={lang === "ar" ? "حذف" : "Delete"}>
+                            <Tooltip 
+                                text={
+                                    reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0
+                                        ? (lang === "ar" ? "محظور أمنياً: لا يمكن حذف سند معتمد أو يحتوي على مدخلات مخزنية" : "Blocked: Cannot delete approved voucher or voucher with items")
+                                        : (lang === "ar" ? "حذف السند" : "Delete Voucher")
+                                }
+                            >
                                 <button
                                     onClick={() => {
+                                        if (reception.status === "approved") {
+                                            setErrorMsg(lang === "ar" ? "إجراء محظور أمنياً: لا يمكن حذف سند معتمد نهائياً! يجب إلغاء اعتماده أولاً." : "Security Error: Cannot delete an approved voucher.");
+                                            return;
+                                        }
+                                        if ((reception.inventory_entries?.length || 0) > 0) {
+                                            setErrorMsg(lang === "ar" ? "إجراء محظور أمنياً: لا يمكن حذف سند يحتوي على مدخلات أو أصناف مخزنية! يجب تفريغ الأصناف أولاً." : "Security Error: Cannot delete a voucher containing inventory items.");
+                                            return;
+                                        }
                                         setErrorMsg("");
                                         setSecurePassword("");
                                         setDeleteModalOpen(true);
                                     }}
-                                    className={`h-[30px] bg-danger hover:bg-danger-hover text-white font-bold rounded-none flex items-center justify-center transition-all shadow-sm gap-1.5 ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
+                                    disabled={reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0}
+                                    className={`h-[30px] font-bold rounded-none flex items-center justify-center transition-all shadow-sm gap-1.5 ${
+                                        reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0
+                                            ? "bg-gray-400 text-white cursor-not-allowed opacity-60"
+                                            : "bg-danger hover:bg-danger-hover text-white"
+                                    } ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                     {showButtonText && (
@@ -469,8 +488,8 @@ export default function Show({ reception }) {
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
                                         {lang === "ar"
-                                            ? "الفترة الإلزامية:"
-                                            : "Billing Period:"}
+                                            ? "الفترة:"
+                                            : "Period:"}
                                     </span>
                                     <span className="text-text font-semibold">
                                         {lang === "ar" ? "الفترة" : "Period"}{" "}
