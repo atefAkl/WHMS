@@ -9,6 +9,7 @@ class ContractPeriodItem extends Model
     protected $fillable = [
         'contract_period_id',
         'storage_item_id',
+        'short_name',
         'unit_count',
         'monthly_rent',
         'discount',

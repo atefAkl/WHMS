@@ -9,6 +9,7 @@ class StorageItem extends Model
     protected $fillable = [
         'name_ar',
         'name_en',
+        'short_name',
         'default_price',
         'is_active',
         'code',

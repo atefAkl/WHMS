@@ -488,6 +488,51 @@ class ReceptionController extends Controller
             // 3. Available pallets (booked - utilized)
             $availablePallets = max(0, $bookedPallets - $utilizedPallets);
 
+            // 4. Breakdown by Item Short Name / Size
+            $activePalletIds = \App\Models\InventoryEntry::where(function ($q) use ($contract) {
+                $q->where(function ($q1) use ($contract) {
+                    $q1->where('voucher_type', \App\Models\Reception::class)
+                        ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contract->id)->pluck('id'));
+                })->orWhere(function ($q2) use ($contract) {
+                    $q2->where('voucher_type', \App\Models\Delivery::class)
+                        ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contract->id)->pluck('id'));
+                });
+            })
+                ->select('pallet_id')
+                ->groupBy('pallet_id')
+                ->having(\Illuminate\Support\Facades\DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
+                ->pluck('pallet_id');
+
+            $palletSizeCounts = \App\Models\Pallet::whereIn('id', $activePalletIds)
+                ->select('size', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+                ->groupBy('size')
+                ->pluck('count', 'size')
+                ->all();
+
+            $contract->load('items.storageItem');
+            $itemsBreakdown = [];
+            foreach ($contract->items as $cItem) {
+                $label = $cItem->short_name ?: ($cItem->storageItem->short_name ?? $cItem->storageItem->name_ar ?? 'طبلية');
+                $booked = (int) $cItem->unit_count;
+                
+                $utilized = $palletSizeCounts[$label] ?? 0;
+                if ($utilized === 0) {
+                    foreach ($palletSizeCounts as $sz => $cnt) {
+                        if (str_contains($label, $sz) || str_contains($sz, $label)) {
+                            $utilized += $cnt;
+                        }
+                    }
+                }
+                
+                $itemsBreakdown[] = [
+                    'label' => $label,
+                    'full_name' => $cItem->storageItem->name_ar ?? $label,
+                    'booked' => $booked,
+                    'utilized' => $utilized,
+                    'available' => max(0, $booked - $utilized),
+                ];
+            }
+
             // Financial / Invoice stats
             $totalInvoiced = (float) $contract->invoices()->sum('total_amount');
             $totalPaid = (float) $contract->invoices()->sum('paid_amount');
@@ -525,6 +570,8 @@ class ReceptionController extends Controller
                 'utilized_pallets' => $utilizedPallets,
                 'capacity_balance' => $availablePallets,
                 'remaining' => $availablePallets,
+                'items_breakdown' => $itemsBreakdown,
+                'pallet_size_counts' => $palletSizeCounts,
                 'end_date' => $contract->end_date ? $contract->end_date->toDateString() : null,
                 'total_invoiced' => $totalInvoiced,
                 'total_paid' => $totalPaid,
