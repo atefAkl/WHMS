@@ -116,6 +116,146 @@ class PalletController extends Controller
         return redirect()->back()->with('success', 'تم حذف الطبلية بنجاح.');
     }
 
+    public function show(Pallet $pallet)
+    {
+        // 1. Fetch all inventory entries for this pallet with vouchers & contracts
+        $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
+            ->with([
+                'inventoryItem',
+                'variant',
+                'voucher',
+            ])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // Calculate current total balance in warehouse
+        $totalIn = (float) $entries->sum('quantity_in');
+        $totalOut = (float) $entries->sum('quantity_out');
+        $currentBalance = max(0.0, $totalIn - $totalOut);
+
+        // Group entries by contract
+        $contractsMap = [];
+        $runningGlobalBalance = 0.0;
+
+        foreach ($entries as $entry) {
+            $voucher = $entry->voucher;
+            $contractId = $voucher ? $voucher->contract_id : null;
+            $contract = $voucher ? $voucher->contract : null;
+
+            if (!$contractId || !$contract) {
+                continue;
+            }
+
+            if (!isset($contractsMap[$contractId])) {
+                $contract->load(['customer', 'periods', 'items.storageItem']);
+                $contractsMap[$contractId] = [
+                    'contract_id' => $contract->id,
+                    'contract_number' => $contract->contract_number,
+                    'customer_name' => $contract->customer ? $contract->customer->name : 'عميل غير محدد',
+                    'start_date' => $contract->start_date ? $contract->start_date->toDateString() : null,
+                    'end_date' => $contract->end_date ? $contract->end_date->toDateString() : null,
+                    'mandatory_period' => $contract->mandatory_period,
+                    'periods' => $contract->periods,
+                    'first_registered_at' => $entry->created_at ? $entry->created_at->toDateTimeString() : null,
+                    'first_reception_date' => null,
+                    'last_activity_date' => null,
+                    'entries' => [],
+                    'running_contract_balance' => 0.0,
+                    'monthly_rent_rate' => 0.0,
+                ];
+
+                // Get monthly rent rate for pallet storage in this contract
+                $firstItem = $contract->items->first();
+                if ($firstItem) {
+                    $contractsMap[$contractId]['monthly_rent_rate'] = (float) $firstItem->monthly_rent;
+                }
+            }
+
+            $in = (float) $entry->quantity_in;
+            $out = (float) $entry->quantity_out;
+
+            $contractsMap[$contractId]['running_contract_balance'] += ($in - $out);
+            $runningContractBalance = $contractsMap[$contractId]['running_contract_balance'];
+
+            $dateStr = $entry->created_at ? $entry->created_at->toDateString() : now()->toDateString();
+            if ($entry->voucher_type === \App\Models\Reception::class && empty($contractsMap[$contractId]['first_reception_date'])) {
+                $contractsMap[$contractId]['first_reception_date'] = $voucher->reception_date ?? $dateStr;
+            }
+            $contractsMap[$contractId]['last_activity_date'] = $dateStr;
+
+            $contractsMap[$contractId]['entries'][] = [
+                'id' => $entry->id,
+                'voucher_type' => $entry->voucher_type === \App\Models\Reception::class ? 'استلام (إدخال)' : 'تسليم (خروج)',
+                'voucher_serial' => $voucher ? $voucher->serial_number : '—',
+                'voucher_date' => $voucher->reception_date ?? $voucher->delivery_date ?? $dateStr,
+                'item_name' => $entry->inventoryItem ? $entry->inventoryItem->name : 'بضاعة عامة',
+                'variant_name' => $entry->variant ? $entry->variant->variant_name : null,
+                'quantity_in' => $in,
+                'quantity_out' => $out,
+                'running_balance' => $runningContractBalance,
+                'batch_number' => $entry->batch_number,
+                'created_at' => $entry->created_at ? $entry->created_at->toDateTimeString() : null,
+            ];
+        }
+
+        // Calculate days stayed, periods cost, and timeline charts for each contract
+        $contractsList = [];
+        foreach ($contractsMap as $cData) {
+            $firstDate = \Carbon\Carbon::parse($cData['first_reception_date'] ?? $cData['first_registered_at'] ?? now());
+            $lastDate = \Carbon\Carbon::parse($cData['last_activity_date'] ?? now());
+            $daysStayed = max(1, $firstDate->diffInDays($lastDate));
+
+            // Calculate billing periods count
+            $monthlyRate = $cData['monthly_rent_rate'] > 0 ? $cData['monthly_rent_rate'] : 50.0;
+            $mandatoryMonths = max(1, (int) $cData['mandatory_period']);
+            $monthsStayed = (int) ceil($daysStayed / 30.0);
+
+            $mandatoryCost = $mandatoryMonths * $monthlyRate;
+            $renewalMonths = max(0, $monthsStayed - $mandatoryMonths);
+            $renewalCost = $renewalMonths * $monthlyRate;
+            $totalCost = $mandatoryCost + $renewalCost;
+
+            // Generate timeline chart points
+            $timelineChart = [];
+            $cumBalance = 0;
+            $entryCount = count($cData['entries']);
+
+            foreach ($cData['entries'] as $idx => $e) {
+                $cumBalance = $e['running_balance'];
+                $days = $firstDate->diffInDays(\Carbon\Carbon::parse($e['voucher_date']));
+                $currentPeriod = $days <= ($mandatoryMonths * 30) ? 'الفترة الإلزامية' : 'فترة تجديد ' . ceil(($days - ($mandatoryMonths * 30)) / 30);
+                
+                $calcMonths = max(1, (int) ceil($days / 30.0));
+                $accCost = $calcMonths * $monthlyRate;
+
+                $timelineChart[] = [
+                    'date' => $e['voucher_date'],
+                    'days_on_contract' => $days,
+                    'balance' => $cumBalance,
+                    'accumulated_cost' => $accCost,
+                    'period_label' => $currentPeriod,
+                ];
+            }
+
+            $cData['days_stayed'] = $daysStayed;
+            $cData['months_stayed'] = $monthsStayed;
+            $cData['mandatory_cost'] = $mandatoryCost;
+            $cData['renewal_cost'] = $renewalCost;
+            $cData['total_cost'] = $totalCost;
+            $cData['timeline_chart'] = $timelineChart;
+
+            $contractsList[] = $cData;
+        }
+
+        return Inertia::render('Pallets/Show', [
+            'pallet' => $pallet,
+            'current_balance' => $currentBalance,
+            'total_in' => $totalIn,
+            'total_out' => $totalOut,
+            'contracts' => $contractsList,
+        ]);
+    }
+
     public function lookup(Request $request)
     {
         $request->validate([

@@ -8,6 +8,7 @@ import {
     Plus,
     Edit,
     Trash2,
+    Eye,
     Boxes,
     Search,
     Filter,
@@ -269,6 +270,14 @@ export default function Index({ pallets = { data: [] }, filters = {} }) {
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-end space-x-1 rtl:space-x-reverse">
+                                                    <Tooltip text={lang === "ar" ? "عرض البيانات وحركة العقد" : "Show Details & Contract Life Cycle"}>
+                                                        <Link
+                                                            href={route("pallets.show", pallet.id)}
+                                                            className="p-1.5 text-text-muted hover:text-emerald-600 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 transition-all rounded-none inline-flex items-center"
+                                                        >
+                                                            <Eye className="h-3.5 w-3.5" />
+                                                        </Link>
+                                                    </Tooltip>
                                                     <Tooltip text={lang === "ar" ? "تعديل" : "Edit"}>
                                                         <button
                                                             onClick={() => openEditModal(pallet)}
