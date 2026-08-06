@@ -1103,6 +1103,32 @@ export default function CreateEdit({
                             )}
                         </div>
 
+                        {/* Live Contract Pallet Balance Banner upon Contract / Period Selection */}
+                        {data.contract_id && contractStats && (
+                            <div className="bg-emerald-500/10 border-2 border-emerald-500/40 p-4 rounded-none flex flex-wrap items-center justify-between gap-4 text-xs shadow-sm">
+                                <div className="flex items-center gap-2 font-black text-emerald-900 text-sm">
+                                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                                    <span>
+                                        {lang === "ar" ? "رصيد العقد المتاح فور اختيار العقد/الفترة:" : "Live Contract Pallet Balance:"}
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-5 text-xs font-mono font-bold">
+                                    <div className="text-gray-800">
+                                        {lang === "ar" ? "سعة العقد المحجوزة:" : "Booked Capacity:"}{" "}
+                                        <span className="text-black font-black text-sm">{contractStats.total_capacity || 0}</span> طبلية
+                                    </div>
+                                    <div className="text-amber-800">
+                                        {lang === "ar" ? "المشغول حالياً بالمخزن:" : "Utilized in Warehouse:"}{" "}
+                                        <span className="font-black text-sm text-amber-900">{liveCurrentlyInWarehouse}</span> طبلية
+                                    </div>
+                                    <div className="text-emerald-800 bg-white px-3 py-1.5 border border-emerald-500 shadow-sm text-xs">
+                                        {lang === "ar" ? "الرصيد المتبقي المتاح للإدخال:" : "Available Pallet Balance:"}{" "}
+                                        <span className="text-emerald-700 font-black text-base">{liveRemaining}</span> طبلية
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* POS Row Input Bar */}
                         <div className="bg-surface border border-primary/20 p-5 shadow-sm rounded-none space-y-4">
                             <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider flex items-center gap-1.5">
