@@ -305,6 +305,10 @@ export default function Show({ reception }) {
                                     >
                                         <button
                                             onClick={() => {
+                                                if (!reception.customer_id || !reception.contract_id || !reception.period_id || (reception.inventory_entries?.length || 0) === 0) {
+                                                    setErrorMsg(lang === "ar" ? "لا يمكن اعتماد سند غير مكتمل البيانات! (يجب اختيار العميل والعقد والفترة التخزينية وإدخال الأصناف)." : "Incomplete data for approval.");
+                                                    return;
+                                                }
                                                 setErrorMsg("");
                                                 setApproveModalOpen(true);
                                             }}
@@ -320,6 +324,35 @@ export default function Show({ reception }) {
                                             )}
                                         </button>
                                     </Tooltip>
+
+                                    {/* Cancel Voucher Button for Drafts with items */}
+                                    {(reception.inventory_entries?.length || 0) > 0 && (
+                                        <Tooltip
+                                            text={
+                                                lang === "ar"
+                                                    ? "إلغاء السند وتجميده"
+                                                    : "Cancel Voucher"
+                                            }
+                                        >
+                                            <button
+                                                onClick={() => {
+                                                    setErrorMsg("");
+                                                    setSecurePassword("");
+                                                    setCancelModalOpen(true);
+                                                }}
+                                                className={`h-[30px] bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-none flex items-center justify-center transition-all shadow-sm gap-1.5 ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
+                                            >
+                                                <X className="h-4 w-4" />
+                                                {showButtonText && (
+                                                    <span>
+                                                        {lang === "ar"
+                                                            ? "إلغاء السند"
+                                                            : "Cancel"}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </Tooltip>
+                                    )}
                                 </>
                             )}
 

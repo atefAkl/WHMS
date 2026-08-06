@@ -350,12 +350,57 @@ class ReceptionController extends Controller
 
     public function approve(Reception $reception)
     {
+        if (empty($reception->customer_id)) {
+            return redirect()->back()->with('error', 'لا يمكن اعتماد السند: يجب تحديد العميل أولاً.');
+        }
+
+        if (empty($reception->contract_id)) {
+            return redirect()->back()->with('error', 'لا يمكن اعتماد السند: يجب ربطه بعقد تخزيني نشط.');
+        }
+
+        if (empty($reception->period_id)) {
+            return redirect()->back()->with('error', 'لا يمكن اعتماد السند: يجب تحديد الفترة التخزينية.');
+        }
+
+        if ($reception->inventoryEntries()->count() === 0) {
+            return redirect()->back()->with('error', 'لا يمكن اعتماد السند: يجب إضافة بنود وبضائع مستلمة أولاً (السند خالٍ من السجلات).');
+        }
+
         $reception->update([
             'status' => 'approved',
             'updated_by' => auth()->id()
         ]);
 
         return redirect()->back()->with('success', 'تم اعتماد السند بنجاح وتثبيت حركات المخزن.');
+    }
+
+    public function cancel(Request $request, Reception $reception)
+    {
+        $this->validateSecureDelete($request);
+
+        if ($reception->status === 'approved') {
+            return redirect()->back()->with('error', 'لا يمكن إلغاء سند معتمد مباشر. يجب إلغاء اعتماده أولاً.');
+        }
+
+        DB::transaction(function () use ($reception) {
+            // Soft delete entries so they no longer count towards warehouse balances
+            $reception->inventoryEntries()->delete();
+
+            $history = $reception->history ?: [];
+            $history[] = [
+                'date' => now()->toDateTimeString(),
+                'user' => auth()->user()->name,
+                'reason' => 'إلغاء السند وتجميد حركاته المخزنية أمنياً',
+            ];
+
+            $reception->update([
+                'status' => 'cancelled',
+                'history' => $history,
+                'updated_by' => auth()->id()
+            ]);
+        });
+
+        return redirect()->back()->with('success', 'تم إلغاء السند بنجاح وتجميد حركاته المخزنية دون حذفه.');
     }
 
     public function reopen(Request $request, Reception $reception)
@@ -394,6 +439,11 @@ class ReceptionController extends Controller
 
     public function print(Reception $reception)
     {
+        if (empty($reception->customer_id) || empty($reception->contract_id) || empty($reception->period_id) || $reception->inventoryEntries()->count() === 0) {
+            return redirect()->route('receptions.show', $reception->id)
+                ->with('error', 'ممنوع طباعة سند غير مكتمل البيانات! (يجب اختيار العميل والعقد والفترة التخزينية وإدخال أصناف البضائع).');
+        }
+
         $reception->load([
             'customer',
             'contract',

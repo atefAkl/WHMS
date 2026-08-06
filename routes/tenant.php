@@ -168,6 +168,7 @@ Route::middleware([
                 // Receptions Vouchers
                 Route::post('receptions/{reception}/approve', [\App\Http\Controllers\ReceptionController::class, 'approve'])->name('receptions.approve');
                 Route::post('receptions/{reception}/reopen', [\App\Http\Controllers\ReceptionController::class, 'reopen'])->name('receptions.reopen');
+                Route::post('receptions/{reception}/cancel', [\App\Http\Controllers\ReceptionController::class, 'cancel'])->name('receptions.cancel');
                 Route::get('receptions/{reception}/print', [\App\Http\Controllers\ReceptionController::class, 'print'])->name('receptions.print');
                 Route::resource('receptions', \App\Http\Controllers\ReceptionController::class);
 
@@ -177,6 +178,7 @@ Route::middleware([
                 // Deliveries
                 Route::post('deliveries/{delivery}/approve', [\App\Http\Controllers\DeliveryController::class, 'approve'])->name('deliveries.approve');
                 Route::post('deliveries/{delivery}/reopen', [\App\Http\Controllers\DeliveryController::class, 'reopen'])->name('deliveries.reopen');
+                Route::post('deliveries/{delivery}/cancel', [\App\Http\Controllers\DeliveryController::class, 'cancel'])->name('deliveries.cancel');
                 Route::get('deliveries/{delivery}/print', [\App\Http\Controllers\DeliveryController::class, 'print'])->name('deliveries.print');
                 Route::resource('deliveries', \App\Http\Controllers\DeliveryController::class);
 

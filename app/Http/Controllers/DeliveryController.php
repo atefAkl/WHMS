@@ -387,6 +387,34 @@ class DeliveryController extends Controller
         return redirect()->route('deliveries.index')->with('success', 'تم اعتماد سند الخروج بنجاح.');
     }
 
+    public function cancel(Request $request, Delivery $delivery)
+    {
+        $this->validateSecureDelete($request);
+
+        if ($delivery->status === 'approved') {
+            return redirect()->back()->with('error', 'لا يمكن إلغاء سند معتمد مباشر. يجب إلغاء اعتماده أولاً.');
+        }
+
+        DB::transaction(function () use ($delivery) {
+            // Soft delete entries so they no longer count towards warehouse balances
+            $delivery->inventoryEntries()->delete();
+
+            if (!empty($delivery->exit_authorization_id)) {
+                $exitAuth = ExitAuthorization::find($delivery->exit_authorization_id);
+                if ($exitAuth) {
+                    $exitAuth->update(['status' => 'pending']);
+                }
+            }
+
+            $delivery->update([
+                'status' => 'cancelled',
+                'updated_by' => auth()->id()
+            ]);
+        });
+
+        return redirect()->back()->with('success', 'تم إلغاء سند الخروج بنجاح وتجميد حركاته المخزنية دون حذفه.');
+    }
+
     public function reopen(Request $request, Delivery $delivery)
     {
         $request->validate([
@@ -421,6 +449,11 @@ class DeliveryController extends Controller
 
     public function print(Delivery $delivery)
     {
+        if (empty($delivery->customer_id) || empty($delivery->contract_id) || empty($delivery->period_id) || $delivery->inventoryEntries()->count() === 0) {
+            return redirect()->route('deliveries.show', $delivery->id)
+                ->with('error', 'ممنوع طباعة سند غير مكتمل البيانات! (يجب اختيار العميل والعقد والفترة التخزينية وإدخال أصناف البضائع).');
+        }
+
         $delivery->load([
             'customer',
             'contract',
