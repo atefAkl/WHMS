@@ -210,6 +210,20 @@ class ContractController extends Controller
         try {
             $contract = $this->contractService->storeContract($request->validated());
 
+            try {
+                $users = \App\Models\User::all();
+                $customerName = $contract->customer ? $contract->customer->name : '';
+                foreach ($users as $user) {
+                    $user->notify(new \App\Notifications\SystemNotification(
+                        'عقد تخزين جديد 📄',
+                        "تم توثيق عقد جديد برقم ({$contract->contract_number}) للعميل ({$customerName}).",
+                        route('contracts.show', $contract->id)
+                    ));
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Contract notification error: " . $e->getMessage());
+            }
+
             return redirect()->route('customers.show', $contract->customer_id)
                 ->with('success', __('contracts.messages.store_success', ['number' => $contract->contract_number]));
         } catch (\Exception $e) {

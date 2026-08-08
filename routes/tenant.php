@@ -82,6 +82,14 @@ Route::middleware([
             auth()->user()->unreadNotifications->markAsRead();
             return redirect()->back()->with('success', 'تم تحديد جميع التنبيهات كمقروءة.');
         })->name('notifications.markAllRead');
+        Route::post('notifications/send-test', function() {
+            auth()->user()->notify(new \App\Notifications\SystemNotification(
+                'تنبيه تجريبي من النظام 🔔',
+                'هذا إشعار تجريبي لاختبار وتأكيد وصول الإشعارات الفورية والتفاعلية بالنظام.',
+                route('dashboard')
+            ));
+            return redirect()->back()->with('success', 'تم إرسال إشعار تجريبي بنجاح!');
+        })->name('notifications.sendTest');
         Route::delete('notifications/clear-all', function() {
             auth()->user()->notifications()->delete();
             return redirect()->back()->with('success', 'تم حذف جميع التنبيهات.');

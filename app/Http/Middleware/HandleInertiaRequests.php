@@ -71,6 +71,7 @@ class HandleInertiaRequests extends Middleware
                 'active_season_name' => session('active_season_name'),
                 'permissions' => $request->user() ? $request->user()->getPermissions() : [],
                 'unread_notifications_count' => ($request->user() && \Illuminate\Support\Facades\Schema::hasTable('notifications')) ? $request->user()->unreadNotifications()->count() : 0,
+                'recent_notifications' => ($request->user() && \Illuminate\Support\Facades\Schema::hasTable('notifications')) ? $request->user()->notifications()->latest()->limit(5)->get() : [],
             ],
             'flash' => [
                 'success'      => fn() => $request->session()->get('success'),

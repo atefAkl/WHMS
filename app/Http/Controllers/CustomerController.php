@@ -133,7 +133,21 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $request->validate($this->rules('create'), $this->messages());
-        Customer::create($request->all());
+        $customer = Customer::create($request->all());
+
+        try {
+            $users = \App\Models\User::all();
+            foreach ($users as $user) {
+                $user->notify(new \App\Notifications\SystemNotification(
+                    'تسجيل عميل جديد 👤',
+                    "تم إضافة العميل الجديد ({$customer->name}) إلى النظام بنجاح.",
+                    route('customers.show', $customer->id)
+                ));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Customer notification error: " . $e->getMessage());
+        }
+
         return redirect()->route('customers.index')->with('success', 'تم إضافة العميل بنجاح.');
     }
 

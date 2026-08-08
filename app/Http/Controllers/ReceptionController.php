@@ -145,6 +145,20 @@ class ReceptionController extends Controller
             return $reception;
         });
 
+        try {
+            $users = \App\Models\User::all();
+            $serial = $reception->serial_number;
+            foreach ($users as $user) {
+                $user->notify(new \App\Notifications\SystemNotification(
+                    'سند استلام جديد 📥',
+                    "تم إنشاء سند استلام جديد برقم ({$serial}).",
+                    route('receptions.show', $reception->id)
+                ));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Reception notification error: " . $e->getMessage());
+        }
+
         if ($request->input('redirect_to') === 'index') {
             return redirect()->route('receptions.index')->with('success', 'تم إنشاء سند الاستلام بنجاح.');
         } elseif ($request->input('redirect_to') === 'edit') {
