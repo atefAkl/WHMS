@@ -40,8 +40,13 @@ export default function CreateEdit({
     isEdit = false,
     authorization = null,
     defaultValidityDays = 30,
+    canSeeFinancialState = false,
+    canBypassFileProof = false,
 }) {
     const { lang } = useLang();
+
+    // Ref for Auto Focus on POS Item select
+    const itemSelectRef = useRef(null);
 
     // Setup Laravel inertia useForm hook
     const { data, setData, post, processing, errors } = useForm({
@@ -62,6 +67,9 @@ export default function CreateEdit({
     const [availableRepresentatives, setAvailableRepresentatives] = useState(
         [],
     );
+
+    // Contract Inventory Balance State
+    const [contractInventory, setContractInventory] = useState([]);
 
     // Customer autocomplete search
     const [customerSearch, setCustomerSearch] = useState("");
@@ -192,13 +200,53 @@ export default function CreateEdit({
                     }));
                 }
                 loadContractStats(contract.id);
+
+                // Load Available Contract Inventory (Pallets, Items, Variants & Balances)
+                axios.get(route("api.contracts.available-inventory", contract.id))
+                    .then((res) => {
+                        setContractInventory(res.data || []);
+                    })
+                    .catch((err) => {
+                        console.error("Could not fetch available contract inventory:", err);
+                        setContractInventory([]);
+                    });
             }
         } else {
             setAvailablePeriods([]);
             setAvailableRepresentatives([]);
             setContractStats(null);
+            setContractInventory([]);
         }
     }, [data.contract_id, filteredContracts]);
+
+    // Cascade inventory filtering for contract items, variants, and pallets
+    const availableItemsForContract = inventoryItems.filter((item) =>
+        contractInventory.some((ci) => ci.inventory_item_id === item.id)
+    );
+
+    const availableVariantsForPosItem = posItemId
+        ? (inventoryItems.find((i) => i.id === parseInt(posItemId))?.variants || []).filter((v) =>
+            contractInventory.some(
+                (ci) =>
+                    ci.inventory_item_id === parseInt(posItemId) &&
+                    ci.inventory_item_variant_id === v.id
+            )
+        )
+        : [];
+
+    const availablePalletsForPosVariant = (posItemId && posVariantId)
+        ? contractInventory.filter(
+            (ci) =>
+                ci.inventory_item_id === parseInt(posItemId) &&
+                ci.inventory_item_variant_id === parseInt(posVariantId)
+        )
+        : [];
+
+    const selectedPalletObj = availablePalletsForPosVariant.find(
+        (p) =>
+            String(p.pallet?.pallet_number || p.pallet?.code || p.pallet_id) === String(posPalletNumber)
+    );
+    const selectedPalletMaxQty = selectedPalletObj ? parseFloat(selectedPalletObj.available_qty) : 0;
 
     // Prepopulate fields if editing
     useEffect(() => {
@@ -279,17 +327,15 @@ export default function CreateEdit({
         setPosRowError("");
 
         if (!posItemId) {
-            setPosRowError(
-                lang === "ar" ? "يرجى اختيار الصنف." : "Please select item.",
-            );
+            setPosRowError(lang === "ar" ? "يجب اختيار الصنف المخزني." : "Select inventory item.");
             return;
         }
         if (!posVariantId) {
-            setPosRowError(
-                lang === "ar"
-                    ? "يرجى اختيار العبوة."
-                    : "Please select variant.",
-            );
+            setPosRowError(lang === "ar" ? "يجب اختيار الدرجة / العبوة." : "Select variant.");
+            return;
+        }
+        if (!posPalletNumber) {
+            setPosRowError(lang === "ar" ? "يجب اختيار الطبلية." : "Select pallet.");
             return;
         }
 
@@ -297,8 +343,17 @@ export default function CreateEdit({
         if (isNaN(qty) || qty <= 0) {
             setPosRowError(
                 lang === "ar"
-                    ? "يجب إدخال كمية أكبر من الصفر."
-                    : "Quantity must be greater than zero.",
+                    ? "يجب إدخال كمية أكبر من الصفر (لا تقبل قيم سالبة)."
+                    : "Quantity must be greater than zero."
+            );
+            return;
+        }
+
+        if (selectedPalletObj && qty > selectedPalletMaxQty) {
+            setPosRowError(
+                lang === "ar"
+                    ? `الكمية المطلوبة (${qty}) تتجاوز الرصيد المتاح على هذه الطبلية (${selectedPalletMaxQty}).`
+                    : `Requested qty (${qty}) exceeds available pallet qty (${selectedPalletMaxQty}).`
             );
             return;
         }
@@ -308,14 +363,14 @@ export default function CreateEdit({
             (item) =>
                 item.inventory_item_id === parseInt(posItemId) &&
                 item.inventory_item_variant_id === parseInt(posVariantId) &&
-                item.pallet_number === posPalletNumber,
+                item.pallet_number === posPalletNumber
         );
 
         if (exists) {
             setPosRowError(
                 lang === "ar"
-                    ? "هذا البند مضاف بالفعل."
-                    : "This item is already added.",
+                    ? "هذا البند وهذه الطبلية مضافة بالفعل في السند."
+                    : "This item pallet is already added."
             );
             return;
         }
@@ -335,6 +390,13 @@ export default function CreateEdit({
         setPosVariantId("");
         setPosPalletNumber("");
         setPosQuantity("");
+
+        // Auto Focus back to POS Item select
+        setTimeout(() => {
+            if (itemSelectRef.current) {
+                itemSelectRef.current.focus();
+            }
+        }, 50);
     };
 
     const handleRemoveItemRow = (index) => {
@@ -1155,28 +1217,32 @@ export default function CreateEdit({
                                         <InputLabel
                                             value={
                                                 lang === "ar"
-                                                    ? "الصنف المطلوب *"
-                                                    : "Inventory Item *"
+                                                    ? "الصنف المخزني للعقد *"
+                                                    : "Contract Item *"
                                             }
                                         />
                                         <select
-                                            className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2"
+                                            ref={itemSelectRef}
+                                            className="mt-1 block w-full border-border bg-surface text-text text-xs font-bold focus:border-primary focus:ring-primary rounded-none h-[38px] px-2"
                                             value={posItemId}
-                                            onChange={(e) =>
-                                                setPosItemId(e.target.value)
-                                            }
+                                            onChange={(e) => {
+                                                setPosItemId(e.target.value);
+                                                setPosVariantId("");
+                                                setPosPalletNumber("");
+                                            }}
+                                            disabled={!data.contract_id}
                                         >
                                             <option value="">
                                                 {lang === "ar"
                                                     ? "-- اختر صنف --"
                                                     : "-- Select Item --"}
                                             </option>
-                                            {inventoryItems.map((inv) => (
+                                            {availableItemsForContract.map((inv) => (
                                                 <option
                                                     key={inv.id}
                                                     value={inv.id}
                                                 >
-                                                    {inv.name}
+                                                    {inv.name} ({inv.code || inv.id})
                                                 </option>
                                             ))}
                                         </select>
@@ -1187,24 +1253,25 @@ export default function CreateEdit({
                                         <InputLabel
                                             value={
                                                 lang === "ar"
-                                                    ? "العبوة/الوزن *"
-                                                    : "Variant *"
+                                                    ? "الدرجة / العبوة *"
+                                                    : "Variant / Grade *"
                                             }
                                         />
                                         <select
-                                            className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2"
+                                            className="mt-1 block w-full border-border bg-surface text-text text-xs font-bold focus:border-primary focus:ring-primary rounded-none h-[38px] px-2"
                                             value={posVariantId}
-                                            onChange={(e) =>
-                                                setPosVariantId(e.target.value)
-                                            }
+                                            onChange={(e) => {
+                                                setPosVariantId(e.target.value);
+                                                setPosPalletNumber("");
+                                            }}
                                             disabled={!posItemId}
                                         >
                                             <option value="">
                                                 {lang === "ar"
-                                                    ? "-- اختر العبوة --"
-                                                    : "-- Select Variant --"}
+                                                    ? "-- اختر الدرجة --"
+                                                    : "-- Select Grade --"}
                                             </option>
-                                            {posVariants.map((v) => (
+                                            {availableVariantsForPosItem.map((v) => (
                                                 <option key={v.id} value={v.id}>
                                                     {v.name}{" "}
                                                     {v.quality
@@ -1215,24 +1282,69 @@ export default function CreateEdit({
                                         </select>
                                     </div>
 
-                                    {/* Pallet Number input */}
-                                    <div className="sm:col-span-2">
+                                    {/* Pallet Select */}
+                                    <div className="sm:col-span-3">
                                         <InputLabel
                                             value={
                                                 lang === "ar"
-                                                    ? "رقم الطبلية (اختياري)"
-                                                    : "Pallet (Opt)"
+                                                    ? "الطبلية المتاحة (رصيدها) *"
+                                                    : "Available Pallet *"
                                             }
                                         />
-                                        <TextInput
-                                            className="w-full text-xs rounded-none border-border mt-1 h-[38px] px-2"
-                                            placeholder="e.g. 120"
+                                        <select
+                                            className="mt-1 block w-full border-border bg-surface text-text text-xs font-bold text-primary focus:border-primary focus:ring-primary rounded-none h-[38px] px-2"
                                             value={posPalletNumber}
-                                            onChange={(e) =>
-                                                setPosPalletNumber(
-                                                    e.target.value,
-                                                )
-                                            }
+                                            onChange={(e) => setPosPalletNumber(e.target.value)}
+                                            disabled={!posVariantId}
+                                        >
+                                            <option value="">
+                                                {lang === "ar"
+                                                    ? "-- اختر الطبلية --"
+                                                    : "-- Select Pallet --"}
+                                            </option>
+                                            {availablePalletsForPosVariant.map((p, idx) => {
+                                                const pNum = p.pallet?.pallet_number || p.pallet?.code || p.pallet_id;
+                                                return (
+                                                    <option key={idx} value={pNum}>
+                                                        {lang === "ar" ? `طبلية #${pNum}` : `Pallet #${pNum}`} (المتاح: {p.available_qty})
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    </div>
+
+                                    {/* Quantity input */}
+                                    <div className="sm:col-span-3">
+                                        <div className="flex justify-between items-center">
+                                            <InputLabel
+                                                value={
+                                                    lang === "ar"
+                                                        ? "الكمية المطلوبة *"
+                                                        : "Quantity *"
+                                                }
+                                            />
+                                            {selectedPalletObj && (
+                                                <span className="text-[10px] text-emerald-700 font-extrabold">
+                                                    المتاح: {selectedPalletMaxQty}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <TextInput
+                                            type="number"
+                                            step="0.01"
+                                            min="0.01"
+                                            max={selectedPalletMaxQty || undefined}
+                                            className="w-full text-xs rounded-none border-border mt-1 h-[38px] px-2 font-mono font-bold"
+                                            placeholder="0.00"
+                                            value={posQuantity}
+                                            onChange={(e) => setPosQuantity(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    handleAddPOSRow();
+                                                }
+                                            }}
+                                            disabled={!posPalletNumber}
                                         />
                                     </div>
 
@@ -1546,209 +1658,211 @@ export default function CreateEdit({
                             )}
                         </div>
 
-                        {/* Financial stats card */}
-                        <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-4">
-                            <div className="flex items-center justify-between border-b border-border pb-3">
-                                <div className="flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                        {lang === "ar"
-                                            ? "الموقف المالي للمتعاقد"
-                                            : "Financial Status"}
-                                    </h3>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setIsFinancialCollapsed(
-                                            !isFinancialCollapsed,
-                                        )
-                                    }
-                                    className="p-1 text-text-muted hover:text-text hover:bg-hover rounded-none transition-all"
-                                >
-                                    {isFinancialCollapsed ? (
-                                        <ChevronDown className="h-3 w-3" />
-                                    ) : (
-                                        <ChevronUp className="h-3 w-3" />
-                                    )}
-                                </button>
-                            </div>
-
-                            {!isFinancialCollapsed && (
-                                <div className="space-y-4 pt-1 text-xs">
-                                    {loadingStats ? (
-                                        <p className="text-text-muted">
+                        {/* Financial stats card (Permission Required: see-client-financial-state) */}
+                        {canSeeFinancialState && (
+                            <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-4">
+                                <div className="flex items-center justify-between border-b border-border pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                        <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
                                             {lang === "ar"
-                                                ? "جاري تحميل البيانات المالية..."
-                                                : "Loading financials..."}
-                                        </p>
-                                    ) : contractStats?.financial ? (
-                                        <>
-                                            <div className="grid grid-cols-1 gap-2 bg-slate-50 border border-border p-3">
-                                                <div className="flex justify-between border-b border-border/40 pb-1.5">
-                                                    <span className="text-text-muted font-medium">
-                                                        {lang === "ar"
-                                                            ? "إجمالي المفوتر:"
-                                                            : "Total Invoiced:"}
-                                                    </span>
-                                                    <span className="font-bold font-mono text-text text-sm">
-                                                        {parseFloat(
-                                                            contractStats
-                                                                .financial
-                                                                .total_invoiced,
-                                                        ).toLocaleString()}{" "}
-                                                        {lang === "ar"
-                                                            ? "ريال"
-                                                            : "SAR"}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between border-b border-border/40 pb-1.5">
-                                                    <span className="text-text-muted font-medium">
-                                                        {lang === "ar"
-                                                            ? "إجمالي المدفوع:"
-                                                            : "Total Paid:"}
-                                                    </span>
-                                                    <span className="font-bold font-mono text-emerald-600 text-sm">
-                                                        {parseFloat(
-                                                            contractStats
-                                                                .financial
-                                                                .total_paid,
-                                                        ).toLocaleString()}{" "}
-                                                        {lang === "ar"
-                                                            ? "ريال"
-                                                            : "SAR"}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center pt-0.5">
-                                                    <span className="text-text-muted font-bold">
-                                                        {lang === "ar"
-                                                            ? "المستحقات المتبقية:"
-                                                            : "Remaining Dues:"}
-                                                    </span>
-                                                    <span
-                                                        className={`font-black font-mono text-sm ${contractStats.financial.total_dues > 0 ? "text-danger" : "text-emerald-600"}`}
-                                                    >
-                                                        {parseFloat(
-                                                            contractStats
-                                                                .financial
-                                                                .total_dues,
-                                                        ).toLocaleString()}{" "}
-                                                        {lang === "ar"
-                                                            ? "ريال"
-                                                            : "SAR"}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                                ? "الموقف المالي للمتعاقد"
+                                                : "Financial Status"}
+                                        </h3>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setIsFinancialCollapsed(
+                                                !isFinancialCollapsed,
+                                            )
+                                        }
+                                        className="p-1 text-text-muted hover:text-text hover:bg-hover rounded-none transition-all"
+                                    >
+                                        {isFinancialCollapsed ? (
+                                            <ChevronDown className="h-3 w-3" />
+                                        ) : (
+                                            <ChevronUp className="h-3 w-3" />
+                                        )}
+                                    </button>
+                                </div>
 
-                                            {/* Invoices List */}
-                                            <div className="space-y-2">
-                                                <h4 className="font-bold text-text-muted border-b border-border pb-1">
-                                                    {lang === "ar"
-                                                        ? "فواتير العقد المستحقة:"
-                                                        : "Contract Invoices:"}
-                                                </h4>
-                                                {contractStats.financial
-                                                    .invoices?.length === 0 ? (
-                                                    <p className="text-text-muted italic">
+                                {!isFinancialCollapsed && (
+                                    <div className="space-y-4 pt-1 text-xs">
+                                        {loadingStats ? (
+                                            <p className="text-text-muted">
+                                                {lang === "ar"
+                                                    ? "جاري تحميل البيانات المالية..."
+                                                    : "Loading financials..."}
+                                            </p>
+                                        ) : contractStats?.financial ? (
+                                            <>
+                                                <div className="grid grid-cols-1 gap-2 bg-slate-50 border border-border p-3">
+                                                    <div className="flex justify-between border-b border-border/40 pb-1.5">
+                                                        <span className="text-text-muted font-medium">
+                                                            {lang === "ar"
+                                                                ? "إجمالي المفوتر:"
+                                                                : "Total Invoiced:"}
+                                                        </span>
+                                                        <span className="font-bold font-mono text-text text-sm">
+                                                            {parseFloat(
+                                                                contractStats
+                                                                    .financial
+                                                                    .total_invoiced,
+                                                            ).toLocaleString()}{" "}
+                                                            {lang === "ar"
+                                                                ? "ريال"
+                                                                : "SAR"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between border-b border-border/40 pb-1.5">
+                                                        <span className="text-text-muted font-medium">
+                                                            {lang === "ar"
+                                                                ? "إجمالي المدفوع:"
+                                                                : "Total Paid:"}
+                                                        </span>
+                                                        <span className="font-bold font-mono text-emerald-600 text-sm">
+                                                            {parseFloat(
+                                                                contractStats
+                                                                    .financial
+                                                                    .total_paid,
+                                                            ).toLocaleString()}{" "}
+                                                            {lang === "ar"
+                                                                ? "ريال"
+                                                                : "SAR"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center pt-0.5">
+                                                        <span className="text-text-muted font-bold">
+                                                            {lang === "ar"
+                                                                ? "المستحقات المتبقية:"
+                                                                : "Remaining Dues:"}
+                                                        </span>
+                                                        <span
+                                                            className={`font-black font-mono text-sm ${contractStats.financial.total_dues > 0 ? "text-danger" : "text-emerald-600"}`}
+                                                        >
+                                                            {parseFloat(
+                                                                contractStats
+                                                                    .financial
+                                                                    .total_dues,
+                                                            ).toLocaleString()}{" "}
+                                                            {lang === "ar"
+                                                                ? "ريال"
+                                                                : "SAR"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Invoices List */}
+                                                <div className="space-y-2">
+                                                    <h4 className="font-bold text-text-muted border-b border-border pb-1">
                                                         {lang === "ar"
-                                                            ? "لا توجد فواتير مسجلة."
-                                                            : "No invoices recorded."}
-                                                    </p>
-                                                ) : (
-                                                    <div className="max-h-[220px] overflow-y-auto space-y-2">
-                                                        {contractStats.financial.invoices.map(
-                                                            (inv) => (
-                                                                <div
-                                                                    key={inv.id}
-                                                                    className="p-2 border border-border bg-surface text-[10px] space-y-1"
-                                                                >
-                                                                    <div className="flex justify-between font-bold">
-                                                                        <span className="text-primary font-mono">
-                                                                            {
-                                                                                inv.invoice_number
-                                                                            }
-                                                                        </span>
-                                                                        <span
-                                                                            className={`px-1.5 rounded-none text-[8px] border ${
-                                                                                inv.status ===
+                                                            ? "فواتير العقد المستحقة:"
+                                                            : "Contract Invoices:"}
+                                                    </h4>
+                                                    {contractStats.financial
+                                                        .invoices?.length === 0 ? (
+                                                        <p className="text-text-muted italic">
+                                                            {lang === "ar"
+                                                                ? "لا توجد فواتير مسجلة."
+                                                                : "No invoices recorded."}
+                                                        </p>
+                                                    ) : (
+                                                        <div className="max-h-[220px] overflow-y-auto space-y-2">
+                                                            {contractStats.financial.invoices.map(
+                                                                (inv) => (
+                                                                    <div
+                                                                        key={inv.id}
+                                                                        className="p-2 border border-border bg-surface text-[10px] space-y-1"
+                                                                    >
+                                                                        <div className="flex justify-between font-bold">
+                                                                            <span className="text-primary font-mono">
+                                                                                {
+                                                                                    inv.invoice_number
+                                                                                }
+                                                                            </span>
+                                                                            <span
+                                                                                className={`px-1.5 rounded-none text-[8px] border ${
+                                                                                    inv.status ===
+                                                                                    "paid"
+                                                                                        ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                                                                        : inv.status ===
+                                                                                            "partial"
+                                                                                          ? "bg-amber-50 text-amber-600 border-amber-200"
+                                                                                          : "bg-rose-50 text-rose-600 border-rose-200"
+                                                                                }`}
+                                                                            >
+                                                                                {inv.status ===
                                                                                 "paid"
-                                                                                    ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                                                                    ? lang ===
+                                                                                      "ar"
+                                                                                        ? "مدفوعة"
+                                                                                        : "Paid"
                                                                                     : inv.status ===
                                                                                         "partial"
-                                                                                      ? "bg-amber-50 text-amber-600 border-amber-200"
-                                                                                      : "bg-rose-50 text-rose-600 border-rose-200"
-                                                                            }`}
-                                                                        >
-                                                                            {inv.status ===
-                                                                            "paid"
-                                                                                ? lang ===
-                                                                                  "ar"
-                                                                                    ? "مدفوعة"
-                                                                                    : "Paid"
-                                                                                : inv.status ===
-                                                                                    "partial"
-                                                                                  ? lang ===
-                                                                                    "ar"
-                                                                                      ? "جزئية"
-                                                                                      : "Partial"
-                                                                                  : lang ===
-                                                                                      "ar"
-                                                                                    ? "غير مدفوعة"
-                                                                                    : "Unpaid"}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="flex justify-between text-text-muted">
-                                                                        <span>
-                                                                            {lang ===
-                                                                            "ar"
-                                                                                ? "المبلغ:"
-                                                                                : "Amount:"}
-                                                                        </span>
-                                                                        <span className="font-bold font-mono">
-                                                                            {inv.amount.toLocaleString()}{" "}
-                                                                            {lang ===
-                                                                            "ar"
-                                                                                ? "ريال"
-                                                                                : "SAR"}
-                                                                        </span>
-                                                                    </div>
-                                                                    {inv.due_date && (
-                                                                        <div className="flex justify-between text-[9px] text-text-muted">
+                                                                                      ? lang ===
+                                                                                        "ar"
+                                                                                          ? "جزئية"
+                                                                                          : "Partial"
+                                                                                      : lang ===
+                                                                                          "ar"
+                                                                                        ? "غير مدفوعة"
+                                                                                        : "Unpaid"}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-text-muted">
                                                                             <span>
                                                                                 {lang ===
                                                                                 "ar"
-                                                                                    ? "الاستحقاق:"
-                                                                                    : "Due date:"}
+                                                                                    ? "المبلغ:"
+                                                                                    : "Amount:"}
                                                                             </span>
-                                                                            <span className="font-mono">
-                                                                                {new Date(
-                                                                                    inv.due_date,
-                                                                                ).toLocaleDateString(
-                                                                                    lang ===
-                                                                                        "ar"
-                                                                                        ? "ar-EG"
-                                                                                        : "en-US",
-                                                                                )}
+                                                                            <span className="font-bold font-mono">
+                                                                                {inv.amount.toLocaleString()}{" "}
+                                                                                {lang ===
+                                                                                "ar"
+                                                                                    ? "ريال"
+                                                                                    : "SAR"}
                                                                             </span>
                                                                         </div>
-                                                                    )}
-                                                                </div>
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <p className="text-text-muted italic">
-                                            {lang === "ar"
-                                                ? "يرجى تحديد عقد لعرض البيانات المالية."
-                                                : "Please select contract to load details."}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                                                                        {inv.due_date && (
+                                                                            <div className="flex justify-between text-[9px] text-text-muted">
+                                                                                <span>
+                                                                                    {lang ===
+                                                                                    "ar"
+                                                                                        ? "الاستحقاق:"
+                                                                                        : "Due date:"}
+                                                                                </span>
+                                                                                <span className="font-mono">
+                                                                                    {new Date(
+                                                                                        inv.due_date,
+                                                                                    ).toLocaleDateString(
+                                                                                        lang ===
+                                                                                            "ar"
+                                                                                            ? "ar-EG"
+                                                                                            : "en-US",
+                                                                                    )}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <p className="text-text-muted italic">
+                                                {lang === "ar"
+                                                    ? "يرجى تحديد عقد لعرض البيانات المالية."
+                                                    : "Please select contract to load details."}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

@@ -84,6 +84,10 @@ class ExitAuthorizationController extends Controller
             $defaultValidityDays = 30;
         }
 
+        $user = auth()->user();
+        $canSeeFinancialState = $user->is_admin || $user->hasPermissionTo('see-client-financial-state') || $user->can('see-client-financial-state');
+        $canBypassFileProof   = $user->is_admin || $user->hasPermissionTo('bypass-exit-file-attachment') || $user->can('bypass-exit-file-attachment');
+
         return Inertia::render('Warehouse/ExitAuthorizations/CreateEdit', [
             'customers' => $customers,
             'inventoryItems' => $inventoryItems,
@@ -91,17 +95,22 @@ class ExitAuthorizationController extends Controller
             'isEdit' => false,
             'authorization' => null,
             'defaultValidityDays' => $defaultValidityDays,
+            'canSeeFinancialState' => $canSeeFinancialState,
+            'canBypassFileProof'   => $canBypassFileProof,
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $canBypassFileProof = $user->is_admin || $user->hasPermissionTo('bypass-exit-file-attachment') || $user->can('bypass-exit-file-attachment');
+
         $validated = $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'contract_id' => 'required|exists:contracts,id',
             'period_id'   => 'nullable|exists:contract_periods,id',
             'requester_type' => 'nullable|string|in:whatsapp,written,personal',
-            'requester_proof' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,pdf,mp4,mp3,wav,ogg|max:20480',
+            'requester_proof' => $canBypassFileProof ? 'nullable|file|mimes:jpeg,png,jpg,gif,svg,pdf,mp4,mp3,wav,ogg|max:20480' : 'nullable|file|mimes:jpeg,png,jpg,gif,svg,pdf,mp4,mp3,wav,ogg|max:20480',
             'driver_id'   => 'nullable|exists:drivers,id',
             'representative_id' => 'nullable|exists:contract_agents,id',
             'deliver_to_self' => 'nullable|boolean',

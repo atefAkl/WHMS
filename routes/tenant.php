@@ -116,6 +116,53 @@ Route::middleware([
         Route::get('settings/notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'index'])->name('settings.notifications.index');
         Route::post('settings/notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'update'])->name('settings.notifications.update');
 
+        // Customer Financial Status API (Strict Permission Checked)
+        Route::get('/api/customers/{customer}/financial-status', function (\App\Models\Customer $customer) {
+            $user = auth()->user();
+            $canSee = $user->is_admin || $user->hasPermissionTo('see-client-financial-state') || $user->can('see-client-financial-state');
+            if (!$canSee) {
+                return response()->json(['allowed' => false, 'message' => 'غير مصرح بمشاهدة الموقف المالي.']);
+            }
+
+            $unpaidInvoices = \App\Models\SalesInvoice::where('customer_id', $customer->id)
+                ->whereIn('status', ['posted', 'partially_paid', 'unpaid'])
+                ->get();
+
+            $totalUnpaid = $unpaidInvoices->sum('total_amount');
+            $balance = $customer->account ? $customer->account->current_balance : 0;
+
+            return response()->json([
+                'allowed'      => true,
+                'balance'      => $balance,
+                'unpaid_count' => $unpaidInvoices->count(),
+                'unpaid_total' => $totalUnpaid,
+                'status_label' => $totalUnpaid > 0 ? 'يوجد فواتير مستحقة' : 'سليم / متزن',
+            ]);
+        })->name('api.customers.financial-status');
+
+        // Contract Available Inventory API (Items, Variants, Pallets & Balances)
+        Route::get('/api/contracts/{contract}/available-inventory', function (\App\Models\Contract $contract) {
+            $inventory = \App\Models\InventoryEntry::whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                $query->where('contract_id', $contract->id);
+            })
+            ->select(
+                'inventory_item_id',
+                'inventory_item_variant_id',
+                'pallet_id',
+                \Illuminate\Support\Facades\DB::raw('SUM(quantity_in - quantity_out) as available_qty')
+            )
+            ->groupBy('inventory_item_id', 'inventory_item_variant_id', 'pallet_id')
+            ->having('available_qty', '>', 0)
+            ->with([
+                'inventoryItem:id,name,code',
+                'variant:id,name,code',
+                'pallet:id,code,pallet_number'
+            ])
+            ->get();
+
+            return response()->json($inventory);
+        })->name('api.contracts.available-inventory');
+
         // Tenant Onboarding / Setup
         Route::get('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'create'])->name('tenant.setup');
         Route::post('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'store'])->name('tenant.store');
