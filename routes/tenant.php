@@ -112,6 +112,10 @@ Route::middleware([
             ]);
         })->name('api.notifications.unread-count');
 
+        // System Notification Administration Settings
+        Route::get('settings/notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'index'])->name('settings.notifications.index');
+        Route::post('settings/notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'update'])->name('settings.notifications.update');
+
         // Tenant Onboarding / Setup
         Route::get('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'create'])->name('tenant.setup');
         Route::post('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'store'])->name('tenant.store');
