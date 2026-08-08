@@ -97,53 +97,39 @@ export default function NotificationSettings({ settings, roles }) {
                             </div>
                         </div>
 
-                        {/* 2. System Master Event Triggers */}
-                        <div className="bg-surface border border-border rounded-xl p-6 space-y-4 shadow-2xs">
-                            <h2 className="text-sm font-bold text-text flex items-center gap-2 border-b border-border pb-3">
-                                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                                {lang === "ar" ? "المفاتيح الرئيسية للأحداث (System Master Event Triggers)" : "Master Event Triggers"}
-                            </h2>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                {[
-                                    { key: 'notification_customer_created', label: lang === "ar" ? "تفعيل إشعار إضافة العملاء الجدد" : "Enable New Customer Alerts" },
-                                    { key: 'notification_contract_created', label: lang === "ar" ? "تفعيل إشعار توثيق العقود" : "Enable New Contract Alerts" },
-                                    { key: 'notification_reception_created', label: lang === "ar" ? "تفعيل إشعار سندات الاستلام" : "Enable Reception Voucher Alerts" },
-                                    { key: 'notification_delivery_created', label: lang === "ar" ? "تفعيل إشعار سندات التسليم والعمليات" : "Enable Delivery Voucher Alerts" },
-                                ].map((item) => (
-                                    <label key={item.key} className="flex items-center gap-2 p-3 rounded-lg border border-border bg-slate-50/50 hover:bg-slate-100/50 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border text-primary focus:ring-primary h-4 w-4"
-                                            checked={data.settings[item.key] === 'true' || data.settings[item.key] === true}
-                                            onChange={(e) => handleChange(item.key, e.target.checked ? 'true' : 'false')}
-                                        />
-                                        <span className="font-bold text-text">{item.label}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 3. Notification Templates Customization */}
+                        {/* 2. Notification Templates & Master Event Controls */}
                         <div className="bg-surface border border-border rounded-xl p-6 space-y-5 shadow-2xs">
                             <h2 className="text-sm font-bold text-text flex items-center gap-2 border-b border-border pb-3">
                                 <FileText className="h-4 w-4 text-blue-600" />
-                                {lang === "ar" ? "تخصيص قوالب ونصوص التنبيهات (Notification Templates)" : "Custom Notification Templates"}
+                                {lang === "ar" ? "تخصيص قوالب ومفاتيح تشغيل التنبيهات (Notification Templates & Event Triggers)" : "Custom Notification Templates & Event Triggers"}
                             </h2>
 
                             <div className="space-y-4">
                                 {/* Customer Template */}
                                 <div className="p-4 border border-border rounded-lg bg-slate-50/30 space-y-3">
-                                    <h3 className="text-xs font-bold text-text flex items-center gap-1.5">
-                                        <UserPlus className="h-4 w-4 text-emerald-600" />
-                                        {lang === "ar" ? "قالب إشعار العميل الجديد" : "New Customer Template"}
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                                        <h3 className="text-xs font-bold text-text flex items-center gap-1.5">
+                                            <UserPlus className="h-4 w-4 text-emerald-600" />
+                                            {lang === "ar" ? "إشعار إضافة عميل جديد" : "New Customer Alert"}
+                                        </h3>
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-text">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                                                checked={data.settings.notification_customer_created === 'true' || data.settings.notification_customer_created === true}
+                                                onChange={(e) => handleChange('notification_customer_created', e.target.checked ? 'true' : 'false')}
+                                            />
+                                            <span className={data.settings.notification_customer_created === 'true' || data.settings.notification_customer_created === true ? "text-emerald-700 font-black" : "text-text-muted"}>
+                                                {lang === "ar" ? "تفعيل الإشعار" : "Enable Alert"}
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                         <div>
                                             <InputLabel value={lang === "ar" ? "العنوان" : "Title Template"} />
                                             <input
                                                 type="text"
-                                                className="mt-1 block w-full rounded-md border-border bg-surface text-text text-xs"
+                                                className="mt-1 block w-full rounded-md border-border bg-surface text-text text-xs font-bold"
                                                 value={data.settings.notification_tpl_customer_title ?? ''}
                                                 onChange={(e) => handleChange('notification_tpl_customer_title', e.target.value)}
                                             />
@@ -162,16 +148,29 @@ export default function NotificationSettings({ settings, roles }) {
 
                                 {/* Contract Template */}
                                 <div className="p-4 border border-border rounded-lg bg-slate-50/30 space-y-3">
-                                    <h3 className="text-xs font-bold text-text flex items-center gap-1.5">
-                                        <FileText className="h-4 w-4 text-blue-600" />
-                                        {lang === "ar" ? "قالب إشعار العقد الجديد" : "New Contract Template"}
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                                        <h3 className="text-xs font-bold text-text flex items-center gap-1.5">
+                                            <FileText className="h-4 w-4 text-blue-600" />
+                                            {lang === "ar" ? "إشعار توثيق عقد جديد" : "New Contract Alert"}
+                                        </h3>
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-text">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                                                checked={data.settings.notification_contract_created === 'true' || data.settings.notification_contract_created === true}
+                                                onChange={(e) => handleChange('notification_contract_created', e.target.checked ? 'true' : 'false')}
+                                            />
+                                            <span className={data.settings.notification_contract_created === 'true' || data.settings.notification_contract_created === true ? "text-emerald-700 font-black" : "text-text-muted"}>
+                                                {lang === "ar" ? "تفعيل الإشعار" : "Enable Alert"}
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                         <div>
                                             <InputLabel value={lang === "ar" ? "العنوان" : "Title Template"} />
                                             <input
                                                 type="text"
-                                                className="mt-1 block w-full rounded-md border-border bg-surface text-text text-xs"
+                                                className="mt-1 block w-full rounded-md border-border bg-surface text-text text-xs font-bold"
                                                 value={data.settings.notification_tpl_contract_title ?? ''}
                                                 onChange={(e) => handleChange('notification_tpl_contract_title', e.target.value)}
                                             />
@@ -183,6 +182,47 @@ export default function NotificationSettings({ settings, roles }) {
                                                 className="mt-1 block w-full rounded-md border-border bg-surface text-text text-xs"
                                                 value={data.settings.notification_tpl_contract_msg ?? ''}
                                                 onChange={(e) => handleChange('notification_tpl_contract_msg', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Reception Template */}
+                                <div className="p-4 border border-border rounded-lg bg-slate-50/30 space-y-3">
+                                    <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                                        <h3 className="text-xs font-bold text-text flex items-center gap-1.5">
+                                            <Inbox className="h-4 w-4 text-amber-600" />
+                                            {lang === "ar" ? "إشعار سند استلام جديد" : "New Reception Voucher Alert"}
+                                        </h3>
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-text">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                                                checked={data.settings.notification_reception_created === 'true' || data.settings.notification_reception_created === true}
+                                                onChange={(e) => handleChange('notification_reception_created', e.target.checked ? 'true' : 'false')}
+                                            />
+                                            <span className={data.settings.notification_reception_created === 'true' || data.settings.notification_reception_created === true ? "text-emerald-700 font-black" : "text-text-muted"}>
+                                                {lang === "ar" ? "تفعيل الإشعار" : "Enable Alert"}
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                        <div>
+                                            <InputLabel value={lang === "ar" ? "العنوان" : "Title Template"} />
+                                            <input
+                                                type="text"
+                                                className="mt-1 block w-full rounded-md border-border bg-surface text-text text-xs font-bold"
+                                                value={data.settings.notification_tpl_reception_title ?? ''}
+                                                onChange={(e) => handleChange('notification_tpl_reception_title', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <InputLabel value={lang === "ar" ? "نص الرسالة (استخدم {serial_number})" : "Message ({serial_number})"} />
+                                            <input
+                                                type="text"
+                                                className="mt-1 block w-full rounded-md border-border bg-surface text-text text-xs"
+                                                value={data.settings.notification_tpl_reception_msg ?? ''}
+                                                onChange={(e) => handleChange('notification_tpl_reception_msg', e.target.value)}
                                             />
                                         </div>
                                     </div>
