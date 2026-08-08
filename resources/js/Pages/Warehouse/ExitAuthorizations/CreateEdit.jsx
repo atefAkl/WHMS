@@ -322,7 +322,7 @@ export default function CreateEdit({
         }
     }, [posItemId, inventoryItems]);
 
-    // Handle adding items to list locally
+    // Handle adding items to list locally in Exit Authorization (Free Qty & Items Addition)
     const handleAddPOSRow = () => {
         setPosRowError("");
 
@@ -334,43 +334,13 @@ export default function CreateEdit({
             setPosRowError(lang === "ar" ? "يجب اختيار الدرجة / العبوة." : "Select variant.");
             return;
         }
-        if (!posPalletNumber) {
-            setPosRowError(lang === "ar" ? "يجب اختيار الطبلية." : "Select pallet.");
-            return;
-        }
 
         const qty = parseFloat(posQuantity);
         if (isNaN(qty) || qty <= 0) {
             setPosRowError(
                 lang === "ar"
-                    ? "يجب إدخال كمية أكبر من الصفر (لا تقبل قيم سالبة)."
+                    ? "يجب إدخال كمية أكبر من الصفر."
                     : "Quantity must be greater than zero."
-            );
-            return;
-        }
-
-        if (selectedPalletObj && qty > selectedPalletMaxQty) {
-            setPosRowError(
-                lang === "ar"
-                    ? `الكمية المطلوبة (${qty}) تتجاوز الرصيد المتاح على هذه الطبلية (${selectedPalletMaxQty}).`
-                    : `Requested qty (${qty}) exceeds available pallet qty (${selectedPalletMaxQty}).`
-            );
-            return;
-        }
-
-        // Check for duplicates
-        const exists = data.items.some(
-            (item) =>
-                item.inventory_item_id === parseInt(posItemId) &&
-                item.inventory_item_variant_id === parseInt(posVariantId) &&
-                item.pallet_number === posPalletNumber
-        );
-
-        if (exists) {
-            setPosRowError(
-                lang === "ar"
-                    ? "هذا البند وهذه الطبلية مضافة بالفعل في السند."
-                    : "This item pallet is already added."
             );
             return;
         }
