@@ -82,6 +82,13 @@ Route::middleware([
             auth()->user()->unreadNotifications->markAsRead();
             return redirect()->back()->with('success', 'تم تحديد جميع التنبيهات كمقروءة.');
         })->name('notifications.markAllRead');
+        Route::post('notifications/{id}/mark-read', function($id) {
+            $notification = auth()->user()->notifications()->find($id);
+            if ($notification && is_null($notification->read_at)) {
+                $notification->markAsRead();
+            }
+            return response()->json(['success' => true]);
+        })->name('notifications.markOneRead');
         Route::post('notifications/send-test', function() {
             auth()->user()->notify(new \App\Notifications\SystemNotification(
                 'تنبيه تجريبي من النظام 🔔',

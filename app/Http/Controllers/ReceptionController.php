@@ -146,7 +146,7 @@ class ReceptionController extends Controller
         });
 
         try {
-            $users = \App\Models\User::all();
+            $users = \App\Models\User::all()->filter(fn($u) => $u->wantsNotification('reception_created'));
             $serial = $reception->serial_number;
             foreach ($users as $user) {
                 $user->notify(new \App\Notifications\SystemNotification(

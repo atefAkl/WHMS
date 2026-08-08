@@ -58,6 +58,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user wants to receive specific notification type
+     */
+    public function wantsNotification(string $type): bool
+    {
+        $prefs = $this->preferences['notifications'] ?? [];
+        return !isset($prefs[$type]) || (bool) $prefs[$type];
+    }
+
+    /**
      * Get the active permissions for the user.
      *
      * @return array<string>

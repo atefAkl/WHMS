@@ -61,6 +61,49 @@ export default function UpdatePreferencesForm({ className = '' }) {
                     </select>
                 </div>
 
+                {/* Notifications Customization / Subscriptions */}
+                <div className="pt-4 border-t border-border space-y-4">
+                    <div>
+                        <h3 className="text-sm font-bold text-text">
+                            {lang === 'ar' ? 'تخصيص التنبيهات المباشرة (Notification Subscriptions)' : 'Notification Subscriptions'}
+                        </h3>
+                        <p className="text-xs text-text-muted mt-0.5">
+                            {lang === 'ar' ? 'اختر الأحداث والعمليات التي ترغب في استقبال تنبيهات فورية بها على حسابك.' : 'Select events you wish to receive instant notifications for.'}
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        {[
+                            { key: 'customer_created', label: lang === 'ar' ? 'إشعارات إضافة عميل جديد' : 'New Customer Alerts', default: true },
+                            { key: 'contract_created', label: lang === 'ar' ? 'إشعارات توثيق عقد جديد' : 'New Contract Alerts', default: true },
+                            { key: 'reception_created', label: lang === 'ar' ? 'إشعارات سندات الاستلام' : 'Reception Voucher Alerts', default: true },
+                            { key: 'delivery_created', label: lang === 'ar' ? 'إشعارات سندات التسليم والعمليات' : 'Delivery Voucher Alerts', default: true },
+                        ].map((item) => {
+                            const isChecked = data.preferences.notifications?.[item.key] ?? item.default;
+                            return (
+                                <label key={item.key} className="flex items-center gap-2 p-2.5 rounded border border-border bg-slate-50/50 hover:bg-slate-100/50 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-border text-primary focus:ring-primary h-4 w-4"
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                            const currentNotifs = data.preferences.notifications || {};
+                                            setData('preferences', {
+                                                ...data.preferences,
+                                                notifications: {
+                                                    ...currentNotifs,
+                                                    [item.key]: e.target.checked
+                                                }
+                                            });
+                                        }}
+                                    />
+                                    <span className="font-medium text-text">{item.label}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 <div className="flex items-center gap-4">
                     <PrimaryButton 
                         disabled={processing}

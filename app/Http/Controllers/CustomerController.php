@@ -136,7 +136,7 @@ class CustomerController extends Controller
         $customer = Customer::create($request->all());
 
         try {
-            $users = \App\Models\User::all();
+            $users = \App\Models\User::all()->filter(fn($u) => $u->wantsNotification('customer_created'));
             foreach ($users as $user) {
                 $user->notify(new \App\Notifications\SystemNotification(
                     'تسجيل عميل جديد 👤',
