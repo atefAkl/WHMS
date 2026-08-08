@@ -94,6 +94,16 @@ Route::middleware([
             auth()->user()->notifications()->delete();
             return redirect()->back()->with('success', 'تم حذف جميع التنبيهات.');
         })->name('notifications.clearAll');
+        Route::get('/api/notifications/unread-count', function() {
+            $user = auth()->user();
+            if (!$user || !\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+                return response()->json(['unread_count' => 0, 'recent' => []]);
+            }
+            return response()->json([
+                'unread_count' => $user->unreadNotifications()->count(),
+                'recent'       => $user->notifications()->latest()->limit(5)->get(),
+            ]);
+        })->name('api.notifications.unread-count');
 
         // Tenant Onboarding / Setup
         Route::get('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'create'])->name('tenant.setup');

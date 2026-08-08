@@ -1,10 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Bell, MessageSquare, User, ChevronDown, Settings, LogOut } from 'lucide-react';
 import Dropdown from './Dropdown';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLang } from '@/Contexts/LanguageContext';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import axios from 'axios';
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
@@ -28,8 +29,39 @@ export default function Topbar({ header }) {
     const user = usePage().props.auth.user;
     const { lang, setLang } = useLang();
 
+    const initialUnread = usePage().props.auth?.unread_notifications_count ?? 0;
+    const initialRecent = usePage().props.auth?.recent_notifications ?? [];
+
+    const [unreadCount, setUnreadCount] = useState(initialUnread);
+    const [recentNotifications, setRecentNotifications] = useState(initialRecent);
+
+    useEffect(() => {
+        setUnreadCount(initialUnread);
+        setRecentNotifications(initialRecent);
+    }, [initialUnread, initialRecent]);
+
+    // Smart Silent Notification Pulse (syncs header bell every 12 seconds in background)
+    useEffect(() => {
+        if (!user) return;
+        const fetchUnread = () => {
+            try {
+                axios.get(route('api.notifications.unread-count'))
+                    .then(res => {
+                        if (res.data) {
+                            setUnreadCount(res.data.unread_count || 0);
+                            setRecentNotifications(res.data.recent || []);
+                        }
+                    })
+                    .catch(() => { });
+            } catch (e) { }
+        };
+
+        const interval = setInterval(fetchUnread, 12000);
+        return () => clearInterval(interval);
+    }, [user]);
+
     const isCentral = typeof route !== 'undefined' && (
-        route().current('saas.*') || 
+        route().current('saas.*') ||
         route().current('central.*')
     );
 
@@ -41,11 +73,11 @@ export default function Topbar({ header }) {
                 <div className="text-sm font-semibold text-text flex items-center gap-2">
                     {header || (lang === 'ar' ? 'لوحة التحكم' : 'Dashboard')}
                 </div>
-                
+
                 {/* Season Badge */}
                 {usePage().props.auth.active_season_name && (
-                    <Link 
-                        href={safeRoute('season.select')} 
+                    <Link
+                        href={safeRoute('season.select')}
                         className="hidden sm:flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 border border-primary/20 hover:bg-primary/20 transition-colors cursor-pointer"
                         title={lang === 'ar' ? 'تغيير الموسم' : 'Change Season'}
                     >
@@ -59,7 +91,7 @@ export default function Topbar({ header }) {
             <div className="flex items-center gap-2">
 
                 {/* Language Toggle */}
-                <button 
+                <button
                     onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-surface-muted transition-colors font-black text-xs border border-border"
                     title={lang === 'ar' ? 'English' : 'العربية'}
@@ -74,92 +106,84 @@ export default function Topbar({ header }) {
                 </button>
 
                 {/* Interactive Notifications Dropdown */}
-                {(() => {
-                    const unread = usePage().props.auth?.unread_notifications_count ?? 0;
-                    const recent = usePage().props.auth?.recent_notifications ?? [];
+                <Dropdown>
+                    <Dropdown.Trigger>
+                        <button
+                            className="relative rounded-full p-2 text-text-muted hover:bg-surface-muted transition-colors focus:outline-none"
+                            title={lang === 'ar' ? 'الإشعارات والتنبيهات' : 'Notifications'}
+                        >
+                            <Bell className="h-5 w-5" />
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-danger text-white text-[10px] font-black flex items-center justify-center px-1 leading-none shadow-2xs animate-bounce" style={{ border: '2px solid #333', borderRadius: '50% !important' }}>
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                            )}
+                        </button>
+                    </Dropdown.Trigger>
 
-                    return (
-                        <Dropdown>
-                            <Dropdown.Trigger>
-                                <button
-                                    className="relative rounded-full p-2 text-text-muted hover:bg-surface-muted transition-colors focus:outline-none"
-                                    title={lang === 'ar' ? 'الإشعارات والتنبيهات' : 'Notifications'}
-                                >
-                                    <Bell className="h-5 w-5" />
-                                    {unread > 0 && (
-                                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] font-black flex items-center justify-center px-1 leading-none shadow-2xs animate-bounce">
-                                            {unread > 99 ? '99+' : unread}
-                                        </span>
-                                    )}
-                                </button>
-                            </Dropdown.Trigger>
+                    <Dropdown.Content align="right" width="80">
+                        <div className="p-3 border-b border-border flex items-center justify-between bg-surface-muted/40" dir={lang === "ar" ? "rtl" : "ltr"}>
+                            <div className="flex items-center gap-1.5 font-bold text-xs text-text">
+                                <Bell className="h-4 w-4 text-primary" />
+                                <span>{lang === "ar" ? "التنبيهات والأحداث" : "Notifications & Alerts"}</span>
+                            </div>
+                            {unreadCount > 0 && (
+                                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 border border-primary/20">
+                                    {unreadCount} {lang === "ar" ? "جديد" : "new"}
+                                </span>
+                            )}
+                        </div>
 
-                            <Dropdown.Content align="right" width="80">
-                                <div className="p-3 border-b border-border flex items-center justify-between bg-surface-muted/40" dir={lang === "ar" ? "rtl" : "ltr"}>
-                                    <div className="flex items-center gap-1.5 font-bold text-xs text-text">
-                                        <Bell className="h-4 w-4 text-primary" />
-                                        <span>{lang === "ar" ? "التنبيهات والأحداث" : "Notifications & Alerts"}</span>
-                                    </div>
-                                    {unread > 0 && (
-                                        <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 border border-primary/20">
-                                            {unread} {lang === "ar" ? "جديد" : "new"}
-                                        </span>
-                                    )}
+                        <div className="max-h-72 overflow-y-auto divide-y divide-border" dir={lang === "ar" ? "rtl" : "ltr"}>
+                            {recentNotifications.length === 0 ? (
+                                <div className="py-6 text-center text-xs text-text-muted">
+                                    {lang === "ar" ? "لا توجد تنبيهات حالياً." : "No notifications."}
                                 </div>
-
-                                <div className="max-h-72 overflow-y-auto divide-y divide-border" dir={lang === "ar" ? "rtl" : "ltr"}>
-                                    {recent.length === 0 ? (
-                                        <div className="py-6 text-center text-xs text-text-muted">
-                                            {lang === "ar" ? "لا توجد تنبيهات حالياً." : "No notifications."}
-                                        </div>
-                                    ) : (
-                                        recent.map((n) => {
-                                            const nData = n.data || {};
-                                            const isUnread = !n.read_at;
-                                            return (
-                                                <div
-                                                    key={n.id}
-                                                    className={`p-3 text-xs space-y-1 transition-colors ${
-                                                        isUnread ? "bg-primary/5 hover:bg-primary/10 font-medium" : "hover:bg-surface-muted/30"
-                                                    }`}
+                            ) : (
+                                recentNotifications.map((n) => {
+                                    const nData = n.data || {};
+                                    const isUnread = !n.read_at;
+                                    return (
+                                        <div
+                                            key={n.id}
+                                            className={`p-3 text-xs space-y-1 transition-colors ${isUnread ? "bg-primary/5 hover:bg-primary/10 font-medium" : "hover:bg-surface-muted/30"
+                                                }`}
+                                        >
+                                            <div className="flex justify-between items-start gap-2">
+                                                <span className={`font-bold ${isUnread ? "text-primary" : "text-text"}`}>
+                                                    {nData.title || (lang === "ar" ? "إشعار نظام" : "Alert")}
+                                                </span>
+                                                <span className="text-[9px] text-text-muted font-mono shrink-0">
+                                                    {new Date(n.created_at).toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-US", { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-[11px] text-text-muted leading-tight line-clamp-2">
+                                                {nData.message}
+                                            </p>
+                                            {nData.link && (
+                                                <Link
+                                                    href={nData.link}
+                                                    className="inline-block pt-1 text-[10px] font-bold text-primary hover:underline"
                                                 >
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <span className={`font-bold ${isUnread ? "text-primary" : "text-text"}`}>
-                                                            {nData.title || (lang === "ar" ? "إشعار نظام" : "Alert")}
-                                                        </span>
-                                                        <span className="text-[9px] text-text-muted font-mono shrink-0">
-                                                            {new Date(n.created_at).toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-US", { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-[11px] text-text-muted leading-tight line-clamp-2">
-                                                        {nData.message}
-                                                    </p>
-                                                    {nData.link && (
-                                                        <Link
-                                                            href={nData.link}
-                                                            className="inline-block pt-1 text-[10px] font-bold text-primary hover:underline"
-                                                        >
-                                                            {lang === "ar" ? "عرض التفاصيل ←" : "View details →"}
-                                                        </Link>
-                                                    )}
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
+                                                    {lang === "ar" ? "عرض التفاصيل ←" : "View details →"}
+                                                </Link>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
 
-                                <div className="p-2 border-t border-border bg-slate-50 text-center" dir={lang === "ar" ? "rtl" : "ltr"}>
-                                    <Link
-                                        href={route('notifications.index')}
-                                        className="text-xs font-bold text-primary hover:text-primary/80 transition-colors block py-1"
-                                    >
-                                        {lang === "ar" ? "عرض جميع التنبيهات والتحكم بها ←" : "View All Notifications →"}
-                                    </Link>
-                                </div>
-                            </Dropdown.Content>
-                        </Dropdown>
-                    );
-                })()}
+                        <div className="p-2 border-t border-border bg-slate-50 text-center" dir={lang === "ar" ? "rtl" : "ltr"}>
+                            <Link
+                                href={route('notifications.index')}
+                                className="text-xs font-bold text-primary hover:text-primary/80 transition-colors block py-1"
+                            >
+                                {lang === "ar" ? "عرض جميع التنبيهات والتحكم بها ←" : "View All Notifications →"}
+                            </Link>
+                        </div>
+                    </Dropdown.Content>
+                </Dropdown>
 
                 {/* Divider */}
                 <div className="mx-2 h-6 w-px bg-border" />
