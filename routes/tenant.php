@@ -59,6 +59,8 @@ Route::middleware([
         Route::post('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences');
         Route::post('/profile/secure-password', [ProfileController::class, 'updateSecurePassword'])->name('profile.secure-password.update');
 
+        Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index'])->name('activity-logs.index');
+
         // Employee Management CRUD
         Route::resource('employees', \App\Http\Controllers\Tenant\EmployeeController::class)->except(['create', 'edit']);
         Route::put('employees/{employee}/password', [\App\Http\Controllers\Tenant\EmployeeController::class, 'updatePassword'])->name('employees.password.update');

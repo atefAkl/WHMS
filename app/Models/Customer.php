@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
+    use \App\Traits\LogsActivity;
     protected $fillable = [
         'name',
         'foreign_name',

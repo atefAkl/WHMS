@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Contract extends Model
 {
+    use \App\Traits\LogsActivity;
     protected $fillable = [
         'customer_id',
         'contact_id',

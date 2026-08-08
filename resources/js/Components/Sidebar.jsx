@@ -33,7 +33,8 @@ import {
     Scale,
     PieChart,
     Shield,
-    Ticket
+    Ticket,
+    History
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -122,6 +123,7 @@ const tenantNavItems = [
         children: [
             { name: { ar: 'الموظفين', en: 'Employees' }, icon: UserCircle, route: 'employees.index', active: 'employees.*' },
             { name: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' }, icon: Shield, route: 'settings.roles-permissions', active: 'settings.roles-permissions' },
+            { name: { ar: 'سجل الرقابة والعمليات', en: 'Audit Activity Logs' }, icon: History, route: 'activity-logs.index', active: 'activity-logs.*' },
             { name: { ar: 'الرواتب', en: 'Payroll' }, icon: Banknote, route: 'dashboard', active: 'payroll.*' },
             { name: { ar: 'البصمة', en: 'Attendance' }, icon: MapPin, route: 'dashboard', active: 'attendance.*' },
         ]
