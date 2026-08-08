@@ -50,6 +50,9 @@ class EmployeeController extends Controller
         $currentUser = auth()->user();
         $this->authorizeManager();
 
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'see-client-financial-state', 'guard_name' => 'web']);
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'bypass-exit-file-attachment', 'guard_name' => 'web']);
+
         $users = User::latest()->get()->map(function ($user) {
             $user->is_manager = (bool) $user->is_admin;
             $user->role = $user->roles->first()?->name;

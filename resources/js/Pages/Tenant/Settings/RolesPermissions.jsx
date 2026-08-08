@@ -90,6 +90,8 @@ export default function RolesPermissions({ users, isManager, roles }) {
                 { key: "exit_authorizations.edit", name: lang === "ar" ? "تعديل أذونات خروج" : "Edit Exit Permits" },
                 { key: "exit_authorizations.delete", name: lang === "ar" ? "حذف أذونات خروج" : "Delete Exit Permits" },
                 { key: "exit_authorizations.approve", name: lang === "ar" ? "اعتماد أذونات خروج" : "Approve Exit Permits" },
+                { key: "see-client-financial-state", name: lang === "ar" ? "مشاهدة الموقف المالي للمتعاقد" : "View Client Financial State" },
+                { key: "bypass-exit-file-attachment", name: lang === "ar" ? "تفويض إخراج البضاعة بدون ملفات مرفقة" : "Bypass Exit File Proof Requirement" },
                 { key: "deliveries.view", name: lang === "ar" ? "عرض سندات التسليم" : "View Deliveries" },
                 { key: "deliveries.create", name: lang === "ar" ? "إنشاء سندات تسليم" : "Create Deliveries" },
                 { key: "deliveries.edit", name: lang === "ar" ? "تعديل سندات تسليم" : "Edit Deliveries" },
