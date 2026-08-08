@@ -42,24 +42,38 @@ export default function Topbar({ header }) {
         setRecentNotifications(initialRecent);
     }, [initialUnread, initialRecent]);
 
-    // Fast 2s Silent Pulse Listener for instant real-time sync across browsers
+    // Smart Zero-Load Pulse (30s interval + paused on inactive tabs + instant check on tab focus)
     useEffect(() => {
         if (!user) return;
+
+        let intervalId = null;
+
         const fetchUnread = () => {
-            try {
-                axios.get(route('api.notifications.unread-count'))
-                    .then(res => {
-                        if (res.data) {
-                            setUnreadCount(res.data.unread_count || 0);
-                            setRecentNotifications(res.data.recent || []);
-                        }
-                    })
-                    .catch(() => { });
-            } catch (e) { }
+            if (document.hidden) return; // Skip if tab is inactive
+
+            axios.get(route('api.notifications.unread-count'))
+                .then(res => {
+                    if (res.data) {
+                        setUnreadCount(res.data.unread_count || 0);
+                        setRecentNotifications(res.data.recent || []);
+                    }
+                })
+                .catch(() => { });
         };
 
-        const interval = setInterval(fetchUnread, 2000);
-        return () => clearInterval(interval);
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                fetchUnread(); // Fetch instantly when user switches back to tab
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        intervalId = setInterval(fetchUnread, 30000); // 30 seconds gentle pulse
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (intervalId) clearInterval(intervalId);
+        };
     }, [user]);
 
     // Auto mark-as-read on 3 seconds hover
