@@ -34,7 +34,8 @@ import {
     PieChart,
     Shield,
     Ticket,
-    History
+    History,
+    Bell
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
