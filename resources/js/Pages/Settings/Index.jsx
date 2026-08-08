@@ -87,18 +87,10 @@ export default function Index() {
                 bg: 'bg-amber-500/10'
             },
             {
-                title: lang === 'ar' ? 'إدارة المشتركين (SaaS Dashboard)' : 'SaaS Tenants',
-                desc: lang === 'ar' ? 'لوحة إدارة الاشتراكات والنطاقات الفرعية' : 'Manage tenants, subdomains & subscriptions',
-                icon: Database,
-                route: route('saas.tenants.index'),
-                color: 'text-cyan-500',
-                bg: 'bg-cyan-500/10'
-            },
-            {
-                title: lang === 'ar' ? 'الإشعارات' : 'Notifications',
-                desc: lang === 'ar' ? 'قوالب وإعدادات الرسائل' : 'Message templates & settings',
+                title: lang === 'ar' ? 'الإشعارات والتنبيهات' : 'Notification Settings',
+                desc: lang === 'ar' ? 'سلوك التنبيهات، القوالب، ومفاتيح التشغيل' : 'Notification triggers, templates & behavior',
                 icon: Bell,
-                route: '#', // placeholder
+                route: route('settings.notifications.index'),
                 color: 'text-purple-500',
                 bg: 'bg-purple-500/10'
             }
