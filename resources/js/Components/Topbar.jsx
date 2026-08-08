@@ -209,9 +209,30 @@ export default function Topbar({ header }) {
                                                         {nData.title?.includes('استلام') && <Inbox className="h-3.5 w-3.5 text-amber-600 inline" />}
                                                         <span>{nData.title || (lang === "ar" ? "إشعار من النظام" : "System Alert")}</span>
                                                     </h4>
-                                                    <span className="text-[10px] text-text-muted font-mono shrink-0 bg-slate-100 px-1.5 py-0.5 rounded">
-                                                        {new Date(n.created_at).toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-US", { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        {isUnread && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    e.preventDefault();
+                                                                    axios.post(route('notifications.markOneRead', n.id))
+                                                                        .then(() => {
+                                                                            setUnreadCount(prev => Math.max(0, prev - 1));
+                                                                            setRecentNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item));
+                                                                        })
+                                                                        .catch(() => {});
+                                                                }}
+                                                                className="px-1.5 py-0.5 rounded text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-1"
+                                                                title={lang === "ar" ? "تحديد كمقروء" : "Mark as read"}
+                                                            >
+                                                                <Check className="h-3 w-3" />
+                                                                <span>{lang === "ar" ? "مقروء" : "Read"}</span>
+                                                            </button>
+                                                        )}
+                                                        <span className="text-[10px] text-text-muted font-mono bg-slate-100 px-1.5 py-0.5 rounded">
+                                                            {new Date(n.created_at).toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-US", { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 <p className="text-[11px] text-text-muted leading-relaxed font-normal">
@@ -222,14 +243,13 @@ export default function Topbar({ header }) {
                                                     <div className="pt-1 flex items-center justify-between">
                                                         <Link
                                                             href={nData.link}
-                                                            className="inline-flex items-center gap-1 text-[11px] font-black text-primary hover:underline bg-white px-2 py-0.5 border border-primary/20 rounded shadow-2xs"
+                                                            className="inline-flex items-center gap-1 text-[11px] font-black text-primary hover:underline bg-white px-2.5 py-0.5 border border-primary/20 rounded shadow-2xs"
                                                         >
-                                                            <span>{lang === "ar" ? "الانتقال للحدث والتفاصيل" : "Go to event details"}</span>
-                                                            <ExternalLink className="h-3 w-3" />
+                                                            <span>{lang === "ar" ? "المزيد ←" : "More →"}</span>
                                                         </Link>
                                                         {isUnread && (
                                                             <span className="text-[9px] text-text-muted italic opacity-75">
-                                                                {lang === "ar" ? "امكث 3 ثوان لتمييزه كـ مقروء" : "Hover 3s to mark read"}
+                                                                {lang === "ar" ? "امكث 3 ثوان لتمييزه تلقائياً" : "Hover 3s to mark read"}
                                                             </span>
                                                         )}
                                                     </div>
