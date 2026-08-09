@@ -21,7 +21,7 @@ class QueueTicketController extends Controller
     public function index()
     {
         $today = Carbon::today()->toDateString();
-        
+
         $tickets = QueueTicket::with(['customer', 'contract', 'driver', 'creator'])
             ->orderBy('ticket_date', 'desc')
             ->orderBy('daily_sequence', 'desc')
@@ -133,7 +133,7 @@ class QueueTicketController extends Controller
 
         // Calculate occupancy / empty pallet balance
         $bookedPallets = $contract->total_capacity ?: 0;
-        
+
         $utilizedPallets = InventoryEntry::where(function ($q) use ($contract) {
             $q->where(function ($q1) use ($contract) {
                 $q1->where('voucher_type', Reception::class)
@@ -247,7 +247,8 @@ class QueueTicketController extends Controller
 
         // 4. Compute Contract Suffix & Dates
         $contractSuffix = substr($contract->contract_number, -3);
-        $dayTimeStr = Carbon::now()->format('D – H:i:s'); // e.g. "Wed – 13:43:25"
+        // Localized Time (Arabic)
+        $dayTimeStr = Carbon::now()->isoFormat('dddd – HH:mm:ss'); // e.g. "الأربعاء – 13:43:25" 
         $hijriDate = $this->getHijriDate(Carbon::now());
 
         // Pallet Breakdown from contracted items

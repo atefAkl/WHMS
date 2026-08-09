@@ -160,8 +160,9 @@ Route::middleware([
             ])
             ->get();
 
-            return response()->json($inventory);
-        })->name('api.contracts.available-inventory');
+        // Inventory Adjustments Vouchers (11 Code)
+        Route::resource('inventory-adjustments', \App\Http\Controllers\Warehouse\InventoryAdjustmentController::class);
+        Route::post('inventory-adjustments/{inventoryAdjustment}/approve', [\App\Http\Controllers\Warehouse\InventoryAdjustmentController::class, 'approve'])->name('inventory-adjustments.approve');
 
         // Tenant Onboarding / Setup
         Route::get('/tenant-setup', [\App\Http\Controllers\TenantSetupController::class, 'create'])->name('tenant.setup');

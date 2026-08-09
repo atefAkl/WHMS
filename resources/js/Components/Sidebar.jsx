@@ -35,7 +35,8 @@ import {
     Shield,
     Ticket,
     History,
-    Bell
+    Bell,
+    SlidersHorizontal
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -114,7 +115,8 @@ const tenantNavItems = [
             { name: { ar: 'تذاكر الانتظار', en: 'Queue Tickets' }, icon: Ticket, route: 'queue-tickets.index', active: 'queue-tickets.*' },
             { name: { ar: 'سندات الاستلام', en: 'Reception Vouchers' }, icon: FileText, route: 'receptions.index', active: 'receptions.*' },
             { name: { ar: 'أذونات الخروج', en: 'Exit Permits' }, icon: FileText, route: 'exit-authorizations.index', active: 'exit-authorizations.*' },
-            { name: { ar: 'سندات التسليم', en: 'Delivery Notes' }, icon: FileText, route: 'deliveries.index', active: 'deliveries.*' }
+            { name: { ar: 'سندات التسليم', en: 'Delivery Notes' }, icon: FileText, route: 'deliveries.index', active: 'deliveries.*' },
+            { name: { ar: 'تسويات وطبالي المخزون', en: 'Pallet Adjustments' }, icon: SlidersHorizontal, route: 'inventory-adjustments.index', active: 'inventory-adjustments.*' }
         ]
     },
     {
