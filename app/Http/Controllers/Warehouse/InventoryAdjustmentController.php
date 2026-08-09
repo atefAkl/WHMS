@@ -235,7 +235,7 @@ class InventoryAdjustmentController extends Controller
                 $pallet = Pallet::find($item->pallet_id);
                 if ($pallet) {
                     $pallet->update([
-                        'current_quantity' => $item->actual_quantity,
+                        'current_quantity' => (float) $item->actual_quantity,
                     ]);
                 }
             }
