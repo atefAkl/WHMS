@@ -141,6 +141,11 @@ Route::middleware([
             Route::post('inventory-adjustments/{inventoryAdjustment}/approve', [\App\Http\Controllers\Warehouse\InventoryAdjustmentController::class, 'approve'])->name('inventory-adjustments.approve');
             Route::post('inventory-adjustments/{inventoryAdjustment}/reopen', [\App\Http\Controllers\Warehouse\InventoryAdjustmentController::class, 'reopen'])->name('inventory-adjustments.reopen');
 
+            // Pallet Rearrangements Vouchers (15 Code)
+            Route::resource('pallet-rearrangements', \App\Http\Controllers\Warehouse\PalletRearrangementController::class);
+            Route::post('pallet-rearrangements/{palletRearrangement}/approve', [\App\Http\Controllers\Warehouse\PalletRearrangementController::class, 'approve'])->name('pallet-rearrangements.approve');
+            Route::post('pallet-rearrangements/{palletRearrangement}/reopen', [\App\Http\Controllers\Warehouse\PalletRearrangementController::class, 'reopen'])->name('pallet-rearrangements.reopen');
+
             Route::resource('pallets', \App\Http\Controllers\PalletController::class)->except(['create', 'edit']);
             Route::resource('customers', \App\Http\Controllers\CustomerController::class)->except(['create', 'edit']);
             Route::resource('inventory-items', \App\Http\Controllers\InventoryItemController::class)->parameters(['inventory-items' => 'inventory_item'])->except(['create', 'edit']);
