@@ -62,10 +62,15 @@ class InventoryAdjustmentController extends Controller
             ->orderBy('name')
             ->get();
 
+        $inventoryItems = InventoryItem::with('variants')->get();
+        $pallets = \App\Models\Pallet::all();
+
         return Inertia::render('Warehouse/Adjustments/CreateEdit', [
-            'customers'   => $customers,
-            'isEdit'      => false,
-            'adjustment'  => null,
+            'customers'      => $customers,
+            'inventoryItems' => $inventoryItems,
+            'pallets'        => $pallets,
+            'isEdit'         => false,
+            'adjustment'     => null,
         ]);
     }
 

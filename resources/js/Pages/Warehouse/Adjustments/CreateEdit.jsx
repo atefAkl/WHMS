@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Upload, CheckCircle2 } from 'lucide-react';
+import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import axios from 'axios';
 
-export default function CreateEdit({ customers = [], isEdit = false, adjustment = null }) {
+export default function CreateEdit({ customers = [], inventoryItems = [], pallets = [], isEdit = false, adjustment = null }) {
     const { lang } = useLang();
     const [filteredContracts, setFilteredContracts] = useState([]);
     const [availablePeriods, setAvailablePeriods] = useState([]);
@@ -59,7 +59,7 @@ export default function CreateEdit({ customers = [], isEdit = false, adjustment 
                             const sysQty = parseFloat(inv.available_qty || 0);
                             return {
                                 inventory_item_id: inv.inventory_item_id,
-                                inventory_item_name: inv.inventory_item?.name || '—',
+                                inventory_item_name: inv.inventoryItem?.name || '—',
                                 inventory_item_variant_id: inv.inventory_item_variant_id,
                                 variant_name: inv.variant?.name || '—',
                                 pallet_id: inv.pallet_id,
@@ -93,6 +93,33 @@ export default function CreateEdit({ customers = [], isEdit = false, adjustment 
         updatedItems[index].variance_quantity = round2(actualVal - sysQty);
         
         setData('items', updatedItems);
+    };
+
+    const handleAddManualRow = () => {
+        const defaultItem = inventoryItems[0];
+        const defaultVariant = defaultItem?.variants?.[0];
+        const defaultPallet = pallets[0];
+
+        const newRow = {
+            inventory_item_id: defaultItem?.id || 1,
+            inventory_item_name: defaultItem?.name || 'صنف',
+            inventory_item_variant_id: defaultVariant?.id || 1,
+            variant_name: defaultVariant?.name || 'درجة',
+            pallet_id: defaultPallet?.id || 1,
+            pallet_number: defaultPallet?.pallet_number || defaultPallet?.code || '1',
+            system_quantity: 0,
+            actual_quantity: 0,
+            variance_quantity: 0,
+            notes: '',
+        };
+
+        setData('items', [...data.items, newRow]);
+    };
+
+    const handleRemoveRow = (index) => {
+        const updated = [...data.items];
+        updated.splice(index, 1);
+        setData('items', updated);
     };
 
     const round2 = (num) => Math.round(num * 100) / 100;
@@ -243,11 +270,24 @@ export default function CreateEdit({ customers = [], isEdit = false, adjustment 
                             <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
                                 {lang === "ar" ? "جدول طبالي العقد وإحصاء الفروقات" : "Contract Pallets Inventory Audit Table"}
                             </h3>
-                            {loadingPallets && (
-                                <span className="text-xs text-primary font-bold animate-pulse">
-                                    {lang === "ar" ? "جاري تحميل أرصدة طبالي العقد..." : "Loading contract pallets..."}
-                                </span>
-                            )}
+
+                            <div className="flex items-center gap-2">
+                                {data.contract_id && (
+                                    <button
+                                        type="button"
+                                        onClick={handleAddManualRow}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 flex items-center gap-1 shadow-2xs"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" />
+                                        <span>{lang === "ar" ? "إضافة طبلية / بند يدوياً" : "Add Pallet Row"}</span>
+                                    </button>
+                                )}
+                                {loadingPallets && (
+                                    <span className="text-xs text-primary font-bold animate-pulse">
+                                        {lang === "ar" ? "جاري تحميل طبالي العقد..." : "Loading contract pallets..."}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {!data.contract_id ? (
@@ -255,8 +295,16 @@ export default function CreateEdit({ customers = [], isEdit = false, adjustment 
                                 {lang === "ar" ? "يرجى اختيار العقد أولاً لتحميل طباليه المخزنية وتصحيح الفروقات عليها." : "Please select a contract first."}
                             </div>
                         ) : data.items.length === 0 ? (
-                            <div className="p-8 text-center text-text-muted font-bold text-xs italic bg-amber-50 border border-amber-200 text-amber-800">
-                                {lang === "ar" ? "لا توجد طبالي مخزنية ذات أرصدة مسجلة في هذا العقد حالياً." : "No pallet inventory balances found for this contract."}
+                            <div className="p-8 text-center text-text-muted font-bold text-xs space-y-3 bg-amber-50 border border-amber-200 text-amber-900">
+                                <div>{lang === "ar" ? "لم نجد طبالي سابقة مسجلة على هذا العقد، يمكنك النقر على الزر أعلاه لإضافة طبلية وبند تسوية يدوياً!" : "No automatic pallets found for this contract. Click above to add manual rows."}</div>
+                                <button
+                                    type="button"
+                                    onClick={handleAddManualRow}
+                                    className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-4 py-1.5 inline-flex items-center gap-1 shadow-2xs"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    <span>{lang === "ar" ? "إضافة طبلية تسوية يدوية الآن" : "Add Manual Pallet Row Now"}</span>
+                                </button>
                             </div>
                         ) : (
                             <div className="overflow-x-auto border border-border">
@@ -270,15 +318,76 @@ export default function CreateEdit({ customers = [], isEdit = false, adjustment 
                                             <th className="p-2.5 text-center w-28">{lang === "ar" ? "رصيد النظام" : "System Qty"}</th>
                                             <th className="p-2.5 text-center w-36">{lang === "ar" ? "الكمية الفعلية الجردية *" : "Actual Qty *"}</th>
                                             <th className="p-2.5 text-center w-28">{lang === "ar" ? "فرق التسوية" : "Variance"}</th>
+                                            <th className="p-2.5 text-center w-12">#</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
                                         {data.items.map((item, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50">
                                                 <td className="p-2.5 font-mono text-text-muted">{idx + 1}</td>
-                                                <td className="p-2.5 font-bold text-text">{item.inventory_item_name}</td>
-                                                <td className="p-2.5 text-center font-semibold text-text-muted">{item.variant_name}</td>
-                                                <td className="p-2.5 text-center font-mono font-bold text-primary">طبلية #{item.pallet_number}</td>
+                                                <td className="p-2.5 font-bold text-text">
+                                                    <select
+                                                        className="w-full text-xs border-border rounded-none h-[30px] px-1 font-bold"
+                                                        value={item.inventory_item_id}
+                                                        onChange={(e) => {
+                                                            const itemObj = inventoryItems.find(i => i.id === parseInt(e.target.value));
+                                                            const updated = [...data.items];
+                                                            updated[idx].inventory_item_id = parseInt(e.target.value);
+                                                            updated[idx].inventory_item_name = itemObj?.name || 'صنف';
+                                                            if (itemObj?.variants?.length > 0) {
+                                                                updated[idx].inventory_item_variant_id = itemObj.variants[0].id;
+                                                                updated[idx].variant_name = itemObj.variants[0].name;
+                                                            }
+                                                            setData('items', updated);
+                                                        }}
+                                                    >
+                                                        {inventoryItems.map(inv => (
+                                                            <option key={inv.id} value={inv.id}>{inv.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="p-2.5 text-center font-semibold text-text-muted">
+                                                    {(() => {
+                                                        const activeItemObj = inventoryItems.find(i => i.id === parseInt(item.inventory_item_id));
+                                                        const activeVariants = activeItemObj?.variants || [];
+                                                        return (
+                                                            <select
+                                                                className="w-full text-xs border-border rounded-none h-[30px] px-1 font-semibold"
+                                                                value={item.inventory_item_variant_id}
+                                                                onChange={(e) => {
+                                                                    const vObj = activeVariants.find(v => v.id === parseInt(e.target.value));
+                                                                    const updated = [...data.items];
+                                                                    updated[idx].inventory_item_variant_id = parseInt(e.target.value);
+                                                                    updated[idx].variant_name = vObj?.name || 'درجة';
+                                                                    setData('items', updated);
+                                                                }}
+                                                            >
+                                                                {activeVariants.map(v => (
+                                                                    <option key={v.id} value={v.id}>{v.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        );
+                                                    })()}
+                                                </td>
+                                                <td className="p-2.5 text-center font-mono font-bold text-primary">
+                                                    <select
+                                                        className="w-full text-xs border-border rounded-none h-[30px] px-1 font-mono font-bold"
+                                                        value={item.pallet_id}
+                                                        onChange={(e) => {
+                                                            const pObj = pallets.find(p => p.id === parseInt(e.target.value));
+                                                            const updated = [...data.items];
+                                                            updated[idx].pallet_id = parseInt(e.target.value);
+                                                            updated[idx].pallet_number = pObj?.pallet_number || pObj?.code || e.target.value;
+                                                            setData('items', updated);
+                                                        }}
+                                                    >
+                                                        {pallets.map(p => (
+                                                            <option key={p.id} value={p.id}>
+                                                                طبلية #{p.pallet_number || p.code || p.id}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </td>
                                                 <td className="p-2.5 text-center font-mono font-black text-slate-700 text-sm bg-slate-50">
                                                     {item.system_quantity}
                                                 </td>
@@ -303,6 +412,16 @@ export default function CreateEdit({ customers = [], isEdit = false, adjustment 
                                                     }`}>
                                                         {item.variance_quantity > 0 ? `+${item.variance_quantity}` : item.variance_quantity}
                                                     </span>
+                                                </td>
+                                                <td className="p-2.5 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveRow(idx)}
+                                                        className="text-rose-600 hover:text-rose-800 p-1"
+                                                        title={lang === "ar" ? "حذف البند" : "Remove"}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}

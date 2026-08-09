@@ -142,7 +142,7 @@ Route::middleware([
 
         // Contract Available Inventory API (Items, Variants, Pallets & Balances)
         Route::get('/api/contracts/{contract}/available-inventory', function (\App\Models\Contract $contract) {
-            $inventory = \App\Models\InventoryEntry::whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+            $inventory = \App\Models\InventoryEntry::whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             })
             ->select(
@@ -152,13 +152,30 @@ Route::middleware([
                 \Illuminate\Support\Facades\DB::raw('SUM(quantity_in - quantity_out) as available_qty')
             )
             ->groupBy('inventory_item_id', 'inventory_item_variant_id', 'pallet_id')
-            ->having('available_qty', '>', 0)
             ->with([
                 'inventoryItem:id,name,code',
                 'variant:id,name,code',
                 'pallet:id,code,pallet_number'
             ])
             ->get();
+
+            // If empty, fetch any pallets assigned to customer as fallback
+            if ($inventory->isEmpty()) {
+                $customerPallets = \App\Models\Pallet::where('customer_id', $contract->customer_id)->get();
+                $fallback = [];
+                foreach ($customerPallets as $p) {
+                    $fallback[] = [
+                        'inventory_item_id' => $p->inventory_item_id ?: 1,
+                        'inventory_item_variant_id' => $p->inventory_item_variant_id ?: 1,
+                        'pallet_id' => $p->id,
+                        'available_qty' => $p->current_quantity ?? 0,
+                        'inventoryItem' => $p->inventoryItem ?: ['name' => 'صنف عام', 'code' => 'GEN'],
+                        'variant' => $p->variant ?: ['name' => 'درجة أولى', 'code' => 'G1'],
+                        'pallet' => ['id' => $p->id, 'code' => $p->code, 'pallet_number' => $p->pallet_number]
+                    ];
+                }
+                return response()->json($fallback);
+            }
 
             return response()->json($inventory);
         })->name('api.contracts.available-inventory');
