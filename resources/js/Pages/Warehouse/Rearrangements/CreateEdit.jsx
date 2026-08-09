@@ -6,13 +6,11 @@ import { ArrowLeftRight, Save, Home, ChevronRight, Plus, Trash2, Scale, AlertTri
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
-import axios from 'axios';
 
 export default function CreateEdit({ customers = [], inventoryItems = [], pallets = [], isEdit = false, rearrangement = null }) {
     const { lang } = useLang();
     const [filteredContracts, setFilteredContracts] = useState([]);
     const [availablePeriods, setAvailablePeriods] = useState([]);
-    const [loadingPallets, setLoadingPallets] = useState(false);
 
     const { data, setData, post, put, processing, errors } = useForm({
         customer_id: rearrangement?.customer_id || '',
@@ -34,7 +32,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
         }
     }, [data.customer_id, customers]);
 
-    // Handle Contract Selection -> Auto Load Active Periods & Pallet Rows
+    // Handle Contract Selection -> Set 2 initial empty rows if creating new
     useEffect(() => {
         if (data.contract_id) {
             const contractId = parseInt(data.contract_id);
@@ -48,29 +46,23 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
             }
 
             if (!isEdit && data.items.length === 0) {
-                setLoadingPallets(true);
-                axios.get(route('api.contracts.available-inventory', contractId))
-                    .then((res) => {
-                        const inventory = res.data || [];
-                        const formattedItems = inventory.map((inv) => ({
-                            inventory_item_id: inv.inventory_item_id,
-                            inventory_item_name: inv.inventoryItem?.name || 'صنف تمور',
-                            inventory_item_variant_id: inv.inventory_item_variant_id,
-                            variant_name: inv.variant?.name || 'درجة / عبوة',
-                            pallet_id: inv.pallet_id,
-                            pallet_number: inv.pallet?.pallet_number || inv.pallet?.code || inv.pallet_id,
-                            quantity_in: '',
-                            quantity_out: '',
-                            notes: '',
-                        }));
+                const defaultItem = inventoryItems[0];
+                const defaultVariant = defaultItem?.variants?.[0];
+                const defaultPallet = pallets[0];
 
-                        setData((prev) => ({
-                            ...prev,
-                            items: formattedItems,
-                        }));
-                    })
-                    .catch(() => {})
-                    .finally(() => setLoadingPallets(false));
+                const createEmptyRow = () => ({
+                    inventory_item_id: defaultItem?.id || 1,
+                    inventory_item_variant_id: defaultVariant?.id || 1,
+                    pallet_id: defaultPallet?.id || 1,
+                    quantity_in: '',
+                    quantity_out: '',
+                    notes: '',
+                });
+
+                setData((prev) => ({
+                    ...prev,
+                    items: [createEmptyRow(), createEmptyRow()],
+                }));
             }
         }
     }, [data.contract_id]);
@@ -96,11 +88,8 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
 
         const newRow = {
             inventory_item_id: defaultItem?.id || 1,
-            inventory_item_name: defaultItem?.name || 'صنف تمور',
             inventory_item_variant_id: defaultVariant?.id || 1,
-            variant_name: defaultVariant?.name || 'درجة / عبوة',
             pallet_id: defaultPallet?.id || 1,
-            pallet_number: defaultPallet?.pallet_number || defaultPallet?.code || '1',
             quantity_in: '',
             quantity_out: '',
             notes: '',
@@ -294,39 +283,32 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                         <div className="flex justify-between items-center border-b border-border pb-2">
                             <div>
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar" ? "جدول حركة المخزون للترتيب والنقل (خانات متواجهة لكل صف)" : "Transfer Rows"}
+                                    {lang === "ar" ? "جدول حركة الترتيب والنقل (صفين فارغين تلقائياً مع إضافة المزيد حسب الطلب)" : "Transfer Rows"}
                                 </h3>
                                 <p className="text-[11px] text-text-muted mt-0.5">
                                     {lang === "ar"
-                                        ? "أدخل كمية المخرجات (خصم من الطبلية) أو الكمية المدخلة (إضافة لطبلية) على نفس الصف ليتساوى الجانبان."
-                                        : "Enter quantity IN or quantity OUT per row."}
+                                        ? "اختر الطبلية والصنف والدرجة، وأدخل الكمية في خياري المدخلات أو المخرجات. يمكنك إضافة أي عدد من الصفوف."
+                                        : "Select pallet, item, grade, and enter quantity IN or OUT per row."}
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={handleAddRow}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 flex items-center gap-1 shadow-2xs"
-                                >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    <span>{lang === "ar" ? "إضافة صف جديد" : "Add Row"}</span>
-                                </button>
-                                {loadingPallets && (
-                                    <span className="text-xs text-primary font-bold animate-pulse">
-                                        {lang === "ar" ? "جاري تحميل طبالي العقد..." : "Loading pallets..."}
-                                    </span>
-                                )}
-                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAddRow}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 flex items-center gap-1 shadow-2xs"
+                            >
+                                <Plus className="h-4 w-4" />
+                                <span>{lang === "ar" ? "+ إضافة صف تحويل جديد" : "+ Add Transfer Row"}</span>
+                            </button>
                         </div>
 
                         {!data.contract_id ? (
                             <div className="p-8 text-center text-text-muted font-bold text-xs italic bg-slate-50 border border-dashed border-border">
-                                {lang === "ar" ? "يرجى اختيار العقد أولاً لتحميل أصنافه وطباليه." : "Please select a contract first."}
+                                {lang === "ar" ? "يرجى اختيار العقد أولاً لتفعيل إضافة صفوف النقل." : "Please select a contract first."}
                             </div>
                         ) : data.items.length === 0 ? (
                             <div className="p-8 text-center text-text-muted font-bold text-xs space-y-3 bg-slate-50 border border-dashed border-border">
-                                <div>{lang === "ar" ? "لا توجد صفوف تحويل مضافة بعد. اضغط إضافة صف جديد." : "No transfer rows added."}</div>
+                                <div>{lang === "ar" ? "لا توجد صفوف مضافة بعد. اضغط إضافة صف تحويل جديد." : "No rows."}</div>
                                 <button
                                     type="button"
                                     onClick={handleAddRow}
