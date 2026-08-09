@@ -142,42 +142,73 @@ Route::middleware([
 
         // Contract Available Inventory API (Items, Variants, Pallets & Balances)
         Route::get('/api/contracts/{contract}/available-inventory', function (\App\Models\Contract $contract) {
-            $inventory = \App\Models\InventoryEntry::whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
-                $query->where('contract_id', $contract->id);
-            })
-            ->select(
-                'inventory_item_id',
-                'inventory_item_variant_id',
-                'pallet_id',
-                \Illuminate\Support\Facades\DB::raw('SUM(quantity_in - quantity_out) as available_qty')
-            )
-            ->groupBy('inventory_item_id', 'inventory_item_variant_id', 'pallet_id')
-            ->with([
-                'inventoryItem:id,name,code',
-                'variant:id,name,code',
-                'pallet:id,code,pallet_number'
-            ])
-            ->get();
+            $pallets = \App\Models\Pallet::query()
+                ->whereHas('inventoryEntries', function ($q) use ($contract) {
+                    $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
+                        $query->where('contract_id', $contract->id)->orWhere('customer_id', $contract->customer_id);
+                    });
+                })
+                ->orWhere('customer_id', $contract->customer_id)
+                ->orderBy('pallet_number', 'asc')
+                ->get();
 
-            // If empty, fetch any pallets assigned to customer as fallback
-            if ($inventory->isEmpty()) {
-                $customerPallets = \App\Models\Pallet::where('customer_id', $contract->customer_id)->get();
-                $fallback = [];
-                foreach ($customerPallets as $p) {
-                    $fallback[] = [
-                        'inventory_item_id' => $p->inventory_item_id ?: 1,
-                        'inventory_item_variant_id' => $p->inventory_item_variant_id ?: 1,
-                        'pallet_id' => $p->id,
-                        'available_qty' => $p->current_quantity ?? 0,
-                        'inventoryItem' => $p->inventoryItem ?: ['name' => 'صنف عام', 'code' => 'GEN'],
-                        'variant' => $p->variant ?: ['name' => 'درجة أولى', 'code' => 'G1'],
-                        'pallet' => ['id' => $p->id, 'code' => $p->code, 'pallet_number' => $p->pallet_number]
+            $entries = \App\Models\InventoryEntry::whereIn('pallet_id', $pallets->pluck('id'))
+                ->with(['inventoryItem', 'variant', 'pallet'])
+                ->get();
+
+            $entriesByPallet = $entries->groupBy('pallet_id');
+            $result = [];
+
+            foreach ($pallets as $pallet) {
+                $palletEntries = $entriesByPallet->get($pallet->id, collect());
+                if ($palletEntries->isEmpty()) {
+                    $result[] = [
+                        'inventory_item_id' => $pallet->inventory_item_id ?: 1,
+                        'inventory_item_variant_id' => $pallet->inventory_item_variant_id ?: 1,
+                        'pallet_id' => $pallet->id,
+                        'available_qty' => $pallet->current_quantity ?? 0,
+                        'inventoryItem' => $pallet->inventoryItem ? ['id' => $pallet->inventoryItem->id, 'name' => $pallet->inventoryItem->name, 'code' => $pallet->inventoryItem->code] : ['id' => 1, 'name' => 'صنف تمور', 'code' => 'DAT'],
+                        'variant' => $pallet->variant ? ['id' => $pallet->variant->id, 'name' => $pallet->variant->name, 'code' => $pallet->variant->code] : ['id' => 1, 'name' => 'كرتون / درجة', 'code' => 'VAR'],
+                        'pallet' => ['id' => $pallet->id, 'code' => $pallet->code, 'pallet_number' => $pallet->pallet_number]
+                    ];
+                    continue;
+                }
+
+                $grouped = $palletEntries->groupBy(function ($entry) {
+                    return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
+                });
+
+                foreach ($grouped as $group) {
+                    $first = $group->first();
+                    $qtyIn = $group->sum('quantity_in');
+                    $qtyOut = $group->sum('quantity_out');
+                    $balance = $qtyIn - $qtyOut;
+
+                    $result[] = [
+                        'inventory_item_id' => $first->inventory_item_id,
+                        'inventory_item_variant_id' => $first->inventory_item_variant_id,
+                        'pallet_id' => $pallet->id,
+                        'available_qty' => round($balance, 2),
+                        'inventoryItem' => [
+                            'id' => $first->inventory_item_id,
+                            'name' => $first->inventoryItem ? $first->inventoryItem->name : 'صنف تمور',
+                            'code' => $first->inventoryItem ? $first->inventoryItem->code : 'DAT'
+                        ],
+                        'variant' => [
+                            'id' => $first->inventory_item_variant_id,
+                            'name' => $first->variant ? $first->variant->name : 'كرتون / درجة',
+                            'code' => $first->variant ? $first->variant->code : 'VAR'
+                        ],
+                        'pallet' => [
+                            'id' => $pallet->id,
+                            'code' => $pallet->code,
+                            'pallet_number' => $pallet->pallet_number
+                        ]
                     ];
                 }
-                return response()->json($fallback);
             }
 
-            return response()->json($inventory);
+            return response()->json($result);
         })->name('api.contracts.available-inventory');
 
         // Inventory Adjustments Vouchers (11 Code)
