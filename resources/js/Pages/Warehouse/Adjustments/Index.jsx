@@ -1,58 +1,62 @@
-import React, { useState } from 'react';
+import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, Plus, Eye, CheckCircle2, AlertCircle, FileText, Search, Home, ChevronRight, Scale, Trash2 } from 'lucide-react';
+import { SlidersHorizontal, Plus, Eye, Search, Home, ChevronRight, Scale, Edit, Trash2, RotateCcw } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 import Pagination from '@/Components/Pagination';
 
 export default function Index({ adjustments, customers = [], contracts = [], filters = {} }) {
     const { lang } = useLang();
-    const [search, setSearch] = useState(filters.search || '');
-    const [customerId, setCustomerId] = useState(filters.customer_id || '');
-    const [contractId, setContractId] = useState(filters.contract_id || '');
-    const [status, setStatus] = useState(filters.status || '');
 
-    const handleFilter = (e) => {
-        e.preventDefault();
-        router.get(route('inventory-adjustments.index'), {
-            search,
-            customer_id: customerId,
-            contract_id: contractId,
-            status,
-        }, { preserveState: true });
+    const handleFilterChange = (key, value) => {
+        router.get(
+            route('inventory-adjustments.index'),
+            { ...filters, [key]: value },
+            { preserveState: true, replace: true }
+        );
+    };
+
+    const handleReopen = (id) => {
+        if (confirm(lang === "ar" ? "هل أنت متأكد من فك اعتماد سند التسوية؟ سيتم إلغاء حركات المخزون واستعادة أرصدة الطبالي إلى ما كانت عليه!" : "Reopen voucher and revert stock movements?")) {
+            router.post(route('inventory-adjustments.reopen', id));
+        }
+    };
+
+    const handleDelete = (id) => {
+        if (confirm(lang === "ar" ? "هل أنت متأكد من حذف مسودة سند التسوية؟" : "Delete draft adjustment voucher?")) {
+            router.delete(route('inventory-adjustments.destroy', id));
+        }
     };
 
     const breadcrumbs = (
         <div className="flex items-center gap-[6px] text-xs text-text-muted">
             <Home className="h-3.5 w-3.5" />
             <ChevronRight className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`} />
-            <span className="text-primary font-medium">{lang === "ar" ? "إدارة المخازن" : "Warehouse"}</span>
-            <ChevronRight className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`} />
-            <span className="text-primary font-medium">{lang === "ar" ? "سندات تسوية وتصحيح الطبالي" : "Pallet Adjustments"}</span>
+            <span className="text-primary font-medium">{lang === "ar" ? "سندات التسوية وتصحيح الطبالي" : "Inventory Adjustments"}</span>
         </div>
     );
 
     return (
         <AuthenticatedLayout header={breadcrumbs}>
-            <Head title={lang === "ar" ? "سندات تسوية وتصحيح الطبالي" : "Inventory Adjustments"} />
+            <Head title={lang === "ar" ? "سندات تسوية وتصحيح الطبالي (كود 11)" : "Pallet Inventory Adjustments"} />
 
             <div className="max-w-7xl mx-auto pb-12 main-stack-y" dir={lang === "ar" ? "rtl" : "ltr"}>
                 
                 <PageHeader
                     icon={SlidersHorizontal}
-                    title={lang === "ar" ? "سندات تسوية وتصحيح طبالي المخزون (كود 11)" : "Inventory & Pallet Adjustment Vouchers"}
+                    title={lang === "ar" ? "سندات تسوية وتصحيح فروقات كميات الطبالي" : "Pallet Inventory Adjustments (Code 11)"}
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
                             {lang === "ar"
-                                ? "تسوية وتصحيح الفروقات الجردية للطبالي بالزيادة أو النقص بحرفية تامة ودون المساس بالاستلام والتسليم."
-                                : "Adjust pallet physical quantities (surplus/deficit) cleanly without altering historical vouchers."}
+                                ? "إدارة وإنشاء سندات تسوية الكميات والفروقات الجردية بين النظام والجرد الفعلي لمعالجة الزيادة أو العجز بطبالي العقود."
+                                : "Manage inventory adjustments to resolve count variances across pallets."}
                         </p>
                     }
                     actions={
                         <Link
                             href={route('inventory-adjustments.create')}
-                            className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-4 py-2 flex items-center gap-1.5 transition-all shadow-2xs"
+                            className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-2xs"
                         >
                             <Plus className="h-4 w-4" />
                             <span>{lang === "ar" ? "إنشاء سند تسوية جديد" : "New Adjustment Voucher"}</span>
@@ -60,72 +64,62 @@ export default function Index({ adjustments, customers = [], contracts = [], fil
                     }
                 />
 
-                {/* Filter Box */}
-                <form onSubmit={handleFilter} className="bg-surface border border-border p-4 shadow-2xs space-y-3">
+                {/* Filters Header */}
+                <div className="bg-surface border border-border p-4 shadow-2xs">
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-                        <div>
-                            <label className="block font-bold text-text mb-1">{lang === "ar" ? "البحث بالرقم أو العميل" : "Search"}</label>
+                        {/* Search */}
+                        <div className="relative">
                             <input
                                 type="text"
-                                className="w-full text-xs border-border rounded-none h-[36px] bg-surface"
-                                placeholder="DT-SZ-03481100001..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder={lang === "ar" ? "بحث برقم السند أو اسم العميل..." : "Search..."}
+                                className="w-full text-xs border-border bg-surface text-text pe-8 font-semibold rounded-none h-[36px]"
+                                defaultValue={filters.search || ''}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleFilterChange('search', e.target.value);
+                                }}
                             />
+                            <Search className="h-3.5 w-3.5 absolute end-2.5 top-3 text-text-muted" />
                         </div>
 
-                        <div>
-                            <label className="block font-bold text-text mb-1">{lang === "ar" ? "العميل" : "Customer"}</label>
-                            <select
-                                className="w-full text-xs border-border rounded-none h-[36px] bg-surface"
-                                value={customerId}
-                                onChange={(e) => setCustomerId(e.target.value)}
-                            >
-                                <option value="">{lang === "ar" ? "-- الكل --" : "-- All --"}</option>
-                                {customers.map((c) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* Customer Filter */}
+                        <select
+                            className="text-xs border-border bg-surface text-text font-bold rounded-none h-[36px]"
+                            value={filters.customer_id || ''}
+                            onChange={(e) => handleFilterChange('customer_id', e.target.value)}
+                        >
+                            <option value="">{lang === "ar" ? "جميع العملاء" : "All Customers"}</option>
+                            {customers.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
 
-                        <div>
-                            <label className="block font-bold text-text mb-1">{lang === "ar" ? "العقد" : "Contract"}</label>
-                            <select
-                                className="w-full text-xs border-border rounded-none h-[36px] bg-surface"
-                                value={contractId}
-                                onChange={(e) => setContractId(e.target.value)}
-                            >
-                                <option value="">{lang === "ar" ? "-- الكل --" : "-- All --"}</option>
-                                {contracts.map((c) => (
-                                    <option key={c.id} value={c.id}>{c.contract_number}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* Contract Filter */}
+                        <select
+                            className="text-xs border-border bg-surface text-text font-bold rounded-none h-[36px]"
+                            value={filters.contract_id || ''}
+                            onChange={(e) => handleFilterChange('contract_id', e.target.value)}
+                        >
+                            <option value="">{lang === "ar" ? "جميع العقود" : "All Contracts"}</option>
+                            {contracts.map((c) => (
+                                <option key={c.id} value={c.id}>{c.contract_number}</option>
+                            ))}
+                        </select>
 
-                        <div>
-                            <label className="block font-bold text-text mb-1">{lang === "ar" ? "حالة السند" : "Status"}</label>
-                            <select
-                                className="w-full text-xs border-border rounded-none h-[36px] bg-surface"
-                                value={status}
-                                onChange={(e) => setStatus(e.target.value)}
-                            >
-                                <option value="">{lang === "ar" ? "-- الكل --" : "-- All --"}</option>
-                                <option value="draft">{lang === "ar" ? "مسودة" : "Draft"}</option>
-                                <option value="approved">{lang === "ar" ? "معتمد ومرحل" : "Approved"}</option>
-                            </select>
-                        </div>
+                        {/* Status Filter */}
+                        <select
+                            className="text-xs border-border bg-surface text-text font-bold rounded-none h-[36px]"
+                            value={filters.status || ''}
+                            onChange={(e) => handleFilterChange('status', e.target.value)}
+                        >
+                            <option value="">{lang === "ar" ? "جميع الحالات" : "All Statuses"}</option>
+                            <option value="draft">{lang === "ar" ? "مسودة" : "Draft"}</option>
+                            <option value="approved">{lang === "ar" ? "معتمد وممكّن" : "Approved"}</option>
+                        </select>
                     </div>
+                </div>
 
-                    <div className="flex justify-end gap-2 pt-1">
-                        <button type="submit" className="bg-primary text-white text-xs font-bold px-5 py-2 flex items-center gap-1">
-                            <Search className="h-3.5 w-3.5" />
-                            <span>{lang === "ar" ? "تطبيق التصفية" : "Filter"}</span>
-                        </button>
-                    </div>
-                </form>
-
-                {/* Table list */}
-                <div className="bg-surface border border-border overflow-hidden shadow-2xs">
+                {/* Adjustments Table */}
+                <div className="bg-surface border border-border overflow-x-auto shadow-2xs">
                     <table className="w-full text-xs text-start">
                         <thead className="bg-surface-muted text-text-muted font-bold border-b border-border">
                             <tr>
@@ -136,7 +130,7 @@ export default function Index({ adjustments, customers = [], contracts = [], fil
                                 <th className="px-3 py-3 text-center">{lang === "ar" ? "نوع التسوية" : "Type"}</th>
                                 <th className="px-3 py-3 text-center">{lang === "ar" ? "عدد الطبالي" : "Pallets Count"}</th>
                                 <th className="px-3 py-3 text-center">{lang === "ar" ? "الحالة" : "Status"}</th>
-                                <th className="px-3 py-3 text-center w-24">{lang === "ar" ? "إجراء" : "Actions"}</th>
+                                <th className="px-3 py-3 text-center w-28">{lang === "ar" ? "الإجراءات" : "Actions"}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -180,13 +174,42 @@ export default function Index({ adjustments, customers = [], contracts = [], fil
                                             </span>
                                         </td>
                                         <td className="px-3 py-3 text-center">
-                                            <Link
-                                                href={route('inventory-adjustments.show', adj.id)}
-                                                className="p-1.5 text-primary hover:bg-primary/10 inline-flex items-center transition-all"
-                                                title={lang === "ar" ? "عرض التفاصيل والاعتماد" : "View & Approve"}
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Link>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <Link
+                                                    href={route('inventory-adjustments.show', adj.id)}
+                                                    className="p-1 text-primary hover:bg-primary/10 transition-all"
+                                                    title={lang === "ar" ? "عرض التفاصيل والاعتماد" : "View"}
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Link>
+
+                                                {adj.status === 'draft' ? (
+                                                    <>
+                                                        <Link
+                                                            href={route('inventory-adjustments.edit', adj.id)}
+                                                            className="p-1 text-amber-600 hover:bg-amber-50 transition-all"
+                                                            title={lang === "ar" ? "تعديل" : "Edit"}
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => handleDelete(adj.id)}
+                                                            className="p-1 text-rose-600 hover:bg-rose-50 transition-all"
+                                                            title={lang === "ar" ? "حذف" : "Delete"}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleReopen(adj.id)}
+                                                        className="p-1 text-amber-600 hover:bg-amber-50 transition-all"
+                                                        title={lang === "ar" ? "فك الاعتماد وإعادة للمسودة" : "Reopen"}
+                                                    >
+                                                        <RotateCcw className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

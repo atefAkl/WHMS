@@ -139,6 +139,7 @@ Route::middleware([
             // Inventory Adjustments Vouchers (11 Code)
             Route::resource('inventory-adjustments', \App\Http\Controllers\Warehouse\InventoryAdjustmentController::class);
             Route::post('inventory-adjustments/{inventoryAdjustment}/approve', [\App\Http\Controllers\Warehouse\InventoryAdjustmentController::class, 'approve'])->name('inventory-adjustments.approve');
+            Route::post('inventory-adjustments/{inventoryAdjustment}/reopen', [\App\Http\Controllers\Warehouse\InventoryAdjustmentController::class, 'reopen'])->name('inventory-adjustments.reopen');
 
             Route::resource('pallets', \App\Http\Controllers\PalletController::class)->except(['create', 'edit']);
             Route::resource('customers', \App\Http\Controllers\CustomerController::class)->except(['create', 'edit']);

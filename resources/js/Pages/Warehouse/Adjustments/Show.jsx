@@ -2,7 +2,7 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, CheckCircle2, Printer, FileText, ArrowRight, Home, ChevronRight, Download, Scale } from 'lucide-react';
+import { SlidersHorizontal, CheckCircle2, Printer, FileText, Home, ChevronRight, Download, RotateCcw, Edit, Trash2 } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 
 export default function Show({ adjustment }) {
@@ -11,6 +11,18 @@ export default function Show({ adjustment }) {
     const handleApprove = () => {
         if (confirm(lang === "ar" ? "هل أنت تأكد من ترحيل واعتماد سند التسوية القيدي؟ سيتم قيد الفروقات في حركات المخزون وتحديث أرصدة الطبالي." : "Are you sure you want to approve and post this adjustment?")) {
             router.post(route('inventory-adjustments.approve', adjustment.id));
+        }
+    };
+
+    const handleReopen = () => {
+        if (confirm(lang === "ar" ? "هل أنت متأكد من فك اعتماد سند التسوية؟ سيتم إلغاء قيد حركات المخزون واستعادة أرصدة الطبالي إلى ما كانت عليه قبل التسوية!" : "Are you sure you want to reopen this adjustment and revert stock movements?")) {
+            router.post(route('inventory-adjustments.reopen', adjustment.id));
+        }
+    };
+
+    const handleDelete = () => {
+        if (confirm(lang === "ar" ? "هل أنت متأكد من حذف مسودة سند التسوية نهائياً؟" : "Are you sure you want to delete this draft adjustment?")) {
+            router.delete(route('inventory-adjustments.destroy', adjustment.id));
         }
     };
 
@@ -37,26 +49,53 @@ export default function Show({ adjustment }) {
                     title={lang === "ar" ? `سند تسوية وتصحيح طبالي رقم: ${adjustment.serial_number}` : `Inventory Adjustment Voucher: ${adjustment.serial_number}`}
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
-                            {lang === "ar" ? "عرض الفروقات المخزنية ومحضر الإحصاء والتحقق من القيد قبل الترحيل المالي واللوجستي." : "Review pallet variances before posting."}
+                            {lang === "ar" ? "عرض الفروقات المخزنية ومحضر الإحصاء والتحقق من القيد قبل أو بعد الترحيل المالي واللوجستي." : "Review pallet variances before or after posting."}
                         </p>
                     }
                     actions={
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => window.print()}
-                                className="bg-surface border border-border hover:bg-surface-muted text-text text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-2xs"
+                                className="bg-surface border border-border hover:bg-surface-muted text-text text-xs font-bold px-3.5 py-2 flex items-center gap-1.5 shadow-2xs"
                             >
                                 <Printer className="h-4 w-4" />
                                 <span>{lang === "ar" ? "طباعة السند" : "Print Voucher"}</span>
                             </button>
 
-                            {adjustment.status === 'draft' && (
+                            {adjustment.status === 'draft' ? (
+                                <>
+                                    <Link
+                                        href={route('inventory-adjustments.edit', adjustment.id)}
+                                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3.5 py-2 flex items-center gap-1.5 shadow-2xs"
+                                    >
+                                        <Edit className="h-4 w-4" />
+                                        <span>{lang === "ar" ? "تعديل السند" : "Edit Voucher"}</span>
+                                    </Link>
+
+                                    <button
+                                        onClick={handleApprove}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-2xs"
+                                    >
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        <span>{lang === "ar" ? "اعتماد وترحيل سند التسوية" : "Approve & Post"}</span>
+                                    </button>
+
+                                    <button
+                                        onClick={handleDelete}
+                                        className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 flex items-center gap-1.5 shadow-2xs"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        <span>{lang === "ar" ? "حذف" : "Delete"}</span>
+                                    </button>
+                                </>
+                            ) : (
                                 <button
-                                    onClick={handleApprove}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2 flex items-center gap-1.5 shadow-2xs"
+                                    onClick={handleReopen}
+                                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-2xs"
+                                    title={lang === "ar" ? "فك الاعتماد وإلغاء القيد وإعادة المخزون لحالته السابقة" : "Reopen Voucher"}
                                 >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    <span>{lang === "ar" ? "اعتماد وترحيل سند التسوية" : "Approve & Post"}</span>
+                                    <RotateCcw className="h-4 w-4" />
+                                    <span>{lang === "ar" ? "فك اعتماد السند" : "Reopen Voucher"}</span>
                                 </button>
                             )}
                         </div>
@@ -140,35 +179,41 @@ export default function Show({ adjustment }) {
                     </div>
                 </div>
 
-                {/* Pallets Variances Table */}
+                {/* Items Variances Table */}
                 <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
-                    <h3 className="font-bold text-xs text-primary uppercase tracking-wider border-b border-border pb-2">
-                        {lang === "ar" ? "جدول طبالي الفروقات المخزنية الجردية" : "Pallet Inventory Variance Audit Details"}
+                    <h3 className="font-bold text-xs text-primary uppercase border-b border-border pb-2">
+                        {lang === "ar" ? "جدول طبالي الفروقات المخزنية الجردية" : "Inventory Adjustment Items & Variances"}
                     </h3>
 
                     <div className="overflow-x-auto border border-border">
                         <table className="w-full text-xs text-start">
                             <thead className="bg-surface-muted font-bold border-b border-border text-text-muted">
                                 <tr>
-                                    <th className="p-3 text-start w-8">#</th>
-                                    <th className="p-3 text-start">{lang === "ar" ? "الصنف المخزني" : "Item"}</th>
-                                    <th className="p-3 text-center">{lang === "ar" ? "الدرجة / العبوة" : "Grade / Box"}</th>
-                                    <th className="p-3 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet #"}</th>
-                                    <th className="p-3 text-center w-28">{lang === "ar" ? "رصيد النظام" : "System Qty"}</th>
-                                    <th className="p-3 text-center w-32">{lang === "ar" ? "الكمية الفعلية" : "Actual Qty"}</th>
-                                    <th className="p-3 text-center w-32">{lang === "ar" ? "فرق التسوية" : "Variance"}</th>
+                                    <th className="p-2.5 text-start w-8">#</th>
+                                    <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني" : "Inventory Item"}</th>
+                                    <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / العبوة" : "Variant"}</th>
+                                    <th className="p-2.5 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet #"}</th>
+                                    <th className="p-2.5 text-center w-32 bg-slate-100">{lang === "ar" ? "رصيد النظام" : "System Qty"}</th>
+                                    <th className="p-2.5 text-center w-32 font-bold">{lang === "ar" ? "الكمية الفعلية" : "Actual Count"}</th>
+                                    <th className="p-2.5 text-center w-32 font-black">{lang === "ar" ? "فرق التسوية" : "Variance"}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {adjustment.items?.map((item, idx) => (
-                                    <tr key={item.id || idx} className="hover:bg-slate-50">
-                                        <td className="p-3 font-mono text-text-muted">{idx + 1}</td>
-                                        <td className="p-3 font-bold text-text">{item.inventory_item?.name || '—'}</td>
-                                        <td className="p-3 text-center font-semibold text-text-muted">{item.variant?.name || '—'}</td>
-                                        <td className="p-3 text-center font-mono font-bold text-primary">طبلية #{item.pallet?.pallet_number || item.pallet?.code || item.pallet_id}</td>
-                                        <td className="p-3 text-center font-mono font-bold text-slate-700 bg-slate-50">{item.system_quantity}</td>
-                                        <td className="p-3 text-center font-mono font-black text-black bg-emerald-50/40">{item.actual_quantity}</td>
-                                        <td className="p-3 text-center font-mono font-black text-sm">
+                                    <tr key={idx} className="hover:bg-slate-50">
+                                        <td className="p-2.5 font-mono text-text-muted">{idx + 1}</td>
+                                        <td className="p-2.5 font-bold text-text">{item.inventory_item?.name || '—'}</td>
+                                        <td className="p-2.5 text-center font-semibold text-text-muted">{item.variant?.name || '—'}</td>
+                                        <td className="p-2.5 text-center font-mono font-bold text-primary">
+                                            طبلية #{item.pallet?.pallet_number || item.pallet?.code || item.pallet_id}
+                                        </td>
+                                        <td className="p-2.5 text-center font-mono font-bold text-slate-700 bg-slate-100/60">
+                                            {item.system_quantity}
+                                        </td>
+                                        <td className="p-2.5 text-center font-mono font-black text-slate-900">
+                                            {item.actual_quantity}
+                                        </td>
+                                        <td className="p-2.5 text-center font-mono font-black">
                                             <span className={`px-2 py-1 block rounded-none border ${
                                                 item.variance_quantity > 0
                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
@@ -176,7 +221,7 @@ export default function Show({ adjustment }) {
                                                     ? 'bg-rose-50 text-rose-700 border-rose-300'
                                                     : 'bg-slate-100 text-slate-600 border-slate-200'
                                             }`}>
-                                                {item.variance_quantity > 0 ? `+${item.variance_quantity}` : item.variance_quantity}
+                                                {item.variance_quantity > 0 ? `+${item.variance_quantity}` : item.variance_quantity < 0 ? `${item.variance_quantity}` : '0'}
                                             </span>
                                         </td>
                                     </tr>
@@ -185,7 +230,6 @@ export default function Show({ adjustment }) {
                         </table>
                     </div>
                 </div>
-
             </div>
         </AuthenticatedLayout>
     );
