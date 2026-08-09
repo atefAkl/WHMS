@@ -1220,7 +1220,7 @@ class ContractController extends Controller
     {
         $query = \App\Models\Pallet::query()
             ->whereHas('inventoryEntries', function ($q) use ($contract) {
-                $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+                $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
                     $query->where('contract_id', $contract->id);
                 });
             });
@@ -1244,7 +1244,7 @@ class ContractController extends Controller
 
         // Calculate contents for all of them
         $entries = \App\Models\InventoryEntry::whereIn('pallet_id', $allPallets->pluck('id'))
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             })
             ->with(['inventoryItem', 'variant'])
@@ -1334,7 +1334,7 @@ class ContractController extends Controller
     {
         // Fetch distinct items and variants stored under the contract
         $entriesQuery = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             });
 
@@ -1398,7 +1398,7 @@ class ContractController extends Controller
         $variantId = (int) $request->input('variant_id');
 
         $entries = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             })
             ->where('inventory_item_id', $itemId)
@@ -1420,7 +1420,7 @@ class ContractController extends Controller
             $voucher = $entry->voucher;
             if (!$voucher) continue;
 
-            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : 'delivery';
+            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : ($entry->voucher_type === 'App\\Models\\InventoryAdjustment' ? 'adjustment' : 'delivery');
             $operationDate = $entry->operation_date
                 ?? ($voucherType === 'reception' ? $voucher->reception_date : $voucher->delivery_date);
 
@@ -1461,7 +1461,7 @@ class ContractController extends Controller
         $pallet = \App\Models\Pallet::findOrFail($palletId);
 
         $entries = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             })
             ->where('pallet_id', $palletId)
@@ -1492,7 +1492,7 @@ class ContractController extends Controller
             $voucher = $entry->voucher;
             if (!$voucher) continue;
 
-            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : 'delivery';
+            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : ($entry->voucher_type === 'App\\Models\\InventoryAdjustment' ? 'adjustment' : 'delivery');
             $operationDate = $entry->operation_date
                 ?? ($voucherType === 'reception' ? $voucher->reception_date : $voucher->delivery_date);
 
