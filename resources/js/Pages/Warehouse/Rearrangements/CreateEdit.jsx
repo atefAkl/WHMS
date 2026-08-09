@@ -78,7 +78,7 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
                         setData('items', [createEmptyRow(), createEmptyRow()]);
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setLoadingOptions(false));
         } else {
             setContractOptions({ pallets: [], items: [], variants: [] });
@@ -160,7 +160,7 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
                 {lang === "ar" ? "ترتيب الطبالي" : "Rearrangements"}
             </Link>
             <ChevronRight className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`} />
-            <span className="text-primary font-medium">{isEdit ? (lang === "ar" ? "تعديل السند" : "Edit") : (lang === "ar" ? "إنشاء سند جديد" : "New Voucher")}</span>
+            <span className="text-primary font-medium">{isEdit ? (lang === "ar" ? "تعديل السند" : "Edit") : (lang === "ar" ? "إنشاء سند" : "New Voucher")}</span>
         </div>
     );
 
@@ -169,7 +169,7 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
             <Head title={isEdit ? "تعديل سند ترتيب ونقل طبالي" : "إنشاء سند ترتيب ونقل طبالي جديد"} />
 
             <div className="max-w-7xl mx-auto pb-12 main-stack-y" dir={lang === "ar" ? "rtl" : "ltr"}>
-                
+
                 <PageHeader
                     icon={ArrowLeftRight}
                     title={isEdit ? `تعديل سند ترتيب طبالي رقم: ${rearrangement?.serial_number}` : (lang === "ar" ? "إنشاء سند ترتيب ونقل الطبالي الداخلية (كود 15)" : "New Pallet Rearrangement Voucher")}
@@ -190,7 +190,7 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    
+
                     {/* Header Info */}
                     <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
                         <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider flex items-center gap-1.5">
@@ -284,9 +284,8 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
                     </div>
 
                     {/* Balance Indicator Banner */}
-                    <div className={`p-4 border font-bold text-xs flex justify-between items-center ${
-                        isBalanced ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-amber-50 border-amber-300 text-amber-900'
-                    }`}>
+                    <div className={`p-4 border font-bold text-xs flex justify-between items-center ${isBalanced ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-amber-50 border-amber-300 text-amber-900'
+                        }`}>
                         <div className="flex items-center gap-2">
                             {isBalanced ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <AlertTriangle className="h-5 w-5 text-amber-600" />}
                             <div>
@@ -298,10 +297,10 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
                         </div>
                         <div className="flex items-center gap-4 text-xs font-mono font-black">
                             <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1">
-                                {lang === "ar" ? "إجمالي المدخلات (إضافة): " : "IN: "} {totals.totalIn}
+                                {lang === "ar" ? "(إضافة): " : "IN: "} {totals.totalIn}
                             </span>
                             <span className="text-rose-700 font-bold bg-rose-50 border border-rose-200 px-2.5 py-1">
-                                {lang === "ar" ? "إجمالي المخرجات (خصم): " : "OUT: "} {totals.totalOut}
+                                {lang === "ar" ? "(خصم): " : "OUT: "} {totals.totalOut}
                             </span>
                         </div>
                     </div>
@@ -345,7 +344,7 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
                                                     className="w-full bg-[#4CAF50] hover:bg-[#43A047] text-white text-xs font-black py-2 px-3 rounded-md shadow-md flex items-center justify-center gap-1 transition-all"
                                                 >
                                                     <Plus className="h-4 w-4" />
-                                                    <span>{lang === "ar" ? "أضف صف جديد" : "Add Row"}</span>
+                                                    <span>{lang === "ar" ? "أضف صف" : "Add Row"}</span>
                                                 </button>
                                             </th>
                                         </tr>

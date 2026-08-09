@@ -425,10 +425,15 @@ class PalletRearrangementController extends Controller
                     ];
                 }
 
+                $variantDisplayName = $varObj->name;
+                if ($varObj->quality && !str_contains($variantDisplayName, $varObj->quality)) {
+                    $variantDisplayName .= ' | ' . $varObj->quality;
+                }
+
                 $availableVariants[] = [
                     'id' => $varObj->id,
                     'inventory_item_id' => $itemObj->id,
-                    'name' => $varObj->name,
+                    'name' => $variantDisplayName,
                     'code' => $varObj->code,
                 ];
             }
@@ -443,10 +448,14 @@ class PalletRearrangementController extends Controller
                     'code' => $inv->code,
                 ];
                 foreach ($inv->variants as $v) {
+                    $vName = $v->name;
+                    if ($v->quality && !str_contains($vName, $v->quality)) {
+                        $vName .= ' | ' . $v->quality;
+                    }
                     $availableVariants[] = [
                         'id' => $v->id,
                         'inventory_item_id' => $inv->id,
-                        'name' => $v->name,
+                        'name' => $vName,
                         'code' => $v->code,
                     ];
                 }
