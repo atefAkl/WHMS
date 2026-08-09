@@ -8,8 +8,7 @@ use App\Models\Contract;
 use App\Models\InventoryAdjustment;
 use App\Models\InventoryItem;
 use App\Models\InventoryEntry;
-use App\Models\Reception;
-use App\Models\Delivery;
+use App\Models\Pallet;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -57,13 +56,13 @@ class InventoryAdjustmentController extends Controller
     {
         $customers = Customer::where('status', 'active')
             ->with(['contracts' => function ($q) {
-                $q->where('status', 'active')->with(['periods']);
+                $q->where('status', 'active')->with(['periods', 'contractAgents']);
             }])
             ->orderBy('name')
             ->get();
 
         $inventoryItems = InventoryItem::with('variants')->get();
-        $pallets = \App\Models\Pallet::all();
+        $pallets = Pallet::all();
 
         return Inertia::render('Warehouse/Adjustments/CreateEdit', [
             'customers'      => $customers,
@@ -77,19 +76,19 @@ class InventoryAdjustmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'customer_id'     => 'required|exists:customers,id',
-            'contract_id'     => 'required|exists:contracts,id',
-            'period_id'       => 'nullable|exists:contract_periods,id',
-            'adjustment_date' => 'required|date',
-            'reason'          => 'nullable|string',
-            'proof_file'      => 'nullable|file|mimes:jpeg,png,jpg,pdf,doc,docx|max:20480',
-            'items'           => 'required|array|min:1',
+            'customer_id'       => 'required|exists:customers,id',
+            'contract_id'       => 'required|exists:contracts,id',
+            'period_id'         => 'nullable|exists:contract_periods,id',
+            'representative_id' => 'nullable|exists:contract_agents,id',
+            'adjustment_date'   => 'required|date',
+            'reason'            => 'nullable|string',
+            'proof_file'        => 'nullable|file|mimes:jpeg,png,jpg,pdf,doc,docx|max:20480',
+            'items'             => 'required|array|min:1',
             'items.*.inventory_item_id'         => 'required|exists:inventory_items,id',
             'items.*.inventory_item_variant_id' => 'required|exists:inventory_item_variants,id',
             'items.*.pallet_id'                 => 'required|exists:pallets,id',
             'items.*.system_quantity'           => 'required|numeric',
             'items.*.actual_quantity'           => 'required|numeric|min:0',
-            'items.*.variance_quantity'         => 'required|numeric',
             'items.*.notes'                     => 'nullable|string',
         ]);
 
@@ -105,14 +104,23 @@ class InventoryAdjustmentController extends Controller
             $proofPath = '/uploads/documents/adjustments/' . $filename;
         }
 
-        // Determine adjustment type
+        // Compute Variance & Determine Overall Adjustment Type
+        // Standard Equation: Variance = Actual Counted Qty - System Qty
         $hasSurplus = false;
         $hasDeficit = false;
 
+        $processedItems = [];
         foreach ($request->items as $item) {
-            $var = (float) $item['variance_quantity'];
-            if ($var > 0) $hasSurplus = true;
-            if ($var < 0) $hasDeficit = true;
+            $sysQty = (float) $item['system_quantity'];
+            $actQty = (float) $item['actual_quantity'];
+            $variance = round($actQty - $sysQty, 2);
+
+            if ($variance > 0) $hasSurplus = true;
+            if ($variance < 0) $hasDeficit = true;
+
+            $processedItems[] = array_merge($item, [
+                'variance_quantity' => $variance,
+            ]);
         }
 
         $type = 'surplus';
@@ -122,7 +130,8 @@ class InventoryAdjustmentController extends Controller
             $type = 'deficit';
         }
 
-        DB::transaction(function () use ($request, $validated, $proofPath, $type) {
+        $adjustment = null;
+        DB::transaction(function () use ($request, $proofPath, $type, $processedItems, &$adjustment) {
             $adjustment = InventoryAdjustment::create([
                 'customer_id'     => $request->customer_id,
                 'contract_id'     => $request->contract_id,
@@ -135,7 +144,7 @@ class InventoryAdjustmentController extends Controller
                 'created_by'      => auth()->id(),
             ]);
 
-            foreach ($request->items as $itemData) {
+            foreach ($processedItems as $itemData) {
                 $adjustment->items()->create([
                     'inventory_item_id'         => $itemData['inventory_item_id'],
                     'inventory_item_variant_id' => $itemData['inventory_item_variant_id'],
@@ -148,7 +157,7 @@ class InventoryAdjustmentController extends Controller
             }
         });
 
-        return redirect()->route('inventory-adjustments.index')->with('success', 'تم إنشاء مسودة سند التسوية بنجاح.');
+        return redirect()->route('inventory-adjustments.show', $adjustment->id)->with('success', 'تم تسجيل مسودة سند التسوية بنجاح.');
     }
 
     public function show(InventoryAdjustment $inventoryAdjustment)
@@ -182,28 +191,57 @@ class InventoryAdjustmentController extends Controller
                 'approved_at' => now(),
             ]);
 
-            // Post inventory ledger entries for variance
+            // Execute exact ledger variance logic per pallet:
+            // Result = Actual Qty - System Qty
+            // 1) If Result == 0 -> Skip (no ledger entry created)
+            // 2) If Result > 0  -> Create IN entry with quantity_in = Result & reference to adjustment voucher
+            // 3) If Result < 0  -> Create OUT entry with quantity_out = abs(Result) & reference to adjustment voucher
             foreach ($inventoryAdjustment->items as $item) {
-                $var = (float) $item->variance_quantity;
-                if ($var === 0.0) continue;
+                $variance = (float) $item->variance_quantity;
 
-                $quantityIn  = $var > 0 ? $var : 0;
-                $quantityOut = $var < 0 ? abs($var) : 0;
+                // Scenario 1: Result == 0 -> Skip completely
+                if ($variance === 0.0) {
+                    continue;
+                }
 
-                InventoryEntry::create([
-                    'inventory_item_id'         => $item->inventory_item_id,
-                    'inventory_item_variant_id' => $item->inventory_item_variant_id,
-                    'pallet_id'                 => $item->pallet_id,
-                    'voucher_type'              => InventoryAdjustment::class,
-                    'voucher_id'                => $inventoryAdjustment->id,
-                    'quantity_in'               => $quantityIn,
-                    'quantity_out'              => $quantityOut,
-                    'operation_date'            => $inventoryAdjustment->adjustment_date,
-                ]);
+                // Scenario 2: Result > 0 -> Surplus IN Entry
+                if ($variance > 0) {
+                    InventoryEntry::create([
+                        'inventory_item_id'         => $item->inventory_item_id,
+                        'inventory_item_variant_id' => $item->inventory_item_variant_id,
+                        'pallet_id'                 => $item->pallet_id,
+                        'voucher_type'              => InventoryAdjustment::class,
+                        'voucher_id'                => $inventoryAdjustment->id,
+                        'quantity_in'               => $variance,
+                        'quantity_out'              => 0,
+                        'operation_date'            => $inventoryAdjustment->adjustment_date,
+                    ]);
+                } 
+                // Scenario 3: Result < 0 -> Deficit OUT Entry
+                else {
+                    InventoryEntry::create([
+                        'inventory_item_id'         => $item->inventory_item_id,
+                        'inventory_item_variant_id' => $item->inventory_item_variant_id,
+                        'pallet_id'                 => $item->pallet_id,
+                        'voucher_type'              => InventoryAdjustment::class,
+                        'voucher_id'                => $inventoryAdjustment->id,
+                        'quantity_in'               => 0,
+                        'quantity_out'              => abs($variance),
+                        'operation_date'            => $inventoryAdjustment->adjustment_date,
+                    ]);
+                }
+
+                // Update pallet current quantity to the verified actual count
+                $pallet = Pallet::find($item->pallet_id);
+                if ($pallet) {
+                    $pallet->update([
+                        'current_quantity' => $item->actual_quantity,
+                    ]);
+                }
             }
         });
 
-        return back()->with('success', 'تم اعتماد سند التسوية وقيد الفروقات المخزنية بنجاح.');
+        return back()->with('success', 'تم اعتماد سند التسوية وقيد الفروقات وتحديث أرصدة الطبالي بنجاح.');
     }
 
     public function destroy(InventoryAdjustment $inventoryAdjustment)

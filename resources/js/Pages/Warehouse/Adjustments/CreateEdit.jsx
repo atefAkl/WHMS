@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Plus, Trash2, UserCheck, Scale } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
@@ -12,12 +12,14 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
     const { lang } = useLang();
     const [filteredContracts, setFilteredContracts] = useState([]);
     const [availablePeriods, setAvailablePeriods] = useState([]);
+    const [contractAgents, setContractAgents] = useState([]);
     const [loadingPallets, setLoadingPallets] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
         customer_id: adjustment?.customer_id || '',
         contract_id: adjustment?.contract_id || '',
         period_id: adjustment?.period_id || '',
+        representative_id: adjustment?.representative_id || '',
         adjustment_date: adjustment?.adjustment_date || new Date().toISOString().split('T')[0],
         reason: adjustment?.reason || '',
         proof_file: null,
@@ -36,18 +38,31 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
         } else {
             setFilteredContracts([]);
             setAvailablePeriods([]);
+            setContractAgents([]);
         }
     }, [data.customer_id, customers]);
 
-    // Handle Contract Change -> Fetch available pallets & balances
+    // Handle Contract Change -> Auto Load Customer, Agents, Periods & Pallet Balances
     useEffect(() => {
         if (data.contract_id) {
             const contract = filteredContracts.find((c) => c.id === parseInt(data.contract_id));
             if (contract) {
+                // Auto sync customer
+                if (contract.customer_id && String(data.customer_id) !== String(contract.customer_id)) {
+                    setData('customer_id', contract.customer_id);
+                }
+
+                // Active Periods & Agents
                 const activePeriods = (contract.periods || []).filter((p) => p.status === 'active');
                 setAvailablePeriods(activePeriods);
+                setContractAgents(contract.contract_agents || []);
+
                 if (!data.period_id) {
-                    setData('period_id', activePeriods?.[0]?.id || '');
+                    setData((d) => ({
+                        ...d,
+                        period_id: activePeriods?.[0]?.id || '',
+                        representative_id: contract.contract_agents?.[0]?.id || '',
+                    }));
                 }
 
                 // Fetch Available Pallets & Balances for this contract
@@ -80,10 +95,12 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
             }
         } else {
             setAvailablePeriods([]);
+            setContractAgents([]);
             setData('items', []);
         }
     }, [data.contract_id, filteredContracts]);
 
+    // Handle Actual Counted Qty Entry (Actual Qty - System Qty = Variance)
     const handleActualQtyChange = (index, value) => {
         const actualVal = parseFloat(value) || 0;
         const updatedItems = [...data.items];
@@ -102,9 +119,9 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
 
         const newRow = {
             inventory_item_id: defaultItem?.id || 1,
-            inventory_item_name: defaultItem?.name || 'صنف',
+            inventory_item_name: defaultItem?.name || 'صنف تمور',
             inventory_item_variant_id: defaultVariant?.id || 1,
-            variant_name: defaultVariant?.name || 'درجة',
+            variant_name: defaultVariant?.name || 'كرتون / درجة',
             pallet_id: defaultPallet?.id || 1,
             pallet_number: defaultPallet?.pallet_number || defaultPallet?.code || '1',
             system_quantity: 0,
@@ -153,8 +170,8 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
                             {lang === "ar"
-                                ? "اختر العقد والطبالي المراد إحصاؤها لتعديل الرصيد الفعلي الجردي بالزيادة أو النقص بحضور وإثبات المحضر."
-                                : "Adjust pallet actual count surplus/deficit cleanly."}
+                                ? "اختيار العقد يُحمّل تلقائياً العميل والمندوب وطبالي العقد بفهرسة الأصناف وأحجام الكراتين والكميات حسب النظام."
+                                : "Select contract to auto load customer, representative, pallets, and system balances."}
                         </p>
                     }
                 />
@@ -163,14 +180,15 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                     
                     {/* Customer & Contract Selection Box */}
                     <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
-                        <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider">
-                            {lang === "ar" ? "بيانات العقد والفترة التخزينية" : "Contract & Customer Details"}
+                        <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider flex items-center gap-1.5">
+                            <Scale className="h-4 w-4 text-primary" />
+                            <span>{lang === "ar" ? "بيانات العقد والعميل والمندوب" : "Contract & Representative Details"}</span>
                         </h3>
 
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
                             {/* Customer */}
                             <div>
-                                <InputLabel value={lang === "ar" ? "العميل *" : "Customer *"} />
+                                <InputLabel value={lang === "ar" ? "العميل المتعاقد *" : "Customer *"} />
                                 <select
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs font-bold rounded-none h-[38px] px-2"
                                     value={data.customer_id}
@@ -180,6 +198,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                             customer_id: e.target.value,
                                             contract_id: '',
                                             period_id: '',
+                                            representative_id: '',
                                         }));
                                     }}
                                     required
@@ -226,7 +245,25 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                 </select>
                             </div>
 
-                            {/* Adjustment Date */}
+                            {/* Representative (Mandoob) */}
+                            <div>
+                                <InputLabel value={lang === "ar" ? "مندوب العميل (إن وجد)" : "Representative"} />
+                                <select
+                                    className="mt-1 block w-full border-border bg-surface text-text text-xs font-bold rounded-none h-[38px] px-2"
+                                    value={data.representative_id}
+                                    onChange={(e) => setData('representative_id', e.target.value)}
+                                    disabled={!data.contract_id}
+                                >
+                                    <option value="">{lang === "ar" ? "-- لا يوجد مندوب --" : "-- None --"}</option>
+                                    {contractAgents.map((a) => (
+                                        <option key={a.id} value={a.id}>{a.name} ({a.job_title || 'مندوب'})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Reason & Proof File */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2">
                             <div>
                                 <InputLabel value={lang === "ar" ? "تاريخ التسوية والجرد *" : "Adjustment Date *"} />
                                 <TextInput
@@ -237,16 +274,13 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                     required
                                 />
                             </div>
-                        </div>
 
-                        {/* Reason & Proof File */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
                             <div>
-                                <InputLabel value={lang === "ar" ? "سبب التسوية وبيان الفحص والإحصاء *" : "Reason / Audit Notes *"} />
+                                <InputLabel value={lang === "ar" ? "سبب التسوية وبيان الفحص الإحصائي *" : "Reason / Audit Notes *"} />
                                 <textarea
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs rounded-none p-2 font-semibold"
-                                    rows="2"
-                                    placeholder={lang === "ar" ? "أدخل سبب إجراء التسوية (مثال: إعادة فحص وإحصاء منصات التحميل بحضور المندوب)..." : "Reason for adjustment..."}
+                                    rows="1"
+                                    placeholder={lang === "ar" ? "أدخل سبب التسوية (مثال: محضر فحص وإحصاء منصات التحميل بحضور المندوب)..." : "Reason..."}
                                     value={data.reason}
                                     onChange={(e) => setData('reason', e.target.value)}
                                     required
@@ -254,22 +288,29 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                             </div>
 
                             <div>
-                                <InputLabel value={lang === "ar" ? "إرفاق صورة محضر الفحص والجرد (PDF/صورة)" : "Audit Minutes File"} />
+                                <InputLabel value={lang === "ar" ? "إرفاق صورة محضر الجرد (PDF/صورة)" : "Audit Minutes File"} />
                                 <input
                                     type="file"
-                                    className="mt-1 block w-full text-xs border border-border p-1.5 bg-surface"
+                                    className="mt-1 block w-full text-xs border border-border p-1 bg-surface"
                                     onChange={(e) => setData('proof_file', e.target.files[0])}
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Pallets Adjustments Table */}
+                    {/* Pallets Adjustments Table indexed by Item & Box size */}
                     <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
                         <div className="flex justify-between items-center border-b border-border pb-2">
-                            <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                {lang === "ar" ? "جدول طبالي العقد وإحصاء الفروقات" : "Contract Pallets Inventory Audit Table"}
-                            </h3>
+                            <div>
+                                <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
+                                    {lang === "ar" ? "فهرسة طبالي العقد وإدخال ناتج ملف الجرد" : "Indexed Contract Pallets & Actual Count Input"}
+                                </h3>
+                                <p className="text-[11px] text-text-muted mt-0.5">
+                                    {lang === "ar"
+                                        ? "أدخل الأرقام في خانة (حسب ملف الجرد)، وسيحسب الباك الفروقات ويلغي التكرار ويُنشئ صوف الإدخال أو الإخراج تلقائياً!"
+                                        : "Enter actual counts in the audit column. System will automatically generate IN/OUT ledger entries upon approval."}
+                                </p>
+                            </div>
 
                             <div className="flex items-center gap-2">
                                 {data.contract_id && (
@@ -279,12 +320,12 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                         className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 flex items-center gap-1 shadow-2xs"
                                     >
                                         <Plus className="h-3.5 w-3.5" />
-                                        <span>{lang === "ar" ? "إضافة طبلية / بند يدوياً" : "Add Pallet Row"}</span>
+                                        <span>{lang === "ar" ? "إضافة طبلية يدوياً" : "Add Pallet Row"}</span>
                                     </button>
                                 )}
                                 {loadingPallets && (
                                     <span className="text-xs text-primary font-bold animate-pulse">
-                                        {lang === "ar" ? "جاري تحميل طبالي العقد..." : "Loading contract pallets..."}
+                                        {lang === "ar" ? "جاري تحميل وتجميع طبالي العقد..." : "Loading contract pallets..."}
                                     </span>
                                 )}
                             </div>
@@ -292,11 +333,11 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
 
                         {!data.contract_id ? (
                             <div className="p-8 text-center text-text-muted font-bold text-xs italic bg-slate-50 border border-dashed border-border">
-                                {lang === "ar" ? "يرجى اختيار العقد أولاً لتحميل طباليه المخزنية وتصحيح الفروقات عليها." : "Please select a contract first."}
+                                {lang === "ar" ? "يرجى اختيار العقد أولاً لتحميل طباليه المخزنية المجمعة وفهرستها." : "Please select a contract first."}
                             </div>
                         ) : data.items.length === 0 ? (
                             <div className="p-8 text-center text-text-muted font-bold text-xs space-y-3 bg-amber-50 border border-amber-200 text-amber-900">
-                                <div>{lang === "ar" ? "لم نجد طبالي سابقة مسجلة على هذا العقد، يمكنك النقر على الزر أعلاه لإضافة طبلية وبند تسوية يدوياً!" : "No automatic pallets found for this contract. Click above to add manual rows."}</div>
+                                <div>{lang === "ar" ? "لم نجد طبالي سابقة مسجلة على هذا العقد، يمكنك إضافة طبلية وبند تسوية يدوياً!" : "No automatic pallets found for this contract."}</div>
                                 <button
                                     type="button"
                                     onClick={handleAddManualRow}
@@ -312,12 +353,12 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                     <thead className="bg-surface-muted font-bold border-b border-border text-text-muted">
                                         <tr>
                                             <th className="p-2.5 text-start w-8">#</th>
-                                            <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني" : "Item"}</th>
-                                            <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / العبوة" : "Grade / Box"}</th>
+                                            <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني (نوع التمور)" : "Item (Date Variant)"}</th>
+                                            <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / حجم الكرتون" : "Grade / Box Size"}</th>
                                             <th className="p-2.5 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet #"}</th>
-                                            <th className="p-2.5 text-center w-28">{lang === "ar" ? "رصيد النظام" : "System Qty"}</th>
-                                            <th className="p-2.5 text-center w-36">{lang === "ar" ? "الكمية الفعلية الجردية *" : "Actual Qty *"}</th>
-                                            <th className="p-2.5 text-center w-28">{lang === "ar" ? "فرق التسوية" : "Variance"}</th>
+                                            <th className="p-2.5 text-center w-32 bg-slate-100">{lang === "ar" ? "حسب النظام" : "System Qty"}</th>
+                                            <th className="p-2.5 text-center w-36 bg-amber-50">{lang === "ar" ? "حسب ملف الجرد *" : "Actual Count *"}</th>
+                                            <th className="p-2.5 text-center w-28">{lang === "ar" ? "ناتج الفرق" : "Variance"}</th>
                                             <th className="p-2.5 text-center w-12">#</th>
                                         </tr>
                                     </thead>
@@ -388,15 +429,15 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                                         ))}
                                                     </select>
                                                 </td>
-                                                <td className="p-2.5 text-center font-mono font-black text-slate-700 text-sm bg-slate-50">
+                                                <td className="p-2.5 text-center font-mono font-black text-slate-800 text-sm bg-slate-100/80">
                                                     {item.system_quantity}
                                                 </td>
-                                                <td className="p-2.5 text-center">
+                                                <td className="p-2.5 text-center bg-amber-50/50">
                                                     <input
                                                         type="number"
                                                         step="0.01"
                                                         min="0"
-                                                        className="w-full text-center text-xs font-mono font-black border-primary focus:ring-primary rounded-none h-[34px] px-2 bg-white"
+                                                        className="w-full text-center text-xs font-mono font-black border-amber-400 focus:ring-amber-500 rounded-none h-[34px] px-2 bg-white"
                                                         value={item.actual_quantity}
                                                         onChange={(e) => handleActualQtyChange(idx, e.target.value)}
                                                         required
@@ -410,7 +451,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                                             ? 'bg-rose-50 text-rose-700 border-rose-300'
                                                             : 'bg-slate-100 text-slate-600 border-slate-200'
                                                     }`}>
-                                                        {item.variance_quantity > 0 ? `+${item.variance_quantity}` : item.variance_quantity}
+                                                        {item.variance_quantity > 0 ? `+${item.variance_quantity} (إدخال)` : item.variance_quantity < 0 ? `${item.variance_quantity} (إخراج)` : '0 (مطابق)'}
                                                     </span>
                                                 </td>
                                                 <td className="p-2.5 text-center">
