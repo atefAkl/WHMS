@@ -42,63 +42,52 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
         }
     }, [data.customer_id, customers]);
 
-    // Handle Contract Change -> Auto Load Customer, Agents, Periods & Pallet Balances (with Empty Actual Qty inputs)
+    // Handle Contract Selection -> Instantly Fetch Pallet Balances & Periods
     useEffect(() => {
         if (data.contract_id) {
-            const contract = filteredContracts.find((c) => c.id === parseInt(data.contract_id));
-            if (contract) {
-                // Auto sync customer
-                if (contract.customer_id && String(data.customer_id) !== String(contract.customer_id)) {
-                    setData('customer_id', contract.customer_id);
-                }
+            const contractId = parseInt(data.contract_id);
+            if (!contractId) return;
 
-                // Active Periods & Agents
+            const contract = filteredContracts.find((c) => c.id === contractId);
+            if (contract) {
                 const activePeriods = (contract.periods || []).filter((p) => p.status === 'active');
                 setAvailablePeriods(activePeriods);
                 setContractAgents(contract.contract_agents || []);
-
-                if (!data.period_id) {
-                    setData((d) => ({
-                        ...d,
-                        period_id: activePeriods?.[0]?.id || '',
-                        representative_id: contract.contract_agents?.[0]?.id || '',
-                    }));
-                }
-
-                // Fetch Available Pallets & Balances for this contract
-                setLoadingPallets(true);
-                axios.get(route('api.contracts.available-inventory', contract.id))
-                    .then((res) => {
-                        const inventory = res.data || [];
-                        const formattedItems = inventory.map((inv) => {
-                            const sysQty = parseFloat(inv.available_qty || 0);
-                            return {
-                                inventory_item_id: inv.inventory_item_id,
-                                inventory_item_name: inv.inventoryItem?.name || '—',
-                                inventory_item_variant_id: inv.inventory_item_variant_id,
-                                variant_name: inv.variant?.name || '—',
-                                pallet_id: inv.pallet_id,
-                                pallet_number: inv.pallet?.pallet_number || inv.pallet?.code || inv.pallet_id,
-                                system_quantity: sysQty,
-                                actual_quantity: '', // Empty field for user to enter actual count
-                                variance_quantity: 0,
-                                notes: '',
-                            };
-                        });
-                        setData('items', formattedItems);
-                    })
-                    .catch((err) => {
-                        console.error("Error loading inventory balance:", err);
-                        setData('items', []);
-                    })
-                    .finally(() => setLoadingPallets(false));
             }
+
+            setLoadingPallets(true);
+            axios.get(route('api.contracts.available-inventory', contractId))
+                .then((res) => {
+                    const inventory = res.data || [];
+                    const formattedItems = inventory.map((inv) => {
+                        const sysQty = parseFloat(inv.available_qty || 0);
+                        return {
+                            inventory_item_id: inv.inventory_item_id,
+                            inventory_item_name: inv.inventoryItem?.name || 'صنف تمور',
+                            inventory_item_variant_id: inv.inventory_item_variant_id,
+                            variant_name: inv.variant?.name || 'درجة / عبوة',
+                            pallet_id: inv.pallet_id,
+                            pallet_number: inv.pallet?.pallet_number || inv.pallet?.code || inv.pallet_id,
+                            system_quantity: sysQty,
+                            actual_quantity: '', // Empty field for user to enter actual count
+                            variance_quantity: 0,
+                            notes: '',
+                        };
+                    });
+
+                    setData((prev) => ({
+                        ...prev,
+                        items: formattedItems,
+                    }));
+                })
+                .catch((err) => {
+                    console.error("Error loading inventory balance:", err);
+                })
+                .finally(() => setLoadingPallets(false));
         } else {
-            setAvailablePeriods([]);
-            setContractAgents([]);
-            setData('items', []);
+            setData((prev) => ({ ...prev, items: [] }));
         }
-    }, [data.contract_id, filteredContracts]);
+    }, [data.contract_id]);
 
     // Handle Actual Counted Qty Entry (Actual Qty - System Qty = Variance)
     const handleActualQtyChange = (index, value) => {
@@ -148,7 +137,6 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // Ensure all actual_quantity values default to 0 if left empty by user
         const sanitizedItems = data.items.map((item) => ({
             ...item,
             actual_quantity: item.actual_quantity === '' ? 0 : parseFloat(item.actual_quantity),
@@ -216,6 +204,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                             contract_id: '',
                                             period_id: '',
                                             representative_id: '',
+                                            items: [],
                                         }));
                                     }}
                                     required
