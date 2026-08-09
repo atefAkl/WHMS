@@ -40,6 +40,92 @@ Route::middleware([
 
     // Routes that require a configured tenant
     Route::middleware('tenant')->group(function () {
+
+        // Available Inventory API inside tenant middleware
+        Route::get('api/contracts/{contract}/available-inventory', function (\App\Models\Contract $contract) {
+            try {
+                $entries = \App\Models\InventoryEntry::query()
+                    ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($q) use ($contract) {
+                        $q->where('contract_id', $contract->id);
+                    })
+                    ->whereNotNull('pallet_id')
+                    ->with(['inventoryItem', 'variant', 'pallet'])
+                    ->get();
+
+                if ($entries->isEmpty()) {
+                    return response()->json([]);
+                }
+
+                $grouped = $entries->groupBy('pallet_id');
+                $result = [];
+
+                foreach ($grouped as $palletId => $palletEntries) {
+                    $pallet = $palletEntries->first()->pallet;
+                    if (!$pallet) continue;
+
+                    $subGroups = $palletEntries->groupBy(function ($e) {
+                        return $e->inventory_item_id . '_' . $e->inventory_item_variant_id;
+                    });
+
+                    foreach ($subGroups as $group) {
+                        $first = $group->first();
+                        $qtyIn = (float) $group->sum('quantity_in');
+                        $qtyOut = (float) $group->sum('quantity_out');
+                        $balance = $qtyIn - $qtyOut;
+
+                        if ($balance <= 0) continue;
+
+                        $result[] = [
+                            'inventory_item_id' => $first->inventory_item_id,
+                            'inventory_item_variant_id' => $first->inventory_item_variant_id,
+                            'pallet_id' => $pallet->id,
+                            'available_qty' => round($balance, 2),
+                            'inventoryItem' => [
+                                'id' => $first->inventory_item_id,
+                                'name' => $first->inventoryItem ? $first->inventoryItem->name : 'صنف تمور',
+                                'code' => $first->inventoryItem ? $first->inventoryItem->code : 'DAT'
+                            ],
+                            'variant' => [
+                                'id' => $first->inventory_item_variant_id,
+                                'name' => $first->variant ? $first->variant->name : 'كرتون / درجة',
+                                'code' => $first->variant ? $first->variant->code : 'VAR'
+                            ],
+                            'pallet' => [
+                                'id' => $pallet->id,
+                                'code' => $pallet->code,
+                                'pallet_number' => $pallet->pallet_number ?: (string)$pallet->id
+                            ]
+                        ];
+                    }
+                }
+
+                return response()->json($result);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Available Inventory API Error: " . $e->getMessage());
+                return response()->json([], 200);
+            }
+        })->name('api.contracts.available-inventory');
+
+        // Notifications Routes
+        Route::get('/notifications', function () {
+            return Inertia::render('Notifications', [
+                'notifications' => auth()->user() ? auth()->user()->notifications()->paginate(20) : []
+            ]);
+        })->name('notifications.index');
+        Route::post('/notifications/{id}/mark-read', function ($id) {
+            if (auth()->user()) {
+                auth()->user()->notifications()->where('id', $id)->first()?->markAsRead();
+            }
+            return response()->json(['success' => true]);
+        })->name('notifications.markOneRead');
+        Route::get('/api/notifications/unread-count', function () {
+            if (!auth()->user()) return response()->json(['unread_count' => 0, 'recent' => []]);
+            return response()->json([
+                'unread_count' => auth()->user()->unreadNotifications()->count(),
+                'recent' => auth()->user()->notifications()->take(5)->get()
+            ]);
+        })->name('api.notifications.unread-count');
+
         // Season Selection
         Route::get('/select-season', [\App\Http\Controllers\SeasonSelectionController::class, 'create'])->name('season.select');
         Route::post('/select-season', [\App\Http\Controllers\SeasonSelectionController::class, 'store'])->name('season.store');
@@ -49,120 +135,6 @@ Route::middleware([
             Route::get('/dashboard', function () {
                 return Inertia::render('Dashboard');
             })->name('dashboard');
-
-            // Available Inventory API inside tenant & season middleware
-            Route::get('/api/contracts/{contract}/available-inventory', function (\App\Models\Contract $contract) {
-                try {
-                    $pallets = \App\Models\Pallet::query()
-                        ->whereHas('inventoryEntries', function ($q) use ($contract) {
-                            $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($query) use ($contract) {
-                                $query->where('contract_id', $contract->id)->orWhere('customer_id', $contract->customer_id);
-                            });
-                        })
-                        ->orWhere('customer_id', $contract->customer_id)
-                        ->orderBy('pallet_number', 'asc')
-                        ->get();
-
-                    if ($pallets->isEmpty()) {
-                        return response()->json([]);
-                    }
-
-                    $entries = \App\Models\InventoryEntry::whereIn('pallet_id', $pallets->pluck('id'))
-                        ->with(['inventoryItem', 'variant', 'pallet'])
-                        ->get();
-
-                    $entriesByPallet = $entries->groupBy('pallet_id');
-                    $result = [];
-
-                    foreach ($pallets as $pallet) {
-                        $palletEntries = $entriesByPallet->get($pallet->id, collect());
-                        if ($palletEntries->isEmpty()) {
-                            $itemName = 'صنف عام';
-                            if ($pallet->inventory_item_id) {
-                                $invObj = \App\Models\InventoryItem::find($pallet->inventory_item_id);
-                                if ($invObj) $itemName = $invObj->name;
-                            }
-                            $variantName = 'درجة عامة';
-                            if ($pallet->inventory_item_variant_id) {
-                                $varObj = \App\Models\InventoryItemVariant::find($pallet->inventory_item_variant_id);
-                                if ($varObj) $variantName = $varObj->name;
-                            }
-
-                            $result[] = [
-                                'inventory_item_id' => $pallet->inventory_item_id ?: 1,
-                                'inventory_item_variant_id' => $pallet->inventory_item_variant_id ?: 1,
-                                'pallet_id' => $pallet->id,
-                                'available_qty' => (float) ($pallet->current_quantity ?? 0),
-                                'inventoryItem' => ['id' => $pallet->inventory_item_id ?: 1, 'name' => $itemName, 'code' => 'DAT'],
-                                'variant' => ['id' => $pallet->inventory_item_variant_id ?: 1, 'name' => $variantName, 'code' => 'VAR'],
-                                'pallet' => ['id' => $pallet->id, 'code' => $pallet->code, 'pallet_number' => $pallet->pallet_number]
-                            ];
-                            continue;
-                        }
-
-                        $grouped = $palletEntries->groupBy(function ($entry) {
-                            return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
-                        });
-
-                        foreach ($grouped as $group) {
-                            $first = $group->first();
-                            $qtyIn = (float) $group->sum('quantity_in');
-                            $qtyOut = (float) $group->sum('quantity_out');
-                            $balance = $qtyIn - $qtyOut;
-
-                            $itemName = $first->inventoryItem ? $first->inventoryItem->name : 'صنف تمور';
-                            $variantName = $first->variant ? $first->variant->name : 'كرتون / درجة';
-
-                            $result[] = [
-                                'inventory_item_id' => $first->inventory_item_id,
-                                'inventory_item_variant_id' => $first->inventory_item_variant_id,
-                                'pallet_id' => $pallet->id,
-                                'available_qty' => round($balance, 2),
-                                'inventoryItem' => [
-                                    'id' => $first->inventory_item_id,
-                                    'name' => $itemName,
-                                    'code' => $first->inventoryItem ? $first->inventoryItem->code : 'DAT'
-                                ],
-                                'variant' => [
-                                    'id' => $first->inventory_item_variant_id,
-                                    'name' => $variantName,
-                                    'code' => $first->variant ? $first->variant->code : 'VAR'
-                                ],
-                                'pallet' => [
-                                    'id' => $pallet->id,
-                                    'code' => $pallet->code,
-                                    'pallet_number' => $pallet->pallet_number
-                                ]
-                            ];
-                        }
-                    }
-
-                    return response()->json($result);
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::error("Available Inventory API Error: " . $e->getMessage());
-                    return response()->json([], 200);
-                }
-            })->name('api.contracts.available-inventory');
-
-            // Notifications Routes
-            Route::get('/notifications', function () {
-                return Inertia::render('Notifications', [
-                    'notifications' => auth()->user() ? auth()->user()->notifications()->paginate(20) : []
-                ]);
-            })->name('notifications.index');
-            Route::post('/notifications/{id}/mark-read', function ($id) {
-                if (auth()->user()) {
-                    auth()->user()->notifications()->where('id', $id)->first()?->markAsRead();
-                }
-                return response()->json(['success' => true]);
-            })->name('notifications.markOneRead');
-            Route::get('/api/notifications/unread-count', function () {
-                if (!auth()->user()) return response()->json(['unread_count' => 0, 'recent' => []]);
-                return response()->json([
-                    'unread_count' => auth()->user()->unreadNotifications()->count(),
-                    'recent' => auth()->user()->notifications()->take(5)->get()
-                ]);
-            })->name('api.notifications.unread-count');
 
             // Inventory Adjustments Vouchers (11 Code)
             Route::resource('inventory-adjustments', \App\Http\Controllers\Warehouse\InventoryAdjustmentController::class);
