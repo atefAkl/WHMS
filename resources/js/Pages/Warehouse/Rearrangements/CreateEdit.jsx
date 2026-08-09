@@ -2,15 +2,24 @@ import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { ArrowLeftRight, Save, Home, ChevronRight, Plus, Trash2, Scale, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeftRight, Save, Home, ChevronRight, Plus, Trash2, Scale, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
+import axios from 'axios';
 
-export default function CreateEdit({ customers = [], inventoryItems = [], pallets = [], isEdit = false, rearrangement = null }) {
+export default function CreateEdit({ customers = [], isEdit = false, rearrangement = null }) {
     const { lang } = useLang();
     const [filteredContracts, setFilteredContracts] = useState([]);
     const [availablePeriods, setAvailablePeriods] = useState([]);
+
+    // Preloaded contract options (no AJAX on row changes)
+    const [contractOptions, setContractOptions] = useState({
+        pallets: [],
+        items: [],
+        variants: [],
+    });
+    const [loadingOptions, setLoadingOptions] = useState(false);
 
     const { data, setData, post, put, processing, errors } = useForm({
         customer_id: rearrangement?.customer_id || '',
@@ -21,7 +30,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
         items: rearrangement?.items || [],
     });
 
-    // Handle Customer Change
+    // Handle Customer Selection
     useEffect(() => {
         if (data.customer_id) {
             const customer = customers.find((c) => c.id === parseInt(data.customer_id));
@@ -32,7 +41,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
         }
     }, [data.customer_id, customers]);
 
-    // Handle Contract Selection -> Set 2 initial empty rows if creating new
+    // Handle Contract Selection -> Fetch contract options ONCE (pallets, items, variants with balance > 0)
     useEffect(() => {
         if (data.contract_id) {
             const contractId = parseInt(data.contract_id);
@@ -45,29 +54,38 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                 }
             }
 
-            if (!isEdit && data.items.length === 0) {
-                const defaultItem = inventoryItems[0];
-                const defaultVariant = defaultItem?.variants?.[0];
-                const defaultPallet = pallets[0];
+            setLoadingOptions(true);
+            axios.get(route('api.contracts.rearrangement-options', contractId))
+                .then((res) => {
+                    const opts = res.data || { pallets: [], items: [], variants: [] };
+                    setContractOptions(opts);
 
-                const createEmptyRow = () => ({
-                    inventory_item_id: defaultItem?.id || 1,
-                    inventory_item_variant_id: defaultVariant?.id || 1,
-                    pallet_id: defaultPallet?.id || 1,
-                    quantity_in: '',
-                    quantity_out: '',
-                    notes: '',
-                });
+                    // Initialize 2 empty rows if create mode and no items exist
+                    if (!isEdit && data.items.length === 0) {
+                        const defaultPallet = opts.pallets?.[0]?.id || '';
+                        const defaultItem = opts.items?.[0]?.id || '';
+                        const defaultVariant = opts.variants?.find(v => v.inventory_item_id === defaultItem)?.id || opts.variants?.[0]?.id || '';
 
-                setData((prev) => ({
-                    ...prev,
-                    items: [createEmptyRow(), createEmptyRow()],
-                }));
-            }
+                        const createEmptyRow = () => ({
+                            pallet_id: defaultPallet,
+                            inventory_item_id: defaultItem,
+                            inventory_item_variant_id: defaultVariant,
+                            quantity_in: '',
+                            quantity_out: '',
+                            notes: '',
+                        });
+
+                        setData('items', [createEmptyRow(), createEmptyRow()]);
+                    }
+                })
+                .catch(() => {})
+                .finally(() => setLoadingOptions(false));
+        } else {
+            setContractOptions({ pallets: [], items: [], variants: [] });
         }
     }, [data.contract_id]);
 
-    // Calculate totals & verify balance equality per item & variant
+    // Calculate totals & balance status
     const totals = data.items.reduce(
         (acc, item) => {
             const qtyIn = parseFloat(item.quantity_in) || 0;
@@ -82,14 +100,14 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
     const isBalanced = Math.abs(totals.totalIn - totals.totalOut) < 0.01 && totals.totalIn > 0;
 
     const handleAddRow = () => {
-        const defaultItem = inventoryItems[0];
-        const defaultVariant = defaultItem?.variants?.[0];
-        const defaultPallet = pallets[0];
+        const defaultPallet = contractOptions.pallets?.[0]?.id || '';
+        const defaultItem = contractOptions.items?.[0]?.id || '';
+        const defaultVariant = contractOptions.variants?.find(v => v.inventory_item_id === defaultItem)?.id || contractOptions.variants?.[0]?.id || '';
 
         const newRow = {
-            inventory_item_id: defaultItem?.id || 1,
-            inventory_item_variant_id: defaultVariant?.id || 1,
-            pallet_id: defaultPallet?.id || 1,
+            pallet_id: defaultPallet,
+            inventory_item_id: defaultItem,
+            inventory_item_variant_id: defaultVariant,
             quantity_in: '',
             quantity_out: '',
             notes: '',
@@ -107,6 +125,16 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
     const handleRowChange = (index, field, value) => {
         const updated = [...data.items];
         updated[index][field] = value;
+
+        // Automatically set first matching variant when item changes
+        if (field === 'inventory_item_id') {
+            const itemId = parseInt(value);
+            const firstVariant = contractOptions.variants.find(v => v.inventory_item_id === itemId);
+            if (firstVariant) {
+                updated[index]['inventory_item_variant_id'] = firstVariant.id;
+            }
+        }
+
         setData('items', updated);
     };
 
@@ -278,145 +306,142 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                         </div>
                     </div>
 
-                    {/* Items Table */}
+                    {/* Items Table matching EXACT column order from image */}
                     <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
-                        <div className="flex justify-between items-center border-b border-border pb-2">
-                            <div>
-                                <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar" ? "جدول حركة الترتيب والنقل (صفين فارغين تلقائياً مع إضافة المزيد حسب الطلب)" : "Transfer Rows"}
-                                </h3>
-                                <p className="text-[11px] text-text-muted mt-0.5">
-                                    {lang === "ar"
-                                        ? "اختر الطبلية والصنف والدرجة، وأدخل الكمية في خياري المدخلات أو المخرجات. يمكنك إضافة أي عدد من الصفوف."
-                                        : "Select pallet, item, grade, and enter quantity IN or OUT per row."}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={handleAddRow}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 flex items-center gap-1 shadow-2xs"
-                            >
-                                <Plus className="h-4 w-4" />
-                                <span>{lang === "ar" ? "+ إضافة صف تحويل جديد" : "+ Add Transfer Row"}</span>
-                            </button>
-                        </div>
-
                         {!data.contract_id ? (
                             <div className="p-8 text-center text-text-muted font-bold text-xs italic bg-slate-50 border border-dashed border-border">
                                 {lang === "ar" ? "يرجى اختيار العقد أولاً لتفعيل إضافة صفوف النقل." : "Please select a contract first."}
                             </div>
-                        ) : data.items.length === 0 ? (
-                            <div className="p-8 text-center text-text-muted font-bold text-xs space-y-3 bg-slate-50 border border-dashed border-border">
-                                <div>{lang === "ar" ? "لا توجد صفوف مضافة بعد. اضغط إضافة صف تحويل جديد." : "No rows."}</div>
-                                <button
-                                    type="button"
-                                    onClick={handleAddRow}
-                                    className="bg-primary text-white text-xs font-bold px-4 py-1.5 inline-flex items-center gap-1"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    <span>{lang === "ar" ? "إضافة صف تحويل الآن" : "Add Row Now"}</span>
-                                </button>
+                        ) : loadingOptions ? (
+                            <div className="p-8 text-center text-primary font-bold text-xs flex items-center justify-center gap-2 bg-slate-50 border border-border">
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                <span>{lang === "ar" ? "جاري تحميل طبالي وأصناف العقد المتاحة (رصيد > 0)..." : "Loading contract options..."}</span>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto border border-border">
+                            <div className="overflow-x-auto border border-border p-2">
                                 <table className="w-full text-xs text-start">
-                                    <thead className="bg-surface-muted font-bold border-b border-border text-text-muted">
+                                    <thead className="bg-surface-muted font-bold border-b border-border text-text font-black">
                                         <tr>
-                                            <th className="p-2.5 text-start w-8">#</th>
-                                            <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني" : "Inventory Item *"}</th>
-                                            <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / العبوة" : "Grade / Box Size *"}</th>
-                                            <th className="p-2.5 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet # *"}</th>
-                                            <th className="p-2.5 text-center w-36 bg-emerald-50 text-emerald-900 font-black">{lang === "ar" ? "المدخلات (إضافة)" : "IN (Quantity)"}</th>
-                                            <th className="p-2.5 text-center w-36 bg-rose-50 text-rose-900 font-black">{lang === "ar" ? "المخرجات (خصم)" : "OUT (Quantity)"}</th>
-                                            <th className="p-2.5 text-center w-12">#</th>
+                                            {/* Column 1 (Right): الطبلية */}
+                                            <th className="p-2.5 text-start w-48 font-black text-sm">{lang === "ar" ? "الطبلية" : "Pallet"}</th>
+
+                                            {/* Column 2: اختر الصنف */}
+                                            <th className="p-2.5 text-start font-black text-sm">{lang === "ar" ? "اختر الصنف" : "Item"}</th>
+
+                                            {/* Column 3: الدرجة */}
+                                            <th className="p-2.5 text-start w-48 font-black text-sm">{lang === "ar" ? "الدرجة" : "Grade / Box"}</th>
+
+                                            {/* Column 4: مدخلات */}
+                                            <th className="p-2.5 text-center w-36 font-black text-sm">{lang === "ar" ? "مدخلات" : "IN"}</th>
+
+                                            {/* Column 5: مخرجات */}
+                                            <th className="p-2.5 text-center w-36 font-black text-sm">{lang === "ar" ? "مخرجات" : "OUT"}</th>
+
+                                            {/* Column 6 (Left Header Action): Green Add Row Button */}
+                                            <th className="p-2 text-center w-36">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddRow}
+                                                    className="w-full bg-[#4CAF50] hover:bg-[#43A047] text-white text-xs font-black py-2 px-3 rounded-md shadow-md flex items-center justify-center gap-1 transition-all"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    <span>{lang === "ar" ? "أضف صف جديد" : "Add Row"}</span>
+                                                </button>
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {data.items.map((item, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50">
-                                                <td className="p-2.5 font-mono text-text-muted">{idx + 1}</td>
-                                                <td className="p-2.5 font-bold text-text">
-                                                    <select
-                                                        className="w-full text-xs border-border rounded-none h-[32px] px-1 font-bold"
-                                                        value={item.inventory_item_id}
-                                                        onChange={(e) => {
-                                                            const itemObj = inventoryItems.find(i => i.id === parseInt(e.target.value));
-                                                            handleRowChange(idx, 'inventory_item_id', parseInt(e.target.value));
-                                                            if (itemObj?.variants?.length > 0) {
-                                                                handleRowChange(idx, 'inventory_item_variant_id', itemObj.variants[0].id);
-                                                            }
-                                                        }}
-                                                    >
-                                                        {inventoryItems.map(inv => (
-                                                            <option key={inv.id} value={inv.id}>{inv.name}</option>
-                                                        ))}
-                                                    </select>
-                                                </td>
-                                                <td className="p-2.5 text-center font-semibold text-text-muted">
-                                                    {(() => {
-                                                        const activeItemObj = inventoryItems.find(i => i.id === parseInt(item.inventory_item_id));
-                                                        const activeVariants = activeItemObj?.variants || [];
-                                                        return (
-                                                            <select
-                                                                className="w-full text-xs border-border rounded-none h-[32px] px-1 font-semibold"
-                                                                value={item.inventory_item_variant_id}
-                                                                onChange={(e) => handleRowChange(idx, 'inventory_item_variant_id', parseInt(e.target.value))}
-                                                            >
-                                                                {activeVariants.map(v => (
-                                                                    <option key={v.id} value={v.id}>{v.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        );
-                                                    })()}
-                                                </td>
-                                                <td className="p-2.5 text-center font-mono font-bold text-primary">
-                                                    <select
-                                                        className="w-full text-xs border-border rounded-none h-[32px] px-1 font-mono font-bold"
-                                                        value={item.pallet_id}
-                                                        onChange={(e) => handleRowChange(idx, 'pallet_id', parseInt(e.target.value))}
-                                                    >
-                                                        {pallets.map(p => (
-                                                            <option key={p.id} value={p.id}>
-                                                                طبلية #{p.pallet_number || p.code || p.id}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </td>
-                                                <td className="p-2.5 text-center bg-emerald-50/50">
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        placeholder="أدخل..."
-                                                        className="w-full text-center text-xs font-mono font-black border-emerald-400 focus:ring-emerald-500 rounded-none h-[32px] px-2 bg-white"
-                                                        value={item.quantity_in}
-                                                        onChange={(e) => handleRowChange(idx, 'quantity_in', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td className="p-2.5 text-center bg-rose-50/50">
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        placeholder="أدخل..."
-                                                        className="w-full text-center text-xs font-mono font-black border-rose-400 focus:ring-rose-500 rounded-none h-[32px] px-2 bg-white"
-                                                        value={item.quantity_out}
-                                                        onChange={(e) => handleRowChange(idx, 'quantity_out', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td className="p-2.5 text-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveRow(idx)}
-                                                        className="text-rose-600 hover:text-rose-800 p-1"
-                                                        title={lang === "ar" ? "حذف الصف" : "Remove"}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {data.items.map((item, idx) => {
+                                            const activeVariants = contractOptions.variants.filter(
+                                                (v) => v.inventory_item_id === parseInt(item.inventory_item_id)
+                                            );
+
+                                            return (
+                                                <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                    {/* Column 1 (Right): الطبلية */}
+                                                    <td className="p-2 text-start">
+                                                        <select
+                                                            className="w-full text-xs font-mono font-bold border-border rounded-md h-[38px] px-2 text-text"
+                                                            value={item.pallet_id}
+                                                            onChange={(e) => handleRowChange(idx, 'pallet_id', parseInt(e.target.value))}
+                                                        >
+                                                            <option value="">{lang === "ar" ? "اختر الطبلية..." : "Select Pallet..."}</option>
+                                                            {contractOptions.pallets.map((p) => (
+                                                                <option key={p.id} value={p.id}>
+                                                                    طبلية #{p.pallet_number} {p.balance > 0 ? `(رصيد: ${p.balance})` : ''}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+
+                                                    {/* Column 2: اختر الصنف */}
+                                                    <td className="p-2 text-start">
+                                                        <select
+                                                            className="w-full text-xs font-bold border-border rounded-md h-[38px] px-2 text-text"
+                                                            value={item.inventory_item_id}
+                                                            onChange={(e) => handleRowChange(idx, 'inventory_item_id', parseInt(e.target.value))}
+                                                        >
+                                                            <option value="">{lang === "ar" ? "اختر الصنف....." : "Select Item..."}</option>
+                                                            {contractOptions.items.map((inv) => (
+                                                                <option key={inv.id} value={inv.id}>{inv.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+
+                                                    {/* Column 3: الدرجة */}
+                                                    <td className="p-2 text-start">
+                                                        <select
+                                                            className="w-full text-xs font-semibold border-border rounded-md h-[38px] px-2 text-text"
+                                                            value={item.inventory_item_variant_id}
+                                                            onChange={(e) => handleRowChange(idx, 'inventory_item_variant_id', parseInt(e.target.value))}
+                                                        >
+                                                            <option value="">{lang === "ar" ? "الدرجة" : "Grade..."}</option>
+                                                            {activeVariants.map((v) => (
+                                                                <option key={v.id} value={v.id}>{v.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+
+                                                    {/* Column 4: مدخلات */}
+                                                    <td className="p-2 text-center">
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="..."
+                                                            className="w-full text-center text-xs font-mono font-black border-border rounded-md h-[38px] px-2 bg-white"
+                                                            value={item.quantity_in}
+                                                            onChange={(e) => handleRowChange(idx, 'quantity_in', e.target.value)}
+                                                        />
+                                                    </td>
+
+                                                    {/* Column 5: مخرجات */}
+                                                    <td className="p-2 text-center">
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="..."
+                                                            className="w-full text-center text-xs font-mono font-black border-border rounded-md h-[38px] px-2 bg-white"
+                                                            value={item.quantity_out}
+                                                            onChange={(e) => handleRowChange(idx, 'quantity_out', e.target.value)}
+                                                        />
+                                                    </td>
+
+                                                    {/* Column 6 (Left): Delete Trash Icon matching image position */}
+                                                    <td className="p-2 text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveRow(idx)}
+                                                            className="text-gray-400 hover:text-rose-600 p-2 transition-colors inline-flex items-center justify-center"
+                                                            title={lang === "ar" ? "حذف الصف" : "Remove"}
+                                                        >
+                                                            <Trash2 className="h-5 w-5" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

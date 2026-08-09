@@ -162,33 +162,31 @@ export default function Show({ rearrangement }) {
                     </div>
                 </div>
 
-                {/* Items Transfer Table */}
+                {/* Items Transfer Table matching EXACT column order */}
                 <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
                     <h3 className="font-bold text-xs text-primary uppercase border-b border-border pb-2">
-                        {lang === "ar" ? "جدول حركات حركة المخزون للترتيب والنقل" : "Pallet Quantity Transfer Movements"}
+                        {lang === "ar" ? "جدول حركات ترتيب ونقل الطبالي" : "Pallet Quantity Transfer Movements"}
                     </h3>
 
-                    <div className="overflow-x-auto border border-border">
+                    <div className="overflow-x-auto border border-border p-2">
                         <table className="w-full text-xs text-start">
-                            <thead className="bg-surface-muted font-bold border-b border-border text-text-muted">
+                            <thead className="bg-surface-muted font-bold border-b border-border text-text font-black">
                                 <tr>
-                                    <th className="p-2.5 text-start w-8">#</th>
-                                    <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني" : "Inventory Item"}</th>
-                                    <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / العبوة" : "Grade / Box Size"}</th>
-                                    <th className="p-2.5 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet #"}</th>
-                                    <th className="p-2.5 text-center w-36 bg-emerald-50 text-emerald-900 font-black">{lang === "ar" ? "المدخلات (إضافة)" : "IN (Quantity)"}</th>
-                                    <th className="p-2.5 text-center w-36 bg-rose-50 text-rose-900 font-black">{lang === "ar" ? "المخرجات (خصم)" : "OUT (Quantity)"}</th>
+                                    <th className="p-2.5 text-start w-48 font-black text-sm">{lang === "ar" ? "الطبلية" : "Pallet"}</th>
+                                    <th className="p-2.5 text-start font-black text-sm">{lang === "ar" ? "اختر الصنف" : "Item"}</th>
+                                    <th className="p-2.5 text-start w-48 font-black text-sm">{lang === "ar" ? "الدرجة" : "Grade / Box"}</th>
+                                    <th className="p-2.5 text-center w-36 font-black text-sm">{lang === "ar" ? "مدخلات" : "IN"}</th>
+                                    <th className="p-2.5 text-center w-36 font-black text-sm">{lang === "ar" ? "مخرجات" : "OUT"}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {rearrangement.items?.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50">
-                                        <td className="p-2.5 font-mono text-text-muted">{idx + 1}</td>
-                                        <td className="p-2.5 font-bold text-text">{item.inventory_item?.name || '—'}</td>
-                                        <td className="p-2.5 text-center font-semibold text-text-muted">{item.variant?.name || '—'}</td>
-                                        <td className="p-2.5 text-center font-mono font-bold text-primary">
+                                        <td className="p-2.5 text-start font-mono font-bold text-primary">
                                             طبلية #{item.pallet?.pallet_number || item.pallet?.code || item.pallet_id}
                                         </td>
+                                        <td className="p-2.5 font-bold text-text">{item.inventory_item?.name || '—'}</td>
+                                        <td className="p-2.5 text-start font-semibold text-text-muted">{item.variant?.name || '—'}</td>
                                         <td className="p-2.5 text-center font-mono font-black text-emerald-700 bg-emerald-50/50">
                                             {item.quantity_in > 0 ? `+${item.quantity_in}` : '0'}
                                         </td>

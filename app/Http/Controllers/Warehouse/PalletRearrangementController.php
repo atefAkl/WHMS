@@ -358,4 +358,114 @@ class PalletRearrangementController extends Controller
 
         return redirect()->route('pallet-rearrangements.index')->with('success', 'تم حذف سند ترتيب الطبالي.');
     }
+
+    public function getContractRearrangementOptions(Contract $contract)
+    {
+        $entries = InventoryEntry::query()
+            ->whereHasMorph('voucher', [
+                \App\Models\Reception::class,
+                \App\Models\Delivery::class,
+                \App\Models\InventoryAdjustment::class,
+                \App\Models\PalletRearrangement::class
+            ], function ($q) use ($contract) {
+                $q->where('contract_id', $contract->id);
+            })
+            ->with(['inventoryItem', 'variant', 'pallet'])
+            ->get();
+
+        $contractPalletIds = $entries->pluck('pallet_id')->filter()->unique();
+
+        $palletBalances = [];
+        $itemVariantBalances = [];
+
+        foreach ($entries as $e) {
+            if ($e->pallet_id) {
+                if (!isset($palletBalances[$e->pallet_id])) {
+                    $palletBalances[$e->pallet_id] = 0;
+                }
+                $palletBalances[$e->pallet_id] += ($e->quantity_in - $e->quantity_out);
+            }
+
+            $itemKey = $e->inventory_item_id . '_' . $e->inventory_item_variant_id;
+            if (!isset($itemVariantBalances[$itemKey])) {
+                $itemVariantBalances[$itemKey] = [
+                    'item' => $e->inventoryItem,
+                    'variant' => $e->variant,
+                    'balance' => 0,
+                ];
+            }
+            $itemVariantBalances[$itemKey]['balance'] += ($e->quantity_in - $e->quantity_out);
+        }
+
+        $availablePalletIds = array_keys(array_filter($palletBalances, fn($bal) => $bal > 0));
+        
+        $targetPalletIds = count($availablePalletIds) > 0 ? $availablePalletIds : $contractPalletIds;
+        $pallets = Pallet::whereIn('id', $targetPalletIds)
+            ->get()
+            ->map(fn($p) => [
+                'id' => $p->id,
+                'pallet_number' => $p->pallet_number ?: (string)$p->id,
+                'code' => $p->code ?: (string)$p->id,
+                'balance' => $palletBalances[$p->id] ?? 0,
+            ]);
+
+        $availableItems = [];
+        $availableVariants = [];
+
+        foreach ($itemVariantBalances as $key => $data) {
+            if ($data['balance'] > 0 && $data['item'] && $data['variant']) {
+                $itemObj = $data['item'];
+                $varObj = $data['variant'];
+
+                if (!isset($availableItems[$itemObj->id])) {
+                    $availableItems[$itemObj->id] = [
+                        'id' => $itemObj->id,
+                        'name' => $itemObj->name,
+                        'code' => $itemObj->code,
+                    ];
+                }
+
+                $availableVariants[] = [
+                    'id' => $varObj->id,
+                    'inventory_item_id' => $itemObj->id,
+                    'name' => $varObj->name,
+                    'code' => $varObj->code,
+                ];
+            }
+        }
+
+        if (empty($availableItems)) {
+            $allItems = InventoryItem::with('variants')->get();
+            foreach ($allItems as $inv) {
+                $availableItems[$inv->id] = [
+                    'id' => $inv->id,
+                    'name' => $inv->name,
+                    'code' => $inv->code,
+                ];
+                foreach ($inv->variants as $v) {
+                    $availableVariants[] = [
+                        'id' => $v->id,
+                        'inventory_item_id' => $inv->id,
+                        'name' => $v->name,
+                        'code' => $v->code,
+                    ];
+                }
+            }
+        }
+
+        if ($pallets->isEmpty()) {
+            $pallets = Pallet::all()->map(fn($p) => [
+                'id' => $p->id,
+                'pallet_number' => $p->pallet_number ?: (string)$p->id,
+                'code' => $p->code ?: (string)$p->id,
+                'balance' => 0,
+            ]);
+        }
+
+        return response()->json([
+            'pallets'  => array_values($pallets->toArray()),
+            'items'    => array_values($availableItems),
+            'variants' => $availableVariants,
+        ]);
+    }
 }
