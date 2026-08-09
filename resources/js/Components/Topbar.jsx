@@ -14,14 +14,11 @@ function cn(...inputs) {
 function safeRoute(name) {
     if (name === 'logout') return '/logout';
     if (name === 'profile.edit' || name === 'central.profile.edit') return '/profile';
+    if (name === 'notifications.index') return '/notifications';
     try {
         return route(name);
     } catch (e) {
-        try {
-            return route('saas.tenants.index');
-        } catch (err) {
-            return '#';
-        }
+        return '#';
     }
 }
 
@@ -263,7 +260,7 @@ export default function Topbar({ header }) {
 
                         <div className="p-2.5 border-t border-border bg-slate-50 text-center" dir={lang === "ar" ? "rtl" : "ltr"}>
                             <Link
-                                href={route('notifications.index')}
+                                href={safeRoute('notifications.index')}
                                 className="text-xs font-black text-primary hover:text-primary/80 transition-colors block py-1"
                             >
                                 {lang === "ar" ? "عرض مركز جميع التنبيهات وإدارتها ←" : "View & Manage All Notifications →"}

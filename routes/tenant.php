@@ -144,6 +144,26 @@ Route::middleware([
                 }
             })->name('api.contracts.available-inventory');
 
+            // Notifications Routes
+            Route::get('/notifications', function () {
+                return Inertia::render('Notifications', [
+                    'notifications' => auth()->user() ? auth()->user()->notifications()->paginate(20) : []
+                ]);
+            })->name('notifications.index');
+            Route::post('/notifications/{id}/mark-read', function ($id) {
+                if (auth()->user()) {
+                    auth()->user()->notifications()->where('id', $id)->first()?->markAsRead();
+                }
+                return response()->json(['success' => true]);
+            })->name('notifications.markOneRead');
+            Route::get('/api/notifications/unread-count', function () {
+                if (!auth()->user()) return response()->json(['unread_count' => 0, 'recent' => []]);
+                return response()->json([
+                    'unread_count' => auth()->user()->unreadNotifications()->count(),
+                    'recent' => auth()->user()->notifications()->take(5)->get()
+                ]);
+            })->name('api.notifications.unread-count');
+
             // Inventory Adjustments Vouchers (11 Code)
             Route::resource('inventory-adjustments', \App\Http\Controllers\Warehouse\InventoryAdjustmentController::class);
             Route::post('inventory-adjustments/{inventoryAdjustment}/approve', [\App\Http\Controllers\Warehouse\InventoryAdjustmentController::class, 'approve'])->name('inventory-adjustments.approve');
