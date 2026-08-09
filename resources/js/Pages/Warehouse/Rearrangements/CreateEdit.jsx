@@ -6,11 +6,13 @@ import { ArrowLeftRight, Save, Home, ChevronRight, Plus, Trash2, Scale, AlertTri
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
+import axios from 'axios';
 
 export default function CreateEdit({ customers = [], inventoryItems = [], pallets = [], isEdit = false, rearrangement = null }) {
     const { lang } = useLang();
     const [filteredContracts, setFilteredContracts] = useState([]);
     const [availablePeriods, setAvailablePeriods] = useState([]);
+    const [loadingPallets, setLoadingPallets] = useState(false);
 
     const { data, setData, post, put, processing, errors } = useForm({
         customer_id: rearrangement?.customer_id || '',
@@ -32,7 +34,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
         }
     }, [data.customer_id, customers]);
 
-    // Handle Contract Selection
+    // Handle Contract Selection -> Auto Load Active Periods & Pallet Rows
     useEffect(() => {
         if (data.contract_id) {
             const contractId = parseInt(data.contract_id);
@@ -44,36 +46,63 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                     setData('period_id', activePeriods?.[0]?.id || '');
                 }
             }
+
+            if (!isEdit && data.items.length === 0) {
+                setLoadingPallets(true);
+                axios.get(route('api.contracts.available-inventory', contractId))
+                    .then((res) => {
+                        const inventory = res.data || [];
+                        const formattedItems = inventory.map((inv) => ({
+                            inventory_item_id: inv.inventory_item_id,
+                            inventory_item_name: inv.inventoryItem?.name || 'صنف تمور',
+                            inventory_item_variant_id: inv.inventory_item_variant_id,
+                            variant_name: inv.variant?.name || 'درجة / عبوة',
+                            pallet_id: inv.pallet_id,
+                            pallet_number: inv.pallet?.pallet_number || inv.pallet?.code || inv.pallet_id,
+                            quantity_in: '',
+                            quantity_out: '',
+                            notes: '',
+                        }));
+
+                        setData((prev) => ({
+                            ...prev,
+                            items: formattedItems,
+                        }));
+                    })
+                    .catch(() => {})
+                    .finally(() => setLoadingPallets(false));
+            }
         }
     }, [data.contract_id]);
 
-    // Calculate totals & verify balance equality per (item + variant)
+    // Calculate totals & verify balance equality per item & variant
     const totals = data.items.reduce(
         (acc, item) => {
-            const qty = parseFloat(item.quantity) || 0;
-            if (item.type === 'in') {
-                acc.totalIn += qty;
-            } else {
-                acc.totalOut += qty;
-            }
+            const qtyIn = parseFloat(item.quantity_in) || 0;
+            const qtyOut = parseFloat(item.quantity_out) || 0;
+            acc.totalIn += qtyIn;
+            acc.totalOut += qtyOut;
             return acc;
         },
         { totalIn: 0, totalOut: 0 }
     );
 
-    const isBalanced = Math.abs(totals.totalIn - totals.totalOut) < 0.01 && data.items.length >= 2;
+    const isBalanced = Math.abs(totals.totalIn - totals.totalOut) < 0.01 && totals.totalIn > 0;
 
-    const handleAddRow = (type = 'out') => {
+    const handleAddRow = () => {
         const defaultItem = inventoryItems[0];
         const defaultVariant = defaultItem?.variants?.[0];
         const defaultPallet = pallets[0];
 
         const newRow = {
             inventory_item_id: defaultItem?.id || 1,
+            inventory_item_name: defaultItem?.name || 'صنف تمور',
             inventory_item_variant_id: defaultVariant?.id || 1,
+            variant_name: defaultVariant?.name || 'درجة / عبوة',
             pallet_id: defaultPallet?.id || 1,
-            type: type,
-            quantity: '',
+            pallet_number: defaultPallet?.pallet_number || defaultPallet?.code || '1',
+            quantity_in: '',
+            quantity_out: '',
             notes: '',
         };
 
@@ -95,7 +124,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!isBalanced) {
-            alert(lang === "ar" ? "خطأ: يجب أن تتساوى إجمالي المدخلات مع المخرجات لضمان عدم تغيير رصيد العقد!" : "Total IN must equal Total OUT!");
+            alert(lang === "ar" ? "خطأ: يجب أن تتساوى إجمالي خانة المدخلات مع المخرجات لضمان عدم تغيير إجمالي رصيد العقد!" : "Total IN must equal Total OUT!");
             return;
         }
 
@@ -246,16 +275,16 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                             <div>
                                 <span>{lang === "ar" ? "حالة توازن ترحيل الكميات:" : "Transfer Balance Status:"} </span>
                                 <span className="font-black">
-                                    {isBalanced ? (lang === "ar" ? "متوازن 100% (إجمالي المدخلات يساوي إجمالي المخرجات)" : "Balanced 100%") : (lang === "ar" ? "غير متوازن (يجب أن تتساوى المدخلات مع المخرجات)" : "Unbalanced")}
+                                    {isBalanced ? (lang === "ar" ? "متوازن 100% (إجمالي المدخلات يساوي إجمالي المخرجات)" : "Balanced 100%") : (lang === "ar" ? "غير متوازن (أدخل أرقام المدخلات والمخرجات ليتساويا)" : "Unbalanced")}
                                 </span>
                             </div>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-mono font-black">
-                            <span className="text-rose-700 font-bold bg-rose-50 border border-rose-200 px-2.5 py-1">
-                                {lang === "ar" ? "المخرجات (خصم): " : "OUT: "} {totals.totalOut}
-                            </span>
                             <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1">
-                                {lang === "ar" ? "المدخلات (إضافة): " : "IN: "} {totals.totalIn}
+                                {lang === "ar" ? "إجمالي المدخلات (إضافة): " : "IN: "} {totals.totalIn}
+                            </span>
+                            <span className="text-rose-700 font-bold bg-rose-50 border border-rose-200 px-2.5 py-1">
+                                {lang === "ar" ? "إجمالي المخرجات (خصم): " : "OUT: "} {totals.totalOut}
                             </span>
                         </div>
                     </div>
@@ -265,56 +294,47 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                         <div className="flex justify-between items-center border-b border-border pb-2">
                             <div>
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar" ? "جدول حركات ترتيب ونقل الطبالي" : "Transfer Rows"}
+                                    {lang === "ar" ? "جدول حركة المخزون للترتيب والنقل (خانات متواجهة لكل صف)" : "Transfer Rows"}
                                 </h3>
                                 <p className="text-[11px] text-text-muted mt-0.5">
                                     {lang === "ar"
-                                        ? "حدد الطبلية المصدر والصنف والدرجة والكمية المخرجة، ثم حدد الطبلية المستهدفة والكمية المدخلة ليضمن النظام التساوي الكامل."
-                                        : "Select source & target pallets with item/variant and transfer quantities."}
+                                        ? "أدخل كمية المخرجات (خصم من الطبلية) أو الكمية المدخلة (إضافة لطبلية) على نفس الصف ليتساوى الجانبان."
+                                        : "Enter quantity IN or quantity OUT per row."}
                                 </p>
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => handleAddRow('out')}
-                                    className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-1 flex items-center gap-1 shadow-2xs"
-                                >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    <span>{lang === "ar" ? "+ مخرجات (خصم من طبلية)" : "+ Add OUT Row"}</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleAddRow('in')}
+                                    onClick={handleAddRow}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 flex items-center gap-1 shadow-2xs"
                                 >
                                     <Plus className="h-3.5 w-3.5" />
-                                    <span>{lang === "ar" ? "+ مدخلات (إضافة لطبلية)" : "+ Add IN Row"}</span>
+                                    <span>{lang === "ar" ? "إضافة صف جديد" : "Add Row"}</span>
                                 </button>
+                                {loadingPallets && (
+                                    <span className="text-xs text-primary font-bold animate-pulse">
+                                        {lang === "ar" ? "جاري تحميل طبالي العقد..." : "Loading pallets..."}
+                                    </span>
+                                )}
                             </div>
                         </div>
 
-                        {data.items.length === 0 ? (
+                        {!data.contract_id ? (
+                            <div className="p-8 text-center text-text-muted font-bold text-xs italic bg-slate-50 border border-dashed border-border">
+                                {lang === "ar" ? "يرجى اختيار العقد أولاً لتحميل أصنافه وطباليه." : "Please select a contract first."}
+                            </div>
+                        ) : data.items.length === 0 ? (
                             <div className="p-8 text-center text-text-muted font-bold text-xs space-y-3 bg-slate-50 border border-dashed border-border">
-                                <div>{lang === "ar" ? "لم يتم إضافة أي حركات تحويل بعد. يرجى إضافة صف مخرجات وصف مدخلات." : "No transfer rows added yet."}</div>
-                                <div className="flex justify-center gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAddRow('out')}
-                                        className="bg-rose-600 text-white text-xs font-bold px-3 py-1.5 inline-flex items-center gap-1"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        <span>{lang === "ar" ? "إضافة صف مخرجات" : "Add OUT"}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAddRow('in')}
-                                        className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 inline-flex items-center gap-1"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        <span>{lang === "ar" ? "إضافة صف مدخلات" : "Add IN"}</span>
-                                    </button>
-                                </div>
+                                <div>{lang === "ar" ? "لا توجد صفوف تحويل مضافة بعد. اضغط إضافة صف جديد." : "No transfer rows added."}</div>
+                                <button
+                                    type="button"
+                                    onClick={handleAddRow}
+                                    className="bg-primary text-white text-xs font-bold px-4 py-1.5 inline-flex items-center gap-1"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    <span>{lang === "ar" ? "إضافة صف تحويل الآن" : "Add Row Now"}</span>
+                                </button>
                             </div>
                         ) : (
                             <div className="overflow-x-auto border border-border">
@@ -322,11 +342,11 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                     <thead className="bg-surface-muted font-bold border-b border-border text-text-muted">
                                         <tr>
                                             <th className="p-2.5 text-start w-8">#</th>
-                                            <th className="p-2.5 text-center w-36">{lang === "ar" ? "نوع الحركة" : "Movement Type *"}</th>
-                                            <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني" : "Item *"}</th>
+                                            <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني" : "Inventory Item *"}</th>
                                             <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / العبوة" : "Grade / Box Size *"}</th>
                                             <th className="p-2.5 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet # *"}</th>
-                                            <th className="p-2.5 text-center w-32">{lang === "ar" ? "الكمية المحولة" : "Quantity *"}</th>
+                                            <th className="p-2.5 text-center w-36 bg-emerald-50 text-emerald-900 font-black">{lang === "ar" ? "المدخلات (إضافة)" : "IN (Quantity)"}</th>
+                                            <th className="p-2.5 text-center w-36 bg-rose-50 text-rose-900 font-black">{lang === "ar" ? "المخرجات (خصم)" : "OUT (Quantity)"}</th>
                                             <th className="p-2.5 text-center w-12">#</th>
                                         </tr>
                                     </thead>
@@ -334,18 +354,6 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                         {data.items.map((item, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50">
                                                 <td className="p-2.5 font-mono text-text-muted">{idx + 1}</td>
-                                                <td className="p-2.5 text-center">
-                                                    <select
-                                                        className={`w-full text-xs font-black rounded-none h-[32px] px-2 border ${
-                                                            item.type === 'in' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-rose-50 text-rose-800 border-rose-300'
-                                                        }`}
-                                                        value={item.type}
-                                                        onChange={(e) => handleRowChange(idx, 'type', e.target.value)}
-                                                    >
-                                                        <option value="out">{lang === "ar" ? "مخرجات (خصم)" : "OUT (Transfer From)"}</option>
-                                                        <option value="in">{lang === "ar" ? "مدخلات (إضافة)" : "IN (Transfer To)"}</option>
-                                                    </select>
-                                                </td>
                                                 <td className="p-2.5 font-bold text-text">
                                                     <select
                                                         className="w-full text-xs border-border rounded-none h-[32px] px-1 font-bold"
@@ -393,16 +401,26 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                                         ))}
                                                     </select>
                                                 </td>
-                                                <td className="p-2.5 text-center">
+                                                <td className="p-2.5 text-center bg-emerald-50/50">
                                                     <input
                                                         type="number"
                                                         step="0.01"
-                                                        min="0.01"
-                                                        placeholder="الكمية..."
-                                                        className="w-full text-center text-xs font-mono font-black border-border focus:ring-primary rounded-none h-[32px] px-2"
-                                                        value={item.quantity}
-                                                        onChange={(e) => handleRowChange(idx, 'quantity', e.target.value)}
-                                                        required
+                                                        min="0"
+                                                        placeholder="أدخل..."
+                                                        className="w-full text-center text-xs font-mono font-black border-emerald-400 focus:ring-emerald-500 rounded-none h-[32px] px-2 bg-white"
+                                                        value={item.quantity_in}
+                                                        onChange={(e) => handleRowChange(idx, 'quantity_in', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td className="p-2.5 text-center bg-rose-50/50">
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="أدخل..."
+                                                        className="w-full text-center text-xs font-mono font-black border-rose-400 focus:ring-rose-500 rounded-none h-[32px] px-2 bg-white"
+                                                        value={item.quantity_out}
+                                                        onChange={(e) => handleRowChange(idx, 'quantity_out', e.target.value)}
                                                     />
                                                 </td>
                                                 <td className="p-2.5 text-center">

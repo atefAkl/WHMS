@@ -82,16 +82,16 @@ class PalletRearrangementController extends Controller
             'period_id'         => 'nullable|exists:contract_periods,id',
             'rearrangement_date'=> 'required|date',
             'notes'             => 'nullable|string',
-            'items'             => 'required|array|min:2',
+            'items'             => 'required|array|min:1',
             'items.*.inventory_item_id'         => 'required|exists:inventory_items,id',
             'items.*.inventory_item_variant_id' => 'required|exists:inventory_item_variants,id',
             'items.*.pallet_id'                 => 'required|exists:pallets,id',
-            'items.*.type'                      => 'required|in:in,out',
-            'items.*.quantity'                  => 'required|numeric|gt:0',
+            'items.*.quantity_in'               => 'nullable|numeric|min:0',
+            'items.*.quantity_out'              => 'nullable|numeric|min:0',
             'items.*.notes'                     => 'nullable|string',
         ]);
 
-        // Balance Check: Verify that for each (item + variant), Total OUT == Total IN
+        // Balance Check: Verify that total quantity_in == total quantity_out per item & variant
         $groupedTotals = [];
         foreach ($request->items as $item) {
             $key = $item['inventory_item_id'] . '_' . $item['inventory_item_variant_id'];
@@ -99,18 +99,16 @@ class PalletRearrangementController extends Controller
                 $groupedTotals[$key] = ['in' => 0, 'out' => 0];
             }
 
-            $qty = (float) $item['quantity'];
-            if ($item['type'] === 'in') {
-                $groupedTotals[$key]['in'] += $qty;
-            } else {
-                $groupedTotals[$key]['out'] += $qty;
-            }
+            $qtyIn = (float) ($item['quantity_in'] ?? 0);
+            $qtyOut = (float) ($item['quantity_out'] ?? 0);
+            $groupedTotals[$key]['in'] += $qtyIn;
+            $groupedTotals[$key]['out'] += $qtyOut;
         }
 
         foreach ($groupedTotals as $key => $totals) {
-            if (round($totals['in'], 2) !== round($totals['out'], 2)) {
+            if (round($totals['in'], 2) !== round($totals['out'], 2) || $totals['in'] == 0) {
                 return back()->withErrors([
-                    'items' => 'خطأ في التوازن: يجب أن تتساوى إجمالي الكميات المحولة للداخل (مدخلات) مع إجمالي الكميات المحولة للخارج (مخرجات) لكل صنف ودرجة لضمان عدم تغيير رصيد العقد!'
+                    'items' => 'خطأ في التوازن: يجب أن يتساوى إجمالي خانة المدخلات مع خانة المخرجات لكل صنف ودرجة (ويجب ألا يكون صفراً) لضمان عدم تغيير إجمالي كميات العقد!'
                 ])->withInput();
             }
         }
@@ -128,14 +126,21 @@ class PalletRearrangementController extends Controller
             ]);
 
             foreach ($request->items as $itemData) {
-                $rearrangement->items()->create([
-                    'inventory_item_id'         => $itemData['inventory_item_id'],
-                    'inventory_item_variant_id' => $itemData['inventory_item_variant_id'],
-                    'pallet_id'                 => $itemData['pallet_id'],
-                    'type'                      => $itemData['type'],
-                    'quantity'                  => $itemData['quantity'],
-                    'notes'                     => $itemData['notes'] ?? null,
-                ]);
+                $qtyIn = (float) ($itemData['quantity_in'] ?? 0);
+                $qtyOut = (float) ($itemData['quantity_out'] ?? 0);
+
+                if ($qtyIn > 0 || $qtyOut > 0) {
+                    $rearrangement->items()->create([
+                        'inventory_item_id'         => $itemData['inventory_item_id'],
+                        'inventory_item_variant_id' => $itemData['inventory_item_variant_id'],
+                        'pallet_id'                 => $itemData['pallet_id'],
+                        'type'                      => $qtyIn > 0 ? 'in' : 'out',
+                        'quantity'                  => $qtyIn > 0 ? $qtyIn : $qtyOut,
+                        'quantity_in'               => $qtyIn,
+                        'quantity_out'              => $qtyOut,
+                        'notes'                     => $itemData['notes'] ?? null,
+                    ]);
+                }
             }
         });
 
@@ -200,12 +205,12 @@ class PalletRearrangementController extends Controller
             'period_id'         => 'nullable|exists:contract_periods,id',
             'rearrangement_date'=> 'required|date',
             'notes'             => 'nullable|string',
-            'items'             => 'required|array|min:2',
+            'items'             => 'required|array|min:1',
             'items.*.inventory_item_id'         => 'required|exists:inventory_items,id',
             'items.*.inventory_item_variant_id' => 'required|exists:inventory_item_variants,id',
             'items.*.pallet_id'                 => 'required|exists:pallets,id',
-            'items.*.type'                      => 'required|in:in,out',
-            'items.*.quantity'                  => 'required|numeric|gt:0',
+            'items.*.quantity_in'               => 'nullable|numeric|min:0',
+            'items.*.quantity_out'              => 'nullable|numeric|min:0',
             'items.*.notes'                     => 'nullable|string',
         ]);
 
@@ -216,18 +221,16 @@ class PalletRearrangementController extends Controller
                 $groupedTotals[$key] = ['in' => 0, 'out' => 0];
             }
 
-            $qty = (float) $item['quantity'];
-            if ($item['type'] === 'in') {
-                $groupedTotals[$key]['in'] += $qty;
-            } else {
-                $groupedTotals[$key]['out'] += $qty;
-            }
+            $qtyIn = (float) ($item['quantity_in'] ?? 0);
+            $qtyOut = (float) ($item['quantity_out'] ?? 0);
+            $groupedTotals[$key]['in'] += $qtyIn;
+            $groupedTotals[$key]['out'] += $qtyOut;
         }
 
         foreach ($groupedTotals as $key => $totals) {
-            if (round($totals['in'], 2) !== round($totals['out'], 2)) {
+            if (round($totals['in'], 2) !== round($totals['out'], 2) || $totals['in'] == 0) {
                 return back()->withErrors([
-                    'items' => 'خطأ في التوازن: يجب أن تتساوى إجمالي المدخلات مع المخرجات لكل صنف ودرجة لضمان عدم تغيير كمية العقد الكلية!'
+                    'items' => 'خطأ في التوازن: يجب أن يتساوى إجمالي المدخلات مع المخرجات لكل صنف ودرجة لضمان عدم تغيير كمية العقد الكلية!'
                 ])->withInput();
             }
         }
@@ -244,14 +247,21 @@ class PalletRearrangementController extends Controller
             $palletRearrangement->items()->delete();
 
             foreach ($request->items as $itemData) {
-                $palletRearrangement->items()->create([
-                    'inventory_item_id'         => $itemData['inventory_item_id'],
-                    'inventory_item_variant_id' => $itemData['inventory_item_variant_id'],
-                    'pallet_id'                 => $itemData['pallet_id'],
-                    'type'                      => $itemData['type'],
-                    'quantity'                  => $itemData['quantity'],
-                    'notes'                     => $itemData['notes'] ?? null,
-                ]);
+                $qtyIn = (float) ($itemData['quantity_in'] ?? 0);
+                $qtyOut = (float) ($itemData['quantity_out'] ?? 0);
+
+                if ($qtyIn > 0 || $qtyOut > 0) {
+                    $palletRearrangement->items()->create([
+                        'inventory_item_id'         => $itemData['inventory_item_id'],
+                        'inventory_item_variant_id' => $itemData['inventory_item_variant_id'],
+                        'pallet_id'                 => $itemData['pallet_id'],
+                        'type'                      => $qtyIn > 0 ? 'in' : 'out',
+                        'quantity'                  => $qtyIn > 0 ? $qtyIn : $qtyOut,
+                        'quantity_in'               => $qtyIn,
+                        'quantity_out'              => $qtyOut,
+                        'notes'                     => $itemData['notes'] ?? null,
+                    ]);
+                }
             }
         });
 
@@ -272,42 +282,28 @@ class PalletRearrangementController extends Controller
             ]);
 
             foreach ($palletRearrangement->items as $item) {
-                $qty = (float) $item->quantity;
+                $qtyIn = (float) $item->quantity_in;
+                $qtyOut = (float) $item->quantity_out;
 
-                if ($item->type === 'in') {
+                if ($qtyIn > 0 || $qtyOut > 0) {
                     InventoryEntry::create([
                         'inventory_item_id'         => $item->inventory_item_id,
                         'inventory_item_variant_id' => $item->inventory_item_variant_id,
                         'pallet_id'                 => $item->pallet_id,
                         'voucher_type'              => PalletRearrangement::class,
                         'voucher_id'                => $palletRearrangement->id,
-                        'quantity_in'               => $qty,
-                        'quantity_out'              => 0,
+                        'quantity_in'               => $qtyIn,
+                        'quantity_out'              => $qtyOut,
                         'operation_date'            => $palletRearrangement->rearrangement_date,
                     ]);
-                } else {
-                    InventoryEntry::create([
-                        'inventory_item_id'         => $item->inventory_item_id,
-                        'inventory_item_variant_id' => $item->inventory_item_variant_id,
-                        'pallet_id'                 => $item->pallet_id,
-                        'voucher_type'              => PalletRearrangement::class,
-                        'voucher_id'                => $palletRearrangement->id,
-                        'quantity_in'               => 0,
-                        'quantity_out'              => $qty,
-                        'operation_date'            => $palletRearrangement->rearrangement_date,
-                    ]);
-                }
 
-                // Update physical pallet current_quantity in DB
-                $pallet = Pallet::find($item->pallet_id);
-                if ($pallet) {
-                    $newQty = $item->type === 'in' 
-                        ? ($pallet->current_quantity + $qty) 
-                        : max(0, $pallet->current_quantity - $qty);
-
-                    $pallet->update([
-                        'current_quantity' => $newQty,
-                    ]);
+                    $pallet = Pallet::find($item->pallet_id);
+                    if ($pallet) {
+                        $newQty = max(0, $pallet->current_quantity + $qtyIn - $qtyOut);
+                        $pallet->update([
+                            'current_quantity' => $newQty,
+                        ]);
+                    }
                 }
             }
         });
@@ -325,12 +321,10 @@ class PalletRearrangementController extends Controller
             foreach ($palletRearrangement->items as $item) {
                 $pallet = Pallet::find($item->pallet_id);
                 if ($pallet) {
-                    $qty = (float) $item->quantity;
-                    // Revert current_quantity logic
-                    $revertedQty = $item->type === 'in'
-                        ? max(0, $pallet->current_quantity - $qty)
-                        : ($pallet->current_quantity + $qty);
+                    $qtyIn = (float) $item->quantity_in;
+                    $qtyOut = (float) $item->quantity_out;
 
+                    $revertedQty = max(0, $pallet->current_quantity - $qtyIn + $qtyOut);
                     $pallet->update([
                         'current_quantity' => $revertedQty,
                     ]);

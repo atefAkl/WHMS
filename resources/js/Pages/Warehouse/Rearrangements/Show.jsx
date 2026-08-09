@@ -2,7 +2,7 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { ArrowLeftRight, CheckCircle2, Printer, Home, ChevronRight, RotateCcw, Edit, Trash2, Scale, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { ArrowLeftRight, CheckCircle2, Printer, Home, ChevronRight, RotateCcw, Edit, Trash2 } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 
 export default function Show({ rearrangement }) {
@@ -165,7 +165,7 @@ export default function Show({ rearrangement }) {
                 {/* Items Transfer Table */}
                 <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
                     <h3 className="font-bold text-xs text-primary uppercase border-b border-border pb-2">
-                        {lang === "ar" ? "جدول حركات ترتيب ونقل كميات الطبالي" : "Pallet Quantity Transfer Movements"}
+                        {lang === "ar" ? "جدول حركات حركة المخزون للترتيب والنقل" : "Pallet Quantity Transfer Movements"}
                     </h3>
 
                     <div className="overflow-x-auto border border-border">
@@ -173,32 +173,27 @@ export default function Show({ rearrangement }) {
                             <thead className="bg-surface-muted font-bold border-b border-border text-text-muted">
                                 <tr>
                                     <th className="p-2.5 text-start w-8">#</th>
-                                    <th className="p-2.5 text-center w-36">{lang === "ar" ? "نوع الحركة" : "Movement Type"}</th>
                                     <th className="p-2.5 text-start">{lang === "ar" ? "الصنف المخزني" : "Inventory Item"}</th>
                                     <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / العبوة" : "Grade / Box Size"}</th>
                                     <th className="p-2.5 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet #"}</th>
-                                    <th className="p-2.5 text-center w-32 font-black">{lang === "ar" ? "الكمية المحولة" : "Transferred Qty"}</th>
+                                    <th className="p-2.5 text-center w-36 bg-emerald-50 text-emerald-900 font-black">{lang === "ar" ? "المدخلات (إضافة)" : "IN (Quantity)"}</th>
+                                    <th className="p-2.5 text-center w-36 bg-rose-50 text-rose-900 font-black">{lang === "ar" ? "المخرجات (خصم)" : "OUT (Quantity)"}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {rearrangement.items?.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50">
                                         <td className="p-2.5 font-mono text-text-muted">{idx + 1}</td>
-                                        <td className="p-2.5 text-center font-bold">
-                                            <span className={`px-2 py-1 inline-flex items-center gap-1 border font-black ${
-                                                item.type === 'in' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-rose-50 text-rose-700 border-rose-300'
-                                            }`}>
-                                                {item.type === 'in' ? <ArrowDownRight className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
-                                                <span>{item.type === 'in' ? (lang === "ar" ? "مدخلات (+ إلى)" : "IN (To)") : (lang === "ar" ? "مخرجات (- من)" : "OUT (From)")}</span>
-                                            </span>
-                                        </td>
                                         <td className="p-2.5 font-bold text-text">{item.inventory_item?.name || '—'}</td>
                                         <td className="p-2.5 text-center font-semibold text-text-muted">{item.variant?.name || '—'}</td>
                                         <td className="p-2.5 text-center font-mono font-bold text-primary">
                                             طبلية #{item.pallet?.pallet_number || item.pallet?.code || item.pallet_id}
                                         </td>
-                                        <td className="p-2.5 text-center font-mono font-black text-slate-900 text-sm">
-                                            {item.quantity}
+                                        <td className="p-2.5 text-center font-mono font-black text-emerald-700 bg-emerald-50/50">
+                                            {item.quantity_in > 0 ? `+${item.quantity_in}` : '0'}
+                                        </td>
+                                        <td className="p-2.5 text-center font-mono font-black text-rose-700 bg-rose-50/50">
+                                            {item.quantity_out > 0 ? `-${item.quantity_out}` : '0'}
                                         </td>
                                     </tr>
                                 ))}

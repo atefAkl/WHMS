@@ -11,13 +11,17 @@ class PalletRearrangementItem extends Model
         'inventory_item_id',
         'inventory_item_variant_id',
         'pallet_id',
-        'type', // 'in' or 'out'
+        'type',
         'quantity',
+        'quantity_in',
+        'quantity_out',
         'notes',
     ];
 
     protected $casts = [
-        'quantity' => 'float',
+        'quantity'     => 'float',
+        'quantity_in'  => 'float',
+        'quantity_out' => 'float',
     ];
 
     public function rearrangement()
