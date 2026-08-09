@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Plus, Trash2, UserCheck, Scale } from 'lucide-react';
+import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Plus, Trash2, Scale } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
@@ -42,7 +42,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
         }
     }, [data.customer_id, customers]);
 
-    // Handle Contract Change -> Auto Load Customer, Agents, Periods & Pallet Balances
+    // Handle Contract Change -> Auto Load Customer, Agents, Periods & Pallet Balances (with Empty Actual Qty inputs)
     useEffect(() => {
         if (data.contract_id) {
             const contract = filteredContracts.find((c) => c.id === parseInt(data.contract_id));
@@ -80,7 +80,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                 pallet_id: inv.pallet_id,
                                 pallet_number: inv.pallet?.pallet_number || inv.pallet?.code || inv.pallet_id,
                                 system_quantity: sysQty,
-                                actual_quantity: sysQty,
+                                actual_quantity: '', // Empty field for user to enter actual count
                                 variance_quantity: 0,
                                 notes: '',
                             };
@@ -102,13 +102,17 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
 
     // Handle Actual Counted Qty Entry (Actual Qty - System Qty = Variance)
     const handleActualQtyChange = (index, value) => {
-        const actualVal = parseFloat(value) || 0;
         const updatedItems = [...data.items];
-        const sysQty = updatedItems[index].system_quantity;
-        
         updatedItems[index].actual_quantity = value;
-        updatedItems[index].variance_quantity = round2(actualVal - sysQty);
-        
+
+        if (value === '' || value === null) {
+            updatedItems[index].variance_quantity = 0;
+        } else {
+            const actualVal = parseFloat(value) || 0;
+            const sysQty = updatedItems[index].system_quantity;
+            updatedItems[index].variance_quantity = round2(actualVal - sysQty);
+        }
+
         setData('items', updatedItems);
     };
 
@@ -125,7 +129,7 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
             pallet_id: defaultPallet?.id || 1,
             pallet_number: defaultPallet?.pallet_number || defaultPallet?.code || '1',
             system_quantity: 0,
-            actual_quantity: 0,
+            actual_quantity: '',
             variance_quantity: 0,
             notes: '',
         };
@@ -143,7 +147,20 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(route('inventory-adjustments.store'));
+        
+        // Ensure all actual_quantity values default to 0 if left empty by user
+        const sanitizedItems = data.items.map((item) => ({
+            ...item,
+            actual_quantity: item.actual_quantity === '' ? 0 : parseFloat(item.actual_quantity),
+            variance_quantity: item.actual_quantity === '' ? round2(0 - item.system_quantity) : round2(parseFloat(item.actual_quantity) - item.system_quantity),
+        }));
+
+        post(route('inventory-adjustments.store'), {
+            data: {
+                ...data,
+                items: sanitizedItems,
+            }
+        });
     };
 
     const breadcrumbs = (
@@ -170,8 +187,8 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
                             {lang === "ar"
-                                ? "اختيار العقد يُحمّل تلقائياً العميل والمندوب وطبالي العقد بفهرسة الأصناف وأحجام الكراتين والكميات حسب النظام."
-                                : "Select contract to auto load customer, representative, pallets, and system balances."}
+                                ? "اختيار العقد يُحمّل تلقائياً العميل والمندوب وطبالي العقد بفهرسة الأصناف وأحجام الكراتين والكميات حسب النظام، مع خانات فارغة لإدخال الجرد بيدك."
+                                : "Select contract to auto load customer, representative, pallets, and system balances with empty actual count inputs."}
                         </p>
                     }
                 />
@@ -298,17 +315,17 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                         </div>
                     </div>
 
-                    {/* Pallets Adjustments Table indexed by Item & Box size */}
+                    {/* Pallets Adjustments Table indexed by Item & Box size with Empty Actual Count inputs */}
                     <div className="bg-surface border border-border p-5 shadow-2xs space-y-4">
                         <div className="flex justify-between items-center border-b border-border pb-2">
                             <div>
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar" ? "فهرسة طبالي العقد وإدخال ناتج ملف الجرد" : "Indexed Contract Pallets & Actual Count Input"}
+                                    {lang === "ar" ? "طبالي العقد وإدخال ناتج ملف الجرد (خانات فارغة)" : "Contract Pallets & Actual Count Input"}
                                 </h3>
                                 <p className="text-[11px] text-text-muted mt-0.5">
                                     {lang === "ar"
-                                        ? "أدخل الأرقام في خانة (حسب ملف الجرد)، وسيحسب الباك الفروقات ويلغي التكرار ويُنشئ صوف الإدخال أو الإخراج تلقائياً!"
-                                        : "Enter actual counts in the audit column. System will automatically generate IN/OUT ledger entries upon approval."}
+                                        ? "أدخل الأرقام في الخانات الفارغة (حسب ملف الجرد)، وسيحسب الباك الفروقات ويُنشئ قيد الإدخال أو الإخراج تلقائياً!"
+                                        : "Enter actual counts in the empty audit fields."}
                                 </p>
                             </div>
 
@@ -357,8 +374,8 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                             <th className="p-2.5 text-center">{lang === "ar" ? "الدرجة / حجم الكرتون" : "Grade / Box Size"}</th>
                                             <th className="p-2.5 text-center">{lang === "ar" ? "رقم الطبلية" : "Pallet #"}</th>
                                             <th className="p-2.5 text-center w-32 bg-slate-100">{lang === "ar" ? "حسب النظام" : "System Qty"}</th>
-                                            <th className="p-2.5 text-center w-36 bg-amber-50">{lang === "ar" ? "حسب ملف الجرد *" : "Actual Count *"}</th>
-                                            <th className="p-2.5 text-center w-28">{lang === "ar" ? "ناتج الفرق" : "Variance"}</th>
+                                            <th className="p-2.5 text-center w-36 bg-amber-50">{lang === "ar" ? "حسب ملف الجرد (أدخل الرقم)" : "Actual Count *"}</th>
+                                            <th className="p-2.5 text-center w-32">{lang === "ar" ? "ناتج الفرق" : "Variance"}</th>
                                             <th className="p-2.5 text-center w-12">#</th>
                                         </tr>
                                     </thead>
@@ -437,10 +454,10 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                                                         type="number"
                                                         step="0.01"
                                                         min="0"
-                                                        className="w-full text-center text-xs font-mono font-black border-amber-400 focus:ring-amber-500 rounded-none h-[34px] px-2 bg-white"
+                                                        placeholder="أدخل الكمية..."
+                                                        className="w-full text-center text-xs font-mono font-black border-amber-400 focus:ring-amber-500 rounded-none h-[34px] px-2 bg-white placeholder:font-normal placeholder:text-gray-400"
                                                         value={item.actual_quantity}
                                                         onChange={(e) => handleActualQtyChange(idx, e.target.value)}
-                                                        required
                                                     />
                                                 </td>
                                                 <td className="p-2.5 text-center font-mono font-black text-sm">
