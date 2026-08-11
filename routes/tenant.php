@@ -184,6 +184,54 @@ Route::middleware([
             Route::post('contracts/{contract}/vouchers/bulk-reopen', [\App\Http\Controllers\ContractController::class, 'bulkReopenVouchers'])->name('contracts.vouchers.bulk-reopen');
             Route::get('contracts/{contract}/vouchers/bulk-print', [\App\Http\Controllers\ContractController::class, 'bulkPrintVouchers'])->name('contracts.vouchers.bulk-print');
             Route::get('contracts/{contract}/pallets', [\App\Http\Controllers\ContractController::class, 'getPallets'])->name('contracts.pallets');
+            Route::get('api/contracts/{contract}/pallets', [\App\Http\Controllers\ContractController::class, 'getPallets'])->name('api.contracts.pallets');
+
+            Route::get('api/contracts/{contract}/pallets/{pallet}/items', function (\App\Models\Contract $contract, \App\Models\Pallet $pallet) {
+                $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
+                    ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
+                        $query->where('contract_id', $contract->id);
+                    })
+                    ->with('inventoryItem')
+                    ->get();
+
+                $items = $entries->groupBy('inventory_item_id')->map(function ($group) {
+                    $first = $group->first();
+                    $qtyIn = $group->sum('quantity_in');
+                    $qtyOut = $group->sum('quantity_out');
+                    return [
+                        'id' => $first->inventory_item_id,
+                        'name' => $first->inventoryItem?->name ?? 'غير محدد',
+                        'balance' => $qtyIn - $qtyOut,
+                    ];
+                })->values()->filter(fn($i) => $i['balance'] > 0);
+
+                return response()->json($items);
+            })->name('api.contracts.pallets.items');
+
+            Route::get('api/contracts/{contract}/pallets/{pallet}/items/{item}/variants', function (\App\Models\Contract $contract, \App\Models\Pallet $pallet, \App\Models\InventoryItem $item) {
+                $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
+                    ->where('inventory_item_id', $item->id)
+                    ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
+                        $query->where('contract_id', $contract->id);
+                    })
+                    ->with('variant')
+                    ->get();
+
+                $variants = $entries->groupBy('inventory_item_variant_id')->map(function ($group) {
+                    $first = $group->first();
+                    $qtyIn = $group->sum('quantity_in');
+                    $qtyOut = $group->sum('quantity_out');
+                    return [
+                        'id' => $first->inventory_item_variant_id,
+                        'name' => $first->variant?->name ?? 'افتراضي',
+                        'quality' => $first->variant?->quality,
+                        'balance' => $qtyIn - $qtyOut,
+                    ];
+                })->values()->filter(fn($v) => $v['balance'] > 0);
+
+                return response()->json($variants);
+            })->name('api.contracts.pallets.items.variants');
+
             Route::get('contracts/{contract}/stored-items', [\App\Http\Controllers\ContractController::class, 'getStoredItems'])->name('contracts.stored-items');
             Route::get('contracts/{contract}/item-movements', [\App\Http\Controllers\ContractController::class, 'getItemMovements'])->name('contracts.item-movements');
             Route::get('contracts/{contract}/pallet-movements', [\App\Http\Controllers\ContractController::class, 'getPalletMovements'])->name('contracts.pallet-movements');
