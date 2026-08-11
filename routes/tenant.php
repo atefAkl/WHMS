@@ -258,6 +258,22 @@ Route::middleware([
             // Profile & Settings
             Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
             Route::get('/setting/index', [\App\Http\Controllers\SettingsController::class, 'index']);
+
+            // Tenant Settings Sub-Routes
+            Route::prefix('settings')->name('settings.')->group(function () {
+                Route::resource('seasons', \App\Http\Controllers\Settings\SeasonController::class);
+                Route::resource('terms', \App\Http\Controllers\Settings\TermController::class)->except(['create', 'edit']);
+                Route::resource('storage-items', \App\Http\Controllers\Settings\StorageItemController::class)->except(['create', 'edit']);
+                Route::resource('inventory-categories', \App\Http\Controllers\Settings\InventoryCategoryController::class)->except(['create', 'edit']);
+                Route::resource('categories', \App\Http\Controllers\Settings\CustomerCategoryController::class)->except(['create', 'edit']);
+                Route::resource('countries', \App\Http\Controllers\Settings\CountryController::class)->except(['create', 'edit']);
+                Route::get('roles-permissions', [\App\Http\Controllers\SaaSController::class, 'rolesPermissions'])->name('roles-permissions');
+                Route::get('general', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'index'])->name('general.index');
+                Route::post('general', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'store'])->name('general.store');
+                Route::get('notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'index'])->name('notifications.index');
+                Route::post('notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'store'])->name('notifications.store');
+            });
+
             Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
             Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
             Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
