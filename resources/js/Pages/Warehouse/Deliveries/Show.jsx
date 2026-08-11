@@ -95,12 +95,12 @@ export default function Show({ delivery }) {
     };
 
     const totalReception =
-        reception.inventory_entries?.reduce(
+        delivery.inventory_entries?.reduce(
             (sum, entry) => sum + parseFloat(entry.quantity_in || 0),
             0,
         ) || 0;
     const totalDispatch =
-        reception.inventory_entries?.reduce(
+        delivery.inventory_entries?.reduce(
             (sum, entry) => sum + parseFloat(entry.quantity_out || 0),
             0,
         ) || 0;
