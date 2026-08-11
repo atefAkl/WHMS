@@ -288,11 +288,13 @@ export default function CreateEdit({
         axios
             .get(route("api.contracts.pallets", contractId))
             .then((res) => {
-                setPosPallets(res.data);
+                const palletsData = Array.isArray(res.data) ? res.data : (res.data?.pallets || []);
+                setPosPallets(palletsData);
                 setLoadingPallets(false);
             })
             .catch((err) => {
                 console.error(err);
+                setPosPallets([]);
                 setLoadingPallets(false);
             });
     };
@@ -467,11 +469,12 @@ export default function CreateEdit({
         }
     }, [data.exit_authorization_id]);
 
-    const filteredCustomers = customers.filter((c) =>
-        c.name.toLowerCase().includes(customerSearch.toLowerCase()),
+    const filteredCustomers = (Array.isArray(customers) ? customers : []).filter((c) =>
+        (c.name || "").toLowerCase().includes(customerSearch.toLowerCase()),
     );
 
-    const filteredPallets = posPallets.filter((p) => {
+    const palletsList = Array.isArray(posPallets) ? posPallets : (posPallets?.pallets || []);
+    const filteredPallets = palletsList.filter((p) => {
         const search = palletSearch.toLowerCase();
         if (!search) return true;
         const code = (p.pallet_code || "").toLowerCase();
