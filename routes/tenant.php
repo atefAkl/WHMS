@@ -221,10 +221,17 @@ Route::middleware([
                     $first = $group->first();
                     $qtyIn = $group->sum('quantity_in');
                     $qtyOut = $group->sum('quantity_out');
+                    $name = $first->variant?->name ?? 'افتراضي';
+                    $quality = $first->variant?->quality;
                     return [
                         'id' => $first->inventory_item_variant_id,
-                        'name' => $first->variant?->name ?? 'افتراضي',
-                        'quality' => $first->variant?->quality,
+                        'inventory_item_variant_id' => $first->inventory_item_variant_id,
+                        'name' => $name,
+                        'quality' => $quality,
+                        'variant' => [
+                            'name' => $name,
+                            'quality' => $quality,
+                        ],
                         'balance' => $qtyIn - $qtyOut,
                     ];
                 })->values()->filter(fn($v) => $v['balance'] > 0);

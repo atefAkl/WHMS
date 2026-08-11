@@ -427,12 +427,12 @@ export default function CreateEdit({
     useEffect(() => {
         if (posVariantId && posVariants.length > 0) {
             const selectedVar = posVariants.find(
-                (v) => v.inventory_item_variant_id === parseInt(posVariantId),
+                (v) => (v.inventory_item_variant_id || v.id) === parseInt(posVariantId),
             );
             if (selectedVar) {
                 setPosMaxBalance(selectedVar.balance);
                 setPosQuality(
-                    displayBilingual(selectedVar.variant?.quality) || "",
+                    displayBilingual(selectedVar.quality || selectedVar.variant?.quality) || "",
                 );
                 setPosQuantity(selectedVar.balance.toString()); // default to full balance
             }
@@ -1689,21 +1689,17 @@ export default function CreateEdit({
                                                   ? "-- اختر العبوة --"
                                                   : "-- Select Variant --"}
                                         </option>
-                                        {posVariants.map((v) => (
-                                            <option
-                                                key={
-                                                    v.inventory_item_variant_id
-                                                }
-                                                value={
-                                                    v.inventory_item_variant_id
-                                                }
-                                            >
-                                                {displayBilingual(
-                                                    v.variant?.name,
-                                                )}{" "}
-                                                ({v.balance})
-                                            </option>
-                                        ))}
+                                        {posVariants.map((v) => {
+                                            const varId = v.inventory_item_variant_id || v.id;
+                                            const varName = displayBilingual(v.variant?.name || v.name) || (lang === "ar" ? "افتراضي" : "Default");
+                                            const varQuality = displayBilingual(v.variant?.quality || v.quality);
+                                            const label = varQuality ? `${varName} - ${varQuality}` : varName;
+                                            return (
+                                                <option key={varId} value={varId}>
+                                                    {label} ({v.balance})
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                 </div>
 
