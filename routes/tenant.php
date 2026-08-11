@@ -248,6 +248,16 @@ Route::middleware([
             Route::get('/accounting/statements/balance-sheet', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'balanceSheet'])->name('accounting.statements.balance-sheet');
             Route::get('/accounting/statements/account-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'accountStatement'])->name('accounting.statements.account-statement');
 
+            // Accounting Route Aliases for Sidebar
+            Route::get('/accounting', [\App\Http\Controllers\Accounting\FinancialVoucherController::class, 'index'])->name('accounting.index');
+            Route::get('/accounting/reports/account-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'accountStatement'])->name('accounting.reports.account-statement');
+            Route::get('/accounting/reports/trial-balance', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
+            Route::get('/accounting/reports/income-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'incomeStatement'])->name('accounting.reports.income-statement');
+
+            // Services & Queue Tickets Placeholders
+            Route::get('/sales/services', function () { return redirect()->route('dashboard'); })->name('sales.services.index');
+            Route::get('/queue-tickets', function () { return redirect()->route('dashboard'); })->name('queue-tickets.index');
+
             // Terms Management
             Route::get('terms', [\App\Http\Controllers\TermController::class, 'index'])->name('terms.index');
             Route::post('terms', [\App\Http\Controllers\TermController::class, 'store'])->name('terms.store');
@@ -277,7 +287,11 @@ Route::middleware([
             // Employees & Users Management
             Route::get('employees', [\App\Http\Controllers\Tenant\EmployeeController::class, 'index'])->name('employees.index');
             Route::post('employees', [\App\Http\Controllers\Tenant\EmployeeController::class, 'store'])->name('employees.store');
+            Route::get('employees/{employee}', [\App\Http\Controllers\Tenant\EmployeeController::class, 'show'])->name('employees.show');
             Route::put('employees/{user}', [\App\Http\Controllers\Tenant\EmployeeController::class, 'update'])->name('employees.update');
+            Route::delete('employees/{user}', [\App\Http\Controllers\Tenant\EmployeeController::class, 'destroy'])->name('employees.destroy');
+            Route::post('employees/{user}/reset-password', [\App\Http\Controllers\Tenant\EmployeeController::class, 'resetPassword'])->name('employees.reset-password');
+            Route::post('employees/{user}/toggle-status', [\App\Http\Controllers\Tenant\EmployeeController::class, 'toggleStatus'])->name('employees.toggle-status');
             Route::delete('employees/{user}', [\App\Http\Controllers\Tenant\EmployeeController::class, 'destroy'])->name('employees.destroy');
             Route::post('employees/{user}/reset-password', [\App\Http\Controllers\Tenant\EmployeeController::class, 'resetPassword'])->name('employees.reset-password');
             Route::post('employees/{user}/toggle-status', [\App\Http\Controllers\Tenant\EmployeeController::class, 'toggleStatus'])->name('employees.toggle-status');
