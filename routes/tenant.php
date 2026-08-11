@@ -267,12 +267,26 @@ Route::middleware([
                 Route::resource('inventory-categories', \App\Http\Controllers\Settings\InventoryCategoryController::class)->except(['create', 'edit']);
                 Route::resource('categories', \App\Http\Controllers\Settings\CustomerCategoryController::class)->except(['create', 'edit']);
                 Route::resource('countries', \App\Http\Controllers\Settings\CountryController::class)->except(['create', 'edit']);
-                Route::get('roles-permissions', [\App\Http\Controllers\SaaSController::class, 'rolesPermissions'])->name('roles-permissions');
+                Route::get('roles-permissions', [\App\Http\Controllers\Tenant\EmployeeController::class, 'rolesPermissions'])->name('roles-permissions');
                 Route::get('general', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'index'])->name('general.index');
                 Route::post('general', [\App\Http\Controllers\Settings\GeneralSettingsController::class, 'store'])->name('general.store');
                 Route::get('notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'index'])->name('notifications.index');
                 Route::post('notifications', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'store'])->name('notifications.store');
             });
+
+            // Employees & Users Management
+            Route::get('employees', [\App\Http\Controllers\Tenant\EmployeeController::class, 'index'])->name('employees.index');
+            Route::post('employees', [\App\Http\Controllers\Tenant\EmployeeController::class, 'store'])->name('employees.store');
+            Route::put('employees/{user}', [\App\Http\Controllers\Tenant\EmployeeController::class, 'update'])->name('employees.update');
+            Route::delete('employees/{user}', [\App\Http\Controllers\Tenant\EmployeeController::class, 'destroy'])->name('employees.destroy');
+            Route::post('employees/{user}/reset-password', [\App\Http\Controllers\Tenant\EmployeeController::class, 'resetPassword'])->name('employees.reset-password');
+            Route::post('employees/{user}/toggle-status', [\App\Http\Controllers\Tenant\EmployeeController::class, 'toggleStatus'])->name('employees.toggle-status');
+
+            // Roles & Permissions Management
+            Route::get('roles-permissions', [\App\Http\Controllers\Tenant\EmployeeController::class, 'rolesPermissions'])->name('roles-permissions');
+            Route::post('roles', [\App\Http\Controllers\Tenant\RoleController::class, 'store'])->name('roles.store');
+            Route::put('roles/{role}', [\App\Http\Controllers\Tenant\RoleController::class, 'update'])->name('roles.update');
+            Route::delete('roles/{role}', [\App\Http\Controllers\Tenant\RoleController::class, 'destroy'])->name('roles.destroy');
 
             Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
             Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
@@ -282,6 +296,7 @@ Route::middleware([
 
             // Activity Log
             Route::get('/activity-log', [\App\Http\Controllers\ActivityLogController::class, 'index'])->name('activity-log.index');
+            Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index'])->name('activity-logs.index');
 
             // SaaS Management
             Route::get('/saas/settings', [\App\Http\Controllers\SaaSSettingController::class, 'index'])->name('saas.settings.index');
@@ -294,10 +309,10 @@ Route::middleware([
             Route::get('/saas/themes', [\App\Http\Controllers\SaaSController::class, 'themes'])->name('saas.themes');
             Route::post('/saas/themes', [\App\Http\Controllers\SaaSController::class, 'updateThemes'])->name('saas.themes.update');
             Route::get('/saas/geo-settings', [\App\Http\Controllers\SaaSController::class, 'geoSettings'])->name('saas.geo-settings');
-            Route::get('/saas/notification-settings', [\App\Http\Controllers\SaaSController::class, 'notificationSettings'])->name('saas.notification-settings');
-            Route::post('/saas/notification-settings', [\App\Http\Controllers\SaaSController::class, 'updateNotificationSettings'])->name('saas.notification-settings.update');
-            Route::get('/saas/roles-permissions', [\App\Http\Controllers\SaaSController::class, 'rolesPermissions'])->name('saas.roles-permissions');
-            Route::post('/saas/roles-permissions', [\App\Http\Controllers\SaaSController::class, 'updateRolesPermissions'])->name('saas.roles-permissions.update');
+            Route::get('/saas/notification-settings', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'index'])->name('saas.notification-settings');
+            Route::post('/saas/notification-settings', [\App\Http\Controllers\Settings\NotificationSettingsController::class, 'store'])->name('saas.notification-settings.update');
+            Route::get('/saas/roles-permissions', [\App\Http\Controllers\Tenant\EmployeeController::class, 'rolesPermissions'])->name('saas.roles-permissions');
+            Route::post('/saas/roles-permissions', [\App\Http\Controllers\Tenant\RoleController::class, 'store'])->name('saas.roles-permissions.update');
             Route::get('/saas/contract-settings', [\App\Http\Controllers\SaaSController::class, 'contractSettings'])->name('saas.contract-settings');
             Route::post('/saas/contract-settings', [\App\Http\Controllers\SaaSController::class, 'updateContractSettings'])->name('saas.contract-settings.update');
 
