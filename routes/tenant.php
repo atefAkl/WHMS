@@ -256,6 +256,8 @@ Route::middleware([
             Route::post('terms/reorder', [\App\Http\Controllers\TermController::class, 'reorder'])->name('terms.reorder');
 
             // Profile & Settings
+            Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index'])->name('settings.index');
+            Route::get('/setting/index', [\App\Http\Controllers\SettingsController::class, 'index']);
             Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
             Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
             Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
