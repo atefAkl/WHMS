@@ -217,10 +217,14 @@ Route::middleware([
             // Receptions (09 Code)
             Route::resource('receptions', \App\Http\Controllers\ReceptionController::class);
             Route::get('receptions/{reception}/print', [\App\Http\Controllers\ReceptionController::class, 'print'])->name('receptions.print');
+            Route::post('receptions/{reception}/approve', [\App\Http\Controllers\ReceptionController::class, 'approve'])->name('receptions.approve');
+            Route::post('receptions/{reception}/reopen', [\App\Http\Controllers\ReceptionController::class, 'reopen'])->name('receptions.reopen');
 
             // Deliveries (12 Code)
             Route::resource('deliveries', \App\Http\Controllers\DeliveryController::class);
             Route::get('deliveries/{delivery}/print', [\App\Http\Controllers\DeliveryController::class, 'print'])->name('deliveries.print');
+            Route::post('deliveries/{delivery}/approve', [\App\Http\Controllers\DeliveryController::class, 'approve'])->name('deliveries.approve');
+            Route::post('deliveries/{delivery}/reopen', [\App\Http\Controllers\DeliveryController::class, 'reopen'])->name('deliveries.reopen');
 
             // Exit Authorizations
             Route::resource('exit-authorizations', \App\Http\Controllers\ExitAuthorizationController::class);
