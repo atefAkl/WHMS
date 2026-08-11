@@ -37,7 +37,7 @@ if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
             strpos($relativePath, 'public/uploads') === 0 ||
             strpos($relativePath, '.git') === 0 ||
             strpos($relativePath, 'WHMS_release.zip') === 0 ||
-            strpos($relativePath, '.env') === 0 ||
+            strpos($relativePath, '.env') !== false ||
             strpos($relativePath, 'scratch') === 0 ||
             strpos($relativePath, 'storage/logs/') !== false ||
             strpos($relativePath, 'storage/framework/views/') !== false ||
