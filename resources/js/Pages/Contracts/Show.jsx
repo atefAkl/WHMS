@@ -27,6 +27,7 @@ import {
     FileSpreadsheet,
     Layers,
     Package,
+    Boxes,
     CheckCircle2,
     Ban,
     DollarSign,
