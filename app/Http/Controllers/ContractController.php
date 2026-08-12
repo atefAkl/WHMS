@@ -1027,6 +1027,12 @@ class ContractController extends Controller
             });
         })->get(['id', 'name']);
 
+        // Paginate
+        $perPage = 24;
+        $page = (int) $request->input('page', 1);
+        $total = $vouchers->count();
+        $paginatedItems = $vouchers->slice(($page - 1) * $perPage, $perPage)->values();
+
         // Summary calculations
         $totalIn = (float) $vouchers->where('voucher_type', 'reception')->sum('package_count');
         $totalOut = (float) $vouchers->where('voucher_type', 'delivery')->sum('package_count');
@@ -1320,6 +1326,8 @@ class ContractController extends Controller
         $perPage = 24;
         $page = (int) $request->input('page', 1);
         $total = $filteredPallets->count();
+        $paginatedPallets = $filteredPallets->slice(($page - 1) * $perPage, $perPage)->values();
+
         // Summary calculations
         $totalIn = (float) $filteredPallets->sum('total_in');
         $totalOut = (float) $filteredPallets->sum('total_out');
@@ -1381,6 +1389,12 @@ class ContractController extends Controller
                 'pallets_count' => $agg->pallets_count,
             ]);
         }
+
+        // Paginate items collection
+        $perPage = 24;
+        $page = (int) $request->input('page', 1);
+        $total = $items->count();
+        $paginatedItems = $items->slice(($page - 1) * $perPage, $perPage)->values();
 
         // Summary calculations
         $totalIn = (float) $items->sum('total_in');
