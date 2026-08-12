@@ -115,6 +115,7 @@ export default function Show({
     const [vouchersLastPage, setVouchersLastPage] = useState(1);
     const [vouchersLoading, setVouchersLoading] = useState(false);
     const [vouchersGoodsTypes, setVouchersGoodsTypes] = useState([]);
+    const [vouchersSummary, setVouchersSummary] = useState(null);
 
     // Pallets Tab states
     const [pallets, setPallets] = useState([]);
@@ -128,6 +129,7 @@ export default function Show({
     const [filterPalletSize, setFilterPalletSize] = useState("");
     const [filterPalletItemId, setFilterPalletItemId] = useState("");
     const [palletViewMode, setPalletViewMode] = useState("grid");
+    const [palletsSummary, setPalletsSummary] = useState(null);
 
     // Stored Items Tab states
     const [storedItems, setStoredItems] = useState([]);
@@ -137,6 +139,7 @@ export default function Show({
     const [storedItemsLoading, setStoredItemsLoading] = useState(false);
     const [filterItemSearch, setFilterItemSearch] = useState("");
     const [itemViewMode, setItemViewMode] = useState("list");
+    const [storedItemsSummary, setStoredItemsSummary] = useState(null);
 
     // Movement Detail Modal states
     const [showMovementModal, setShowMovementModal] = useState(false);
@@ -163,6 +166,7 @@ export default function Show({
                 setPalletsLastPage(response.data.last_page);
                 setPalletsSizes(response.data.sizes || []);
                 setPalletsItems(response.data.items || []);
+                setPalletsSummary(response.data.summary || null);
                 setPalletsLoading(false);
             })
             .catch((err) => {
@@ -186,6 +190,7 @@ export default function Show({
                 setStoredItems(response.data.items);
                 setStoredItemsTotal(response.data.total);
                 setStoredItemsLastPage(response.data.last_page);
+                setStoredItemsSummary(response.data.summary || null);
                 setStoredItemsLoading(false);
             })
             .catch((err) => {
@@ -311,6 +316,7 @@ export default function Show({
                 setVouchersTotal(response.data.total);
                 setVouchersLastPage(response.data.last_page);
                 setVouchersGoodsTypes(response.data.goods_types || []);
+                setVouchersSummary(response.data.summary || null);
                 setVouchersLoading(false);
             })
             .catch((err) => {
@@ -538,18 +544,27 @@ export default function Show({
 
         const custNationality = contract?.customer?.country?.name_ar || "سعودي";
         const delegateName = contract?.contact?.name || contract?.contract_agents?.[0]?.name || "";
+        const delegatePhone = contract?.contact?.phone_number || contract?.contract_agents?.[0]?.phone_number || "";
         const delegateId = contract?.contact?.id_number || contract?.contract_agents?.[0]?.id_number || "";
         const isBusiness = !!contract?.customer?.cr_number;
+
+        let delegateStr = "";
+        if (delegateName) {
+            delegateStr = `، وينوب عنه/ـا فى هذا العقد (${delegateName})`;
+            if (delegatePhone) {
+                delegateStr += ` هاتف: (${delegatePhone})`;
+            }
+        }
 
         let introText = "";
         if (isBusiness) {
             introText = `بعون الله وتوفيقه، فى يوم ${contract?.write_date || ""} م، الموافق ${contract?.write_date_hijri || ""} هـ ، قد اجتمع كل من:-\n` +
-                `${settings?.company_name || ""} سجل تجاري ${settings?.company_cr || ""}، ويمثلها المدير العام - ${settings?.company_gm || ""} وعنوانها الوطنى: ${settings?.company_address || ""}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n` +
-                `و${contract?.customer?.name || ""}، سجل تجاري: ${contract?.customer?.cr_number || ""}، هاتف: ${contract?.customer?.phone_number || ""}، ويمثلها ${delegateName}، هوية/اقامة رقم ${delegateId}، الجنسية ${custNationality}، طرف ثان.`;
+                `${settings?.company_name || ""} سجل تجاري ${settings?.company_cr || ""}، ويمثلها المدير العام - ${settings?.company_gm || ""} وعنوانها الوطنى: ${settings?.company_address || ""}، جوال: ${settings?.company_phone || ""} ، بريد الكتروني: ${settings?.company_email || ""} طرف أول.\n` +
+                `و${contract?.customer?.name || ""}، سجل تجاري: ${contract?.customer?.cr_number || ""}، هاتف: ${contract?.customer?.phone_number || ""}${delegateStr}، طرف ثان.`;
         } else {
             introText = `بعون الله وتوفيقه، فى يوم ${contract?.write_date || ""} م، الموافق ${contract?.write_date_hijri || ""} هـ ، قد اجتمع كل من:-\n` +
-                `${settings?.company_name || ""} سجل تجاري ${settings?.company_cr || ""}، ويمثلها المدير العام - ${settings?.company_gm || ""} وعنوانها الوطنى: ${settings?.company_address || ""}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n` +
-                `و${contract?.customer?.name || ""}، هاتف: ${contract?.customer?.phone_number || ""}، هوية رقم ${contract?.customer?.id_number || ""}، الجنسية ${custNationality} طرف ثان.`;
+                `${settings?.company_name || ""} سجل تجاري ${settings?.company_cr || ""}، ويمثلها المدير العام - ${settings?.company_gm || ""} وعنوانها الوطنى: ${settings?.company_address || ""}، جوال: ${settings?.company_phone || ""} ، بريد الكتروني: ${settings?.company_email || ""} طرف أول.\n` +
+                `و${contract?.customer?.name || ""}، هاتف: ${contract?.customer?.phone_number || ""}، هوية رقم ${contract?.customer?.id_number || ""}، الجنسية ${custNationality}${delegateStr}، طرف ثان.`;
         }
 
         const vars = {
@@ -578,6 +593,7 @@ export default function Show({
             "{$terms_count}": contract?.terms?.length || 0,
             "{$customer_nationality}": custNationality,
             "{$customer_delegate_name}": delegateName,
+            "{$customer_delegate_phone}": delegatePhone,
             "{$customer_delegate_id}": delegateId,
             "{$customer_delegate_nationality}": custNationality,
             "{$contract_introduction}": introText,
@@ -4854,6 +4870,53 @@ export default function Show({
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Movement Summary Bar for Vouchers */}
+                                        {!vouchersLoading && (vouchers.length > 0 || vouchersSummary) && (
+                                            <div className="mt-4 p-4 rounded-xl bg-surface-muted/30 border border-border/80 shadow-sm">
+                                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                                            <Package className="h-5 w-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-xs font-extrabold text-text">
+                                                                {lang === "ar" ? "إجمالي كراتين السندات حسب الحركة" : "Voucher Packages Movement Summary"}
+                                                            </h4>
+                                                            <p className="text-[10px] text-text-muted">
+                                                                {lang === "ar" ? "إجمالي الكراتين في السندات المحددة للبحث" : "Total packages for searched vouchers"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                                                        <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
+                                                            <span className="block text-[10px] font-bold text-emerald-600">
+                                                                {lang === "ar" ? "مدخلات (وارد)" : "In (Receptions)"}
+                                                            </span>
+                                                            <span className="text-sm font-extrabold text-emerald-700 font-mono">
+                                                                {Math.round(vouchersSummary?.total_in ?? 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                                                            <span className="block text-[10px] font-bold text-amber-600">
+                                                                {lang === "ar" ? "مخرجات (صادر)" : "Out (Dispatches)"}
+                                                            </span>
+                                                            <span className="text-sm font-extrabold text-amber-700 font-mono">
+                                                                {Math.round(vouchersSummary?.total_out ?? 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-center">
+                                                            <span className="block text-[10px] font-bold text-primary">
+                                                                {lang === "ar" ? "الرصيد المتبقي" : "Net Balance"}
+                                                            </span>
+                                                            <span className="text-sm font-extrabold text-primary font-mono">
+                                                                {Math.round(vouchersSummary?.balance ?? 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                 </SectionCard>
 
                                 {/* Bulk actions floating footer */}
@@ -5628,6 +5691,53 @@ export default function Show({
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Movement Summary Bar for Pallets */}
+                                    {!palletsLoading && (pallets.length > 0 || palletsSummary) && (
+                                        <div className="mt-4 p-4 rounded-xl bg-surface-muted/30 border border-border/80 shadow-sm">
+                                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                                        <Boxes className="h-5 w-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-extrabold text-text">
+                                                            {lang === "ar" ? "إجمالي كراتين الطبالي حسب الحركة" : "Pallet Packages Movement Summary"}
+                                                        </h4>
+                                                        <p className="text-[10px] text-text-muted">
+                                                            {lang === "ar" ? "إجمالي المدخلات والمخرجات وصافي رصيد الطبالي" : "Total in, out, and net balance for contract pallets"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                                    <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
+                                                        <span className="block text-[10px] font-bold text-emerald-600">
+                                                            {lang === "ar" ? "مدخلات (وارد)" : "In (Receptions)"}
+                                                        </span>
+                                                        <span className="text-sm font-extrabold text-emerald-700 font-mono">
+                                                            {Math.round(palletsSummary?.total_in ?? 0).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                                                        <span className="block text-[10px] font-bold text-amber-600">
+                                                            {lang === "ar" ? "مخرجات (صادر)" : "Out (Dispatches)"}
+                                                        </span>
+                                                        <span className="text-sm font-extrabold text-amber-700 font-mono">
+                                                            {Math.round(palletsSummary?.total_out ?? 0).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-center">
+                                                        <span className="block text-[10px] font-bold text-primary">
+                                                            {lang === "ar" ? "الرصيد المتبقي" : "Net Balance"}
+                                                        </span>
+                                                        <span className="text-sm font-extrabold text-primary font-mono">
+                                                            {Math.round(palletsSummary?.balance ?? 0).toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </SectionCard>
                             </div>
                         )}
@@ -5905,6 +6015,53 @@ export default function Show({
                                                             ? "التالي"
                                                             : "Next"}
                                                     </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Movement Summary Bar for Stored Items */}
+                                        {!storedItemsLoading && (storedItems.length > 0 || storedItemsSummary) && (
+                                            <div className="mt-4 p-4 rounded-xl bg-surface-muted/30 border border-border/80 shadow-sm">
+                                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                                            <Package className="h-5 w-5" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-xs font-extrabold text-text">
+                                                                {lang === "ar" ? "إجمالي كراتين الأصناف حسب الحركة" : "Stored Items Packages Summary"}
+                                                            </h4>
+                                                            <p className="text-[10px] text-text-muted">
+                                                                {lang === "ar" ? "إجمالي المدخلات والمخرجات وصافي رصيد الأصناف بالعقد" : "Total in, out, and net balance for stored items"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                                                        <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center">
+                                                            <span className="block text-[10px] font-bold text-emerald-600">
+                                                                {lang === "ar" ? "مدخلات (وارد)" : "In (Receptions)"}
+                                                            </span>
+                                                            <span className="text-sm font-extrabold text-emerald-700 font-mono">
+                                                                {Math.round(storedItemsSummary?.total_in ?? 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                                                            <span className="block text-[10px] font-bold text-amber-600">
+                                                                {lang === "ar" ? "مخرجات (صادر)" : "Out (Dispatches)"}
+                                                            </span>
+                                                            <span className="text-sm font-extrabold text-amber-700 font-mono">
+                                                                {Math.round(storedItemsSummary?.total_out ?? 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-center">
+                                                            <span className="block text-[10px] font-bold text-primary">
+                                                                {lang === "ar" ? "الرصيد المتبقي" : "Net Balance"}
+                                                            </span>
+                                                            <span className="text-sm font-extrabold text-primary font-mono">
+                                                                {Math.round(storedItemsSummary?.balance ?? 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}

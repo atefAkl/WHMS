@@ -1027,11 +1027,9 @@ class ContractController extends Controller
             });
         })->get(['id', 'name']);
 
-        // Paginate
-        $perPage = 24;
-        $page = (int) $request->input('page', 1);
-        $total = $vouchers->count();
-        $paginatedItems = $vouchers->slice(($page - 1) * $perPage, $perPage)->values();
+        // Summary calculations
+        $totalIn = (float) $vouchers->where('voucher_type', 'reception')->sum('package_count');
+        $totalOut = (float) $vouchers->where('voucher_type', 'delivery')->sum('package_count');
 
         return response()->json([
             'vouchers' => $paginatedItems,
@@ -1040,6 +1038,11 @@ class ContractController extends Controller
             'current_page' => $page,
             'last_page' => ceil($total / $perPage),
             'goods_types' => $goodsTypes,
+            'summary' => [
+                'total_in' => $totalIn,
+                'total_out' => $totalOut,
+                'balance' => $totalIn - $totalOut,
+            ],
         ]);
     }
 
@@ -1317,7 +1320,9 @@ class ContractController extends Controller
         $perPage = 24;
         $page = (int) $request->input('page', 1);
         $total = $filteredPallets->count();
-        $paginatedPallets = $filteredPallets->slice(($page - 1) * $perPage, $perPage)->values();
+        // Summary calculations
+        $totalIn = (float) $filteredPallets->sum('total_in');
+        $totalOut = (float) $filteredPallets->sum('total_out');
 
         return response()->json([
             'pallets' => $paginatedPallets,
@@ -1327,6 +1332,11 @@ class ContractController extends Controller
             'last_page' => ceil($total / $perPage),
             'sizes' => $allSizes,
             'items' => $allItems,
+            'summary' => [
+                'total_in' => $totalIn,
+                'total_out' => $totalOut,
+                'balance' => $totalIn - $totalOut,
+            ],
         ]);
     }
 
@@ -1372,11 +1382,9 @@ class ContractController extends Controller
             ]);
         }
 
-        // Paginate items collection
-        $perPage = 24;
-        $page = (int) $request->input('page', 1);
-        $total = $items->count();
-        $paginatedItems = $items->slice(($page - 1) * $perPage, $perPage)->values();
+        // Summary calculations
+        $totalIn = (float) $items->sum('total_in');
+        $totalOut = (float) $items->sum('total_out');
 
         return response()->json([
             'items' => $paginatedItems,
@@ -1384,6 +1392,11 @@ class ContractController extends Controller
             'per_page' => $perPage,
             'current_page' => $page,
             'last_page' => ceil($total / $perPage),
+            'summary' => [
+                'total_in' => $totalIn,
+                'total_out' => $totalOut,
+                'balance' => $totalIn - $totalOut,
+            ],
         ]);
     }
 
