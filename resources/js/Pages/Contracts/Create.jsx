@@ -142,11 +142,16 @@ export default function Create({
 
     const applyContractTypeDefaults = (contractType) => {
         const selectedDefaults = typeDefaults?.[contractType] || {};
-        setData("contract_type", contractType);
-        setData("introduction", selectedDefaults.introduction || "");
-        setData("preamble", selectedDefaults.preamble || "");
-        setData("contract_title", selectedDefaults.contract_title || "");
-        setData("footer", selectedDefaults.footer || "");
+        setData((prev) => ({
+            ...prev,
+            contract_type: contractType,
+            introduction: selectedDefaults.introduction || "",
+            preamble: selectedDefaults.preamble || "",
+            contract_title: selectedDefaults.contract_title || "",
+            footer: selectedDefaults.footer || "",
+            mandatory_period: selectedDefaults.mandatory_period || prev.mandatory_period || 12,
+            renewal_period: selectedDefaults.renewal_period || prev.renewal_period || 12,
+        }));
     };
 
     // Update Hijri dates automatically

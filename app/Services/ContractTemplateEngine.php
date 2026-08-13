@@ -16,15 +16,45 @@ class ContractTemplateEngine
             return '';
         }
 
-        $replacements = [];
+        // 1. Evaluate [IF:cond]...[ELSE]...[/IF] conditional blocks
+        $template = preg_replace_callback('/\[IF:([^\]]+)\]((?:(?!\[IF:).)*?)(?:\[ELSE\]((?:(?!\[IF:).)*?))?\[\/IF\]/s', function ($matches) use ($data) {
+            $conditionExpr = trim($matches[1]);
+            $ifTrue = $matches[2] ?? '';
+            $ifFalse = $matches[3] ?? '';
 
+            $isTrue = self::evaluateCondition($conditionExpr, $data);
+            return $isTrue ? $ifTrue : $ifFalse;
+        }, $template);
+
+        // 2. Standard variable replacement
+        $replacements = [];
         foreach ($data as $key => $value) {
-            // Support both {$variable} and {variable} for robustness
             $replacements['{$' . $key . '}'] = $value;
             $replacements['{' . $key . '}']  = $value;
         }
 
         return strtr($template, $replacements);
+    }
+
+    /**
+     * Evaluate condition expression against data dictionary.
+     */
+    private static function evaluateCondition(string $expr, array $data): bool
+    {
+        if (str_contains($expr, '==')) {
+            list($key, $expected) = explode('==', $expr, 2);
+            $val = trim((string) ($data[trim($key)] ?? ''));
+            return $val === trim($expected, " '\"");
+        }
+
+        if (str_contains($expr, '!=')) {
+            list($key, $expected) = explode('!=', $expr, 2);
+            $val = trim((string) ($data[trim($key)] ?? ''));
+            return $val !== trim($expected, " '\"");
+        }
+
+        $val = $data[trim($expr)] ?? null;
+        return !empty($val);
     }
 
     /**
@@ -102,6 +132,7 @@ class ContractTemplateEngine
 
                 // Delegate specific mappings
                 'customer_delegate_name'        => $delegateName,
+                'customer_delegate_phone'       => $delegatePhone,
                 'customer_delegate_id'          => $delegateId,
                 'customer_delegate_nationality' => $custNationality,
 
@@ -112,15 +143,23 @@ class ContractTemplateEngine
             // Merge everything to allow recursion
             $merged = array_merge($data, $contractData);
 
+            $delegateStr = '';
+            if (!empty($delegateName)) {
+                $delegateStr = "، وينوب عنه/ـا فى هذا العقد ({$delegateName})";
+                if (!empty($delegatePhone)) {
+                    $delegateStr .= " هاتف: ({$delegatePhone})";
+                }
+            }
+
             // Generate introduction dynamically based on Business vs Individual classification
             if ($isBusiness) {
                 $introTemplate = "بعون الله وتوفيقه، فى يوم {\$write_date} م، الموافق {\$write_date_hijri} هـ ، قد اجتمع كل من:-\n" .
-                    "{\$company_name} سجل تجاري {\$company_cr}، ويمثلها المدير العام - {\$company_gm} وعنوانها الوطنى: {\$company_address}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n" .
-                    "و{\$customer_name}، سجل تجاري: {\$customer_cr}، هاتف: {\$customer_phone}، ويمثلها {\$customer_delegate_name}، هوية/اقامة رقم {\$customer_delegate_id}، الجنسية {\$customer_delegate_nationality}، طرف ثان.";
+                    "{\$company_name} سجل تجاري {\$company_cr}، ويمثلها المدير العام - {\$company_gm} وعنوانها الوطنى: {\$company_address}، جوال: {\$company_phone} ، بريد الكتروني: {\$company_email} طرف أول.\n" .
+                    "و{\$customer_name}، سجل تجاري: {\$customer_cr}، هاتف: {\$customer_phone}" . $delegateStr . "، طرف ثان.";
             } else {
                 $introTemplate = "بعون الله وتوفيقه، فى يوم {\$write_date} م، الموافق {\$write_date_hijri} هـ ، قد اجتمع كل من:-\n" .
-                    "{\$company_name} سجل تجاري {\$company_cr}، ويمثلها المدير العام - {\$company_gm} وعنوانها الوطنى: {\$company_address}، جوال: 00966509314449 ، بريد الكتروني: admin@ag-stores.com طرف أول.\n" .
-                    "و{\$customer_name}، هاتف: {\$customer_phone}، هوية رقم {\$customer_id}، الجنسية {\$customer_nationality} طرف ثان.";
+                    "{\$company_name} سجل تجاري {\$company_cr}، ويمثلها المدير العام - {\$company_gm} وعنوانها الوطنى: {\$company_address}، جوال: {\$company_phone} ، بريد الكتروني: {\$company_email} طرف أول.\n" .
+                    "و{\$customer_name}، هاتف: {\$customer_phone}، هوية رقم {\$customer_id}، الجنسية {\$customer_nationality}" . $delegateStr . "، طرف ثان.";
             }
 
             // Render variables nested within the introduction template

@@ -42,6 +42,9 @@ import {
     Eye,
     RefreshCw,
 } from "lucide-react";
+import PageHeader from "@/Components/PageHeader";
+import PalletsPrintReport from "@/Components/PalletsPrintReport";
+import ItemsPrintReport from "@/Components/ItemsPrintReport";
 import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
 import DangerButton from "@/Components/DangerButton";
@@ -141,6 +144,10 @@ export default function Show({
     const [filterItemSearch, setFilterItemSearch] = useState("");
     const [itemViewMode, setItemViewMode] = useState("list");
     const [storedItemsSummary, setStoredItemsSummary] = useState(null);
+
+    // Printable Summary Reports states
+    const [showPalletsReport, setShowPalletsReport] = useState(false);
+    const [showItemsReport, setShowItemsReport] = useState(false);
 
     // Movement Detail Modal states
     const [showMovementModal, setShowMovementModal] = useState(false);
@@ -599,6 +606,34 @@ export default function Show({
             "{$customer_delegate_nationality}": custNationality,
             "{$contract_introduction}": introText,
         };
+        const rawDict = {
+            company_name: settings?.company_name || "",
+            company_cr: settings?.company_cr || "",
+            customer_name: contract?.customer?.name || "",
+            customer_cr: contract?.customer?.cr_number || "",
+            customer_id: contract?.customer?.id_number || "",
+            contract_type: contract?.contract_type || "",
+            mandatory_period: contract?.mandatory_period || "",
+            renewal_period: contract?.renewal_period || "",
+        };
+
+        result = result.replace(/\[IF:([^\]]+)\]((?:(?!\[IF:).)*?)(?:\[ELSE\]((?:(?!\[IF:).)*?))?\[\/IF\]/gs, (match, expr, ifTrue, ifFalse) => {
+            const trimmedExpr = expr.trim();
+            let isTrue = false;
+            if (trimmedExpr.includes("==")) {
+                const [k, expected] = trimmedExpr.split("==");
+                const val = String(rawDict[k.trim()] || "").trim();
+                isTrue = val === expected.trim().replace(/^['"]|['"]$/g, "");
+            } else if (trimmedExpr.includes("!=")) {
+                const [k, expected] = trimmedExpr.split("!=");
+                const val = String(rawDict[k.trim()] || "").trim();
+                isTrue = val !== expected.trim().replace(/^['"]|['"]$/g, "");
+            } else {
+                isTrue = Boolean(rawDict[trimmedExpr]);
+            }
+            return isTrue ? (ifTrue || "") : (ifFalse || "");
+        });
+
         Object.entries(vars).forEach(([key, val]) => {
             result = result.replaceAll(key, val);
         });
@@ -4070,11 +4105,6 @@ export default function Show({
                                             <input
                                                 type="date"
                                                 value={filterEndDate}
-                                                onChange={(e) =>
-                                                    setFilterEndDate(
-                                                        e.target.value,
-                                                    )
-                                                }
                                                 className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                                             />
                                         </div>
@@ -5446,13 +5476,21 @@ export default function Show({
                                         </div>
                                     </div>
 
-                                    {/* Summary */}
+                                    {/* Summary & Actions */}
                                     <div className="flex justify-between items-center mb-3">
                                         <span className="text-xs text-text-muted font-bold">
                                             {lang === "ar"
                                                 ? `إجمالي الطبالي: ${palletsTotal}`
                                                 : `Total pallets: ${palletsTotal}`}
                                         </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPalletsReport(true)}
+                                            className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                                        >
+                                            <Printer className="h-3.5 w-3.5" />
+                                            <span>{lang === "ar" ? "طباعة ملخص الطبالي" : "Print Pallets Report"}</span>
+                                        </button>
                                     </div>
 
                                     {/* Table Content */}
@@ -5807,13 +5845,21 @@ export default function Show({
                                         </div>
                                     </div>
 
-                                    {/* Summary */}
+                                    {/* Summary & Actions */}
                                     <div className="flex justify-between items-center mb-3">
                                         <span className="text-xs text-text-muted font-bold">
                                             {lang === "ar"
                                                 ? `عدد السلع المستودعية: ${storedItemsTotal}`
                                                 : `Total warehouse items: ${storedItemsTotal}`}
                                         </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowItemsReport(true)}
+                                            className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                                        >
+                                            <Printer className="h-3.5 w-3.5" />
+                                            <span>{lang === "ar" ? "طباعة تقرير الأصناف" : "Print Items Report"}</span>
+                                        </button>
                                     </div>
 
                                     {/* Table Content */}
@@ -7504,6 +7550,22 @@ export default function Show({
                 passwordError={deleteError}
                 processing={deleteProcessing}
             />
+
+            {/* Printable Summary Reports */}
+            {showPalletsReport && (
+                <PalletsPrintReport
+                    contract={contract}
+                    pallets={pallets}
+                    onClose={() => setShowPalletsReport(false)}
+                />
+            )}
+            {showItemsReport && (
+                <ItemsPrintReport
+                    contract={contract}
+                    items={storedItems}
+                    onClose={() => setShowItemsReport(false)}
+                />
+            )}
         </AuthenticatedLayout>
     );
 }

@@ -590,4 +590,32 @@ class DeliveryController extends Controller
 
         return max(0.0, $totalIn - $totalOut);
     }
+
+    public function bulkPrint(Request $request)
+    {
+        $ids = $request->input('ids');
+        $idList = is_string($ids) ? explode(',', $ids) : (array) $ids;
+
+        $deliveries = Delivery::whereIn('id', array_filter($idList))
+            ->with([
+                'customer',
+                'contract',
+                'driver',
+                'representative',
+                'period',
+                'inventoryEntries.inventoryItem',
+                'inventoryEntries.variant',
+                'inventoryEntries.pallet'
+            ])
+            ->get()
+            ->map(function ($d) {
+                $d->voucher_type = 'delivery';
+                return $d;
+            });
+
+        return Inertia::render('Warehouse/Vouchers/BulkPrint', [
+            'vouchers' => $deliveries,
+            'contract' => null
+        ]);
+    }
 }

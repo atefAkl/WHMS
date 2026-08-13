@@ -96,6 +96,7 @@ class TermController extends Controller
             ["code" => '{$customer_id}', "label_ar" => "هوية العميل", "label_en" => "Customer ID"],
             ["code" => '{$customer_nationality}', "label_ar" => "جنسية العميل", "label_en" => "Customer Nationality"],
             ["code" => '{$customer_delegate_name}', "label_ar" => "نائب العميل (المفوض)", "label_en" => "Customer Delegate Name"],
+            ["code" => '{$customer_delegate_phone}', "label_ar" => "هاتف نائب العميل (المفوض)", "label_en" => "Customer Delegate Phone"],
             ["code" => '{$customer_delegate_id}', "label_ar" => "هوية نائب العميل", "label_en" => "Customer Delegate ID"],
             ["code" => '{$customer_delegate_nationality}', "label_ar" => "جنسية نائب العميل", "label_en" => "Customer Delegate Nationality"],
             ["code" => '{$contract_introduction}', "label_ar" => "مقدمة العقد التلقائية", "label_en" => "Dynamic Contract Introduction"],

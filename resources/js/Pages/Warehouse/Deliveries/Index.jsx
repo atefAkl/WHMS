@@ -153,15 +153,32 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                         </p>
                     }
                     actions={
-                        <Tooltip text={lang === "ar" ? "إنشاء سند خروج جديد" : "Create New Delivery Note"}>
-                            <Link
-                                href={route("deliveries.create")}
-                                className={`bg-primary text-white hover:bg-primary-hover rounded-none flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'}`}
-                            >
-                                <Plus className="h-4 w-4 shrink-0" />
-                                {showButtonText && <span>{lang === "ar" ? "جديد" : "New"}</span>}
-                            </Link>
-                        </Tooltip>
+                        <div className="flex items-center gap-2">
+                            {deliveries?.data?.length > 0 && (
+                                <Tooltip text={lang === "ar" ? "طباعة مجمعة لسندات التسليم" : "Bulk Print Delivery Notes"}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const ids = deliveries.data.map((d) => d.id).join(",");
+                                            router.get(route("deliveries.bulk-print"), { ids });
+                                        }}
+                                        className="bg-slate-800 hover:bg-slate-700 text-white rounded-none flex items-center justify-center transition-all h-[30px] px-3 gap-1.5 text-xs font-bold"
+                                    >
+                                        <Printer className="h-4 w-4 shrink-0" />
+                                        <span>{lang === "ar" ? "طباعة مجمعة" : "Bulk Print"}</span>
+                                    </button>
+                                </Tooltip>
+                            )}
+                            <Tooltip text={lang === "ar" ? "إنشاء سند خروج جديد" : "Create New Delivery Note"}>
+                                <Link
+                                    href={route("deliveries.create")}
+                                    className={`bg-primary text-white hover:bg-primary-hover rounded-none flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'}`}
+                                >
+                                    <Plus className="h-4 w-4 shrink-0" />
+                                    {showButtonText && <span>{lang === "ar" ? "جديد" : "New"}</span>}
+                                </Link>
+                            </Tooltip>
+                        </div>
                     }
                 />
 

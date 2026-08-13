@@ -23,7 +23,7 @@ function safeRoute(name) {
 }
 
 export default function Topbar({ header }) {
-    const user = usePage().props.auth.user;
+    const user = usePage().props.auth?.user;
     const { lang, setLang } = useLang();
 
     const initialUnread = usePage().props.auth?.unread_notifications_count ?? 0;
@@ -110,14 +110,14 @@ export default function Topbar({ header }) {
                 </div>
 
                 {/* Season Badge */}
-                {usePage().props.auth.active_season_name && (
+                {usePage().props.auth?.active_season_name && (
                     <Link
                         href={safeRoute('season.select')}
                         className="hidden sm:flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 border border-primary/20 hover:bg-primary/20 transition-colors cursor-pointer"
                         title={lang === 'ar' ? 'تغيير الموسم' : 'Change Season'}
                     >
                         <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
-                        <span className="text-xs font-bold text-primary tracking-widest">{usePage().props.auth.active_season_name}</span>
+                        <span className="text-xs font-bold text-primary tracking-widest">{usePage().props.auth?.active_season_name}</span>
                     </Link>
                 )}
             </div>
@@ -280,8 +280,8 @@ export default function Topbar({ header }) {
                                 <User className="h-4 w-4" />
                             </div>
                             <div className={cn("hidden text-right md:block", lang === 'ar' ? 'text-right' : 'text-left')}>
-                                <p className="text-sm font-semibold text-text leading-none">{user.name}</p>
-                                <p className="text-[11px] text-text-muted mt-0.5">{user.email}</p>
+                                <p className="text-sm font-semibold text-text leading-none">{user?.name || ''}</p>
+                                <p className="text-[11px] text-text-muted mt-0.5">{user?.email || ''}</p>
                             </div>
                             <ChevronDown className="h-4 w-4 text-text-muted" />
                         </button>
@@ -289,8 +289,8 @@ export default function Topbar({ header }) {
 
                     <Dropdown.Content align={lang === 'ar' ? 'left' : 'right'}>
                         <div className="px-3 py-2 border-b border-border">
-                            <p className="text-xs font-semibold text-text">{user.name}</p>
-                            <p className="text-xs text-text-muted">{user.email}</p>
+                            <p className="text-xs font-semibold text-text">{user?.name || ''}</p>
+                            <p className="text-xs text-text-muted">{user?.email || ''}</p>
                         </div>
                         <Dropdown.Link href={safeRoute(isCentral ? 'central.profile.edit' : 'profile.edit')}>
                             <User className={cn("inline h-4 w-4", lang === 'ar' ? 'ms-2' : 'me-2')} />

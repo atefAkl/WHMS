@@ -630,6 +630,34 @@ class ReceptionController extends Controller
         }
     }
 
+    public function bulkPrint(Request $request)
+    {
+        $ids = $request->input('ids');
+        $idList = is_string($ids) ? explode(',', $ids) : (array) $ids;
+
+        $receptions = Reception::whereIn('id', array_filter($idList))
+            ->with([
+                'customer',
+                'contract',
+                'driver',
+                'representative',
+                'period',
+                'inventoryEntries.inventoryItem',
+                'inventoryEntries.variant',
+                'inventoryEntries.pallet'
+            ])
+            ->get()
+            ->map(function ($r) {
+                $r->voucher_type = 'reception';
+                return $r;
+            });
+
+        return Inertia::render('Warehouse/Vouchers/BulkPrint', [
+            'vouchers' => $receptions,
+            'contract' => null
+        ]);
+    }
+
     private function isActiveContractPeriod($contractId, $periodId): bool
     {
         if (empty($contractId) || empty($periodId)) {
