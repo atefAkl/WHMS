@@ -704,12 +704,12 @@ export default function Show({
                 <h3 className="font-bold text-xs text-black uppercase tracking-wider mb-2">
                     {t("show.storage_table")}
                 </h3>
-                <table className="w-full text-xs text-start border-collapse border border-black">
+                <table className="w-full text-xs text-start border-collapse border border-black table-auto">
                     <thead className="bg-gray-100 text-black uppercase font-bold">
                         <tr>
-                            <th className="border border-black px-2 py-2 text-center w-8">#</th>
+                            <th className="border border-black px-2 py-2 text-center w-8 whitespace-nowrap">#</th>
                             {showItem && (
-                                <th className="border border-black px-3 py-2 text-start">
+                                <th className="border border-black px-3 py-2 text-start min-w-[220px] w-[35%] col-item-name whitespace-normal">
                                     {getColTitle(
                                         "item_name",
                                         "الصنف والمستودع",
@@ -718,24 +718,24 @@ export default function Show({
                                 </th>
                             )}
                             {showQty && (
-                                <th className="border border-black px-3 py-2 text-center w-16">
+                                <th className="border border-black px-3 py-2 text-center w-14 whitespace-nowrap">
                                     {getColTitle("qty", "الكمية", "Qty")}
                                 </th>
                             )}
-                            <th className="border border-black px-3 py-2 text-center w-20">
+                            <th className="border border-black px-3 py-2 text-center w-16 whitespace-nowrap">
                                 {lang === "ar" ? "المدة" : "Period"}
                             </th>
                             {showRent && (
-                                <th className="border border-black px-3 py-2 text-center w-28">
+                                <th className="border border-black px-3 py-2 text-center w-20 whitespace-nowrap">
                                     {getColTitle(
                                         "rent",
-                                        "سعر الوحدة (قبل الضريبة)",
-                                        "Unit Price (Ex. VAT)",
+                                        "الإيجار الشهري",
+                                        "Monthly Rent",
                                     )}
                                 </th>
                             )}
                             {showDiscount && (
-                                <th className="border border-black px-3 py-2 text-center w-24">
+                                <th className="border border-black px-3 py-2 text-center w-16 whitespace-nowrap">
                                     {getColTitle(
                                         "discount",
                                         "الخصم",
@@ -743,15 +743,15 @@ export default function Show({
                                     )}
                                 </th>
                             )}
-                            <th className="border border-black px-3 py-2 text-center w-24">
-                                {lang === "ar" ? "الضريبة (15%)" : "VAT (15%)"}
+                            <th className="border border-black px-3 py-2 text-center w-20 whitespace-nowrap">
+                                {lang === "ar" ? "الضريبة (%15)" : "VAT (15%)"}
                             </th>
                             {showTotal && (
-                                <th className="border border-black px-3 py-2 text-end w-32">
+                                <th className="border border-black px-3 py-2 text-end w-28 whitespace-nowrap">
                                     {getColTitle(
                                         "total",
-                                        "الإجمالي (قبل الضريبة)",
-                                        "Total (Ex. VAT)",
+                                        "الإجمالي شامل الضريبة",
+                                        "Total (Inc. VAT)",
                                     )}
                                 </th>
                             )}
@@ -764,25 +764,25 @@ export default function Show({
                             
                             return (
                                 <tr key={item.id}>
-                                    <td className="border border-black px-2 py-2 text-center font-mono font-bold">{idx + 1}</td>
+                                    <td className="border border-black px-2 py-2 text-center font-mono font-bold whitespace-nowrap">{idx + 1}</td>
                                     {showItem && (
-                                        <td className="border border-black px-3 py-2 font-bold text-start">
+                                        <td className="border border-black px-3 py-2 font-bold text-start col-item-name whitespace-normal leading-normal">
                                             {lang === "ar"
                                                 ? (item.storage_item?.name_ar || item.storageItem?.name_ar || "")
                                                 : (item.storage_item?.name_en || item.storageItem?.name_en || item.storage_item?.name_ar || item.storageItem?.name_ar || "")}
                                         </td>
                                     )}
                                     {showQty && (
-                                        <td className="border border-black px-3 py-2 text-center font-mono">
+                                        <td className="border border-black px-3 py-2 text-center font-mono whitespace-nowrap">
                                             {item.unit_count}
                                         </td>
                                     )}
-                                    <td className="border border-black px-3 py-2 text-center font-mono">
+                                    <td className="border border-black px-3 py-2 text-center font-mono whitespace-nowrap">
                                         {contract.mandatory_period} {lang === "ar" ? "أشهر" : "Months"}
                                     </td>
                                     {showRent && (
                                         <td
-                                            className="border border-black px-3 py-2 text-center font-mono"
+                                            className="border border-black px-3 py-2 text-center font-mono whitespace-nowrap"
                                             dir="ltr"
                                         >
                                             {priceExVat}
@@ -790,7 +790,7 @@ export default function Show({
                                     )}
                                     {showDiscount && (
                                         <td
-                                            className="border border-black px-3 py-2 text-center font-mono text-red-700"
+                                            className="border border-black px-3 py-2 text-center font-mono text-red-700 whitespace-nowrap"
                                             dir="ltr"
                                         >
                                             {item.discount > 0
@@ -798,15 +798,15 @@ export default function Show({
                                                 : "0"}
                                         </td>
                                     )}
-                                    <td className="border border-black px-3 py-2 text-center font-mono font-semibold" dir="ltr">
+                                    <td className="border border-black px-3 py-2 text-center font-mono font-semibold whitespace-nowrap" dir="ltr">
                                         {rowVat}
                                     </td>
                                     {showTotal && (
                                         <td
-                                            className="border border-black px-3 py-2 text-end font-mono font-bold"
+                                            className="border border-black px-3 py-2 text-end font-mono font-bold whitespace-nowrap"
                                             dir="ltr"
                                         >
-                                            {item.subtotal_before_vat}
+                                            {item.subtotal}
                                         </td>
                                     )}
                                 </tr>
@@ -7450,6 +7450,22 @@ export default function Show({
                             background: white !important;
                             box-shadow: none !important;
                             border: none !important;
+                        }
+                        .contract-print-area table {
+                            width: 100% !important;
+                            border-collapse: collapse !important;
+                            table-layout: auto !important;
+                        }
+                        .contract-print-area th, .contract-print-area td {
+                            border: 1px solid #000 !important;
+                            padding: 6px 8px !important;
+                        }
+                        .contract-print-area .col-item-name {
+                            min-width: 220px !important;
+                            width: 35% !important;
+                            white-space: normal !important;
+                            word-break: normal !important;
+                            overflow-wrap: break-word !important;
                         }
                         .print-layout-table {
                             width: 100% !important;
