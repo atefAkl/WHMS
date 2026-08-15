@@ -263,7 +263,7 @@ export default function Topbar({ header }) {
                                 href={safeRoute('notifications.index')}
                                 className="text-xs font-black text-primary hover:text-primary/80 transition-colors block py-1"
                             >
-                                {lang === "ar" ? "عرض مركز جميع التنبيهات وإدارتها ←" : "View & Manage All Notifications →"}
+                                {lang === "ar" ? "عرض الكل ←" : "View All →"}
                             </Link>
                         </div>
                     </Dropdown.Content>

@@ -613,9 +613,12 @@ class DeliveryController extends Controller
                 return $d;
             });
 
+        $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+
         return Inertia::render('Warehouse/Vouchers/BulkPrint', [
             'vouchers' => $deliveries,
-            'contract' => null
+            'contract' => null,
+            'companySettings' => $companySettings
         ]);
     }
 }

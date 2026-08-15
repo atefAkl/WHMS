@@ -113,7 +113,7 @@ Route::middleware([
 
             // Notifications Routes
             Route::get('/notifications', function () {
-                return Inertia::render('Notifications', [
+                return Inertia::render('Tenant/Notifications/Index', [
                     'notifications' => auth()->user() ? auth()->user()->notifications()->paginate(20) : []
                 ]);
             })->name('notifications.index');

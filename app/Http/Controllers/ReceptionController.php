@@ -652,9 +652,12 @@ class ReceptionController extends Controller
                 return $r;
             });
 
+        $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+
         return Inertia::render('Warehouse/Vouchers/BulkPrint', [
             'vouchers' => $receptions,
-            'contract' => null
+            'contract' => null,
+            'companySettings' => $companySettings
         ]);
     }
 

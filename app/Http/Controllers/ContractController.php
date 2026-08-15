@@ -1219,9 +1219,12 @@ class ContractController extends Controller
             }
         }
 
+        $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+
         return Inertia::render('Warehouse/Vouchers/BulkPrint', [
             'vouchers' => $vouchers,
-            'contract' => $contract
+            'contract' => $contract,
+            'companySettings' => $companySettings
         ]);
     }
 

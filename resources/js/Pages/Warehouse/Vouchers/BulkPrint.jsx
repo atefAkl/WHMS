@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Head, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import { Printer, ArrowLeft, CheckSquare, Square } from "lucide-react";
+import { Printer, ArrowLeft, CheckSquare, Square, FileText } from "lucide-react";
 
-export default function BulkPrint({ vouchers = [], contract }) {
+export default function BulkPrint({ vouchers = [], contract, companySettings = {} }) {
     const { lang } = useLang();
     const user = usePage().props.auth.user;
 
@@ -25,27 +25,65 @@ export default function BulkPrint({ vouchers = [], contract }) {
         return rawText;
     };
 
-    const getPalletSizeDisplay = (pallet) => {
-        if (!pallet || !pallet.size) return "";
-        const sizeMap = {
-            'كبيرة': lang === 'ar' ? 'كبيرة' : 'Large',
-            'وسط': lang === 'ar' ? 'وسط' : 'Medium',
-            'صغيرة': lang === 'ar' ? 'صغيرة' : 'Small',
-            'خشب': lang === 'ar' ? 'خشب' : 'Wood',
-            'بلاستيك': lang === 'ar' ? 'بلاستيك' : 'Plastic',
-        };
-        return sizeMap[pallet.size] || pallet.size;
+    // Helper: Format item name, extract capacity/weight
+    const formatItemAndPackage = (entry, isReception) => {
+        const itemObj = isReception ? entry.inventory_item : (entry.inventoryItem || entry.inventory_item);
+        let rawItemName = displayBilingual(itemObj?.name) || "";
+        let rawVarName = displayBilingual(entry.variant?.name) || "";
+        let boxType = entry.variant?.unit || entry.variant?.package_type || "كرتون";
+
+        let extraCap = "";
+        const capacityRegex = /(\d+(?:\.\d+)?\s*(?:كجم|ك|kg|k)\s*\w*|ك\s+\w+)/gi;
+
+        const mVar = rawVarName.match(capacityRegex);
+        if (mVar) {
+            extraCap = mVar[0].trim();
+            rawVarName = rawVarName.replace(capacityRegex, "").trim();
+        }
+
+        const mItem = rawItemName.match(capacityRegex);
+        if (mItem) {
+            if (!extraCap) extraCap = mItem[0].trim();
+            rawItemName = rawItemName.replace(capacityRegex, "").trim();
+        }
+
+        if (rawVarName.toLowerCase() === boxType.toLowerCase()) {
+            rawVarName = "";
+        }
+
+        let finalBoxDisplay = boxType;
+        if (extraCap) {
+            finalBoxDisplay = `${boxType} ${extraCap}`;
+        } else if (rawVarName) {
+            finalBoxDisplay = `${boxType} ${rawVarName}`;
+            rawVarName = "";
+        }
+
+        return { cleanItemName: rawItemName, cleanVarName: rawVarName, finalBoxDisplay };
     };
 
-    const getSignatoryName = (voucher) => {
-        if (voucher.representative?.name) {
-            return voucher.representative.name;
-        }
-        if (voucher.driver?.name) {
-            return voucher.driver.name;
-        }
-        return voucher.customer?.name || "";
+    const getGradeDisplay = (entry) => {
+        return entry.variant?.size || entry.variant?.quality || entry.pallet?.size || "—";
     };
+
+    const getPalletFormatted = (entry) => {
+        const palletNum = entry.pallet?.pallet_number || entry.pallet_number || "—";
+        const palletSize = entry.pallet?.size || entry.variant?.size;
+        if (palletNum !== "—" && palletSize) {
+            return `${palletNum} / ${palletSize}`;
+        }
+        return palletNum;
+    };
+
+    // Company info defaults
+    const compName = companySettings.company_name || "مخازن أيمن محمد عبد الله الغماس للتخزين";
+    const compSlogan = companySettings.company_slogan || "تخزين - تبريد - تجميد - تعبئة وتغليف - بيع - تصدير";
+    const compCr = companySettings.company_cr || "1131305092";
+    const compPhone = companySettings.company_phone || "0568562615";
+    const compEmail = companySettings.company_email || "sales@ag-stores.com";
+    const compAddress = companySettings.company_address || "1131 - القصيم / ضراس - طريق الملك فهد";
+    const compWebsite = companySettings.company_website || "https:web.site";
+    const compLogo = companySettings.company_logo || null;
 
     const toggleVoucher = (key) => {
         setSelectedKeys((prev) => ({
@@ -83,7 +121,7 @@ export default function BulkPrint({ vouchers = [], contract }) {
         (v) => selectedKeys[`${v.voucher_type || 'voucher'}-${v.id}`]
     );
 
-    const renderDocumentCopy = (voucher, copyTitle) => {
+    const renderAuthenticVoucher = (voucher) => {
         const isReception = voucher.voucher_type === 'reception';
         const entries = voucher.inventory_entries || [];
         const totalQty = entries.reduce(
@@ -93,237 +131,214 @@ export default function BulkPrint({ vouchers = [], contract }) {
         const totalPallets = entries.length;
 
         return (
-            <div className="max-w-4xl mx-auto p-8 space-y-6 bg-white text-black font-sans relative my-4">
-                {/* Copy Title indicator */}
-                <div className="absolute top-4 right-8 text-[10px] font-bold bg-gray-100 px-2 py-0.5 border border-gray-300 font-mono uppercase">
-                    {copyTitle}
-                </div>
-
-                {/* Header Section */}
-                <div className="flex justify-between items-start border-b-2 border-black pb-4 pt-2">
-                    <div className="space-y-1 text-start">
-                        <h2 className="text-lg font-black tracking-wide text-gray-900">
-                            {lang === "ar" ? "نظام إدارة المستودعات الذكي" : "WHMS - Intelligent Warehouse System"}
-                        </h2>
-                        <p className="text-xs text-gray-600">
-                            {isReception 
-                                ? (lang === "ar" ? "إيصال استلام بضائع للمستودع" : "Warehouse Goods Reception Voucher")
-                                : (lang === "ar" ? "سند خروج وتسليم بضاعة" : "Warehouse Goods Delivery Note")}
-                        </p>
-                    </div>
-                    <div className="text-end space-y-1">
-                        <div className="text-xs font-bold bg-black text-white px-3 py-1 font-mono uppercase">
-                            {voucher.serial_number}
+            <div className="bulk-voucher-page max-w-4xl mx-auto w-full flex flex-col justify-between p-6 bg-white text-black font-sans text-xs print:p-0 print:m-0 print:box-border print:h-[287mm]">
+                {/* ═══ TOP & MAIN CONTENT ═════════════════════════════════ */}
+                <div className="space-y-3 print:space-y-2">
+                    
+                    {/* Header Section */}
+                    <div className="flex justify-between items-start border-b border-gray-400 pb-2">
+                        {/* Left: Company Logo & Info */}
+                        <div className="flex items-center gap-3">
+                            {compLogo ? (
+                                <img src={compLogo} alt="Logo" className="w-12 h-12 object-contain" />
+                            ) : (
+                                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-300">
+                                    <FileText className="h-5 w-5 text-gray-800" />
+                                </div>
+                            )}
+                            <div className="space-y-0.5 text-start">
+                                <h2 className="font-black text-xs text-black leading-snug">
+                                    {compName}
+                                </h2>
+                                <p className="text-[10px] text-gray-600 font-medium">
+                                    {compSlogan}
+                                </p>
+                                <p className="text-[9px] text-gray-700 font-mono">
+                                    CR: <span className="font-bold">{compCr}</span> &nbsp;|&nbsp; TEL: <span className="font-bold">{compPhone}</span>
+                                </p>
+                            </div>
                         </div>
-                        <p className="text-[10px] text-gray-600 font-mono">
-                            {lang === "ar" ? "حالة السند: " : "Status: "}
-                            <span className="font-bold">
-                                {voucher.status === "approved" 
-                                    ? (lang === "ar" ? "معتمد ومغلق" : "Approved") 
-                                    : (lang === "ar" ? "مسودة" : "Draft")}
-                            </span>
-                        </p>
+
+                        {/* Right: Voucher Title & Serial Number */}
+                        <div className="text-end space-y-0.5">
+                            <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
+                                {isReception 
+                                    ? (lang === "ar" ? "سند استلام بضائع" : "Goods Receipt")
+                                    : (lang === "ar" ? "سند خروج وتسليم بضاعة" : "Goods Delivery Note")}
+                            </h1>
+                            <div className="text-xs font-black font-mono text-gray-900">
+                                No: {voucher.serial_number}
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                {/* Sub Header (Title) */}
-                <div className="text-center py-2 bg-gray-100 border-y border-black">
-                    <h1 className="text-xl font-extrabold uppercase tracking-widest text-gray-900">
-                        {isReception 
-                            ? (lang === "ar" ? "سند استلام بضائع" : "Goods Reception Voucher")
-                            : (lang === "ar" ? "سند خروج بضاعة (تسليم للعميل)" : "Goods Delivery Note")}
-                    </h1>
-                </div>
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-[11px] border-b border-gray-300 pb-2 text-start">
+                        {/* Left Column */}
+                        <div className="space-y-1">
+                            <div className="flex gap-2">
+                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العميل:" : "Client:"}</span>
+                                <span className="font-bold text-black">{voucher.customer?.name}</span>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="flex gap-2 flex-1">
+                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العقد:" : "Contract:"}</span>
+                                    <span className="font-mono font-bold text-black">{voucher.contract?.contract_number}</span>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                    <span className="font-bold text-gray-600">{lang === "ar" ? "الفترة:" : "P.No:"}</span>
+                                    <span className="font-mono font-bold text-black">{voucher.period?.period_number ? String(voucher.period.period_number).padStart(2, '0') : '01'}</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <span className="font-bold text-gray-600 w-24 shrink-0">{isReception ? (lang === "ar" ? "المندوب:" : "Represent:") : (lang === "ar" ? "المستلم/المندوب:" : "Recipient:")}</span>
+                                <span className="font-medium text-gray-900">{voucher.representative?.name || voucher.driver?.name || "—"}</span>
+                            </div>
+                            {isReception ? (
+                                <div className="flex gap-2">
+                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المصدر:" : "Source:"}</span>
+                                    <span className="font-medium text-gray-900">{voucher.farm_source || voucher.source_farm || "—"}</span>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "السائق:" : "Driver:"}</span>
+                                    <span className="font-medium text-gray-900">{voucher.driver?.name ? `${voucher.driver.name} (${voucher.driver.vehicle_plate || ''})` : "—"}</span>
+                                </div>
+                            )}
+                        </div>
 
-                {/* Info Grid - Clean, borderless non-table structure */}
-                <div className="grid grid-cols-2 gap-8 text-xs text-start">
-                    {/* Column 1: Customer & Contract */}
-                    <div className="space-y-2 py-1">
-                        <h3 className="font-extrabold border-b border-gray-300 pb-1 text-gray-900">
-                            {lang === "ar" ? "بيانات العميل والعقد" : "Customer & Contract Details"}
-                        </h3>
-                        <table className="w-full text-start border-none">
-                            <tbody>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">{lang === "ar" ? "العميل:" : "Customer:"}</td>
-                                    <td className="font-bold py-1 text-gray-900">{voucher.customer?.name}</td>
-                                </tr>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">{lang === "ar" ? "رقم العقد:" : "Contract No.:"}</td>
-                                    <td className="font-bold font-mono py-1 text-gray-900">{voucher.contract?.contract_number}</td>
-                                </tr>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">
-                                        {isReception ? (lang === "ar" ? "الفترة الإلزامية:" : "Billing Period:") : (lang === "ar" ? "فترة التسليم:" : "Billing Period:")}
-                                    </td>
-                                    <td className="font-semibold py-1 text-gray-900">
-                                        {lang === "ar" ? "الفترة" : "Period"} {voucher.period?.period_number}{" "}
-                                        <span className="text-[10px] text-gray-500 font-mono font-normal">
-                                            ({voucher.period?.start_date} - {voucher.period?.end_date})
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">
-                                        {isReception ? (lang === "ar" ? "المستلم منه:" : "Representative:") : (lang === "ar" ? "مندوب الاستلام:" : "Representative:")}
-                                    </td>
-                                    <td className="font-semibold py-1 text-gray-900">
-                                        {voucher.representative ? `${voucher.representative.name} (${voucher.representative.phone_number})` : "—"}
-                                    </td>
-                                </tr>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">
-                                        {isReception ? (lang === "ar" ? "تاريخ الاستلام:" : "Date Received:") : (lang === "ar" ? "تاريخ الخروج:" : "Delivery Date:")}
-                                    </td>
-                                    <td className="font-bold font-mono py-1 text-gray-900">
+                        {/* Right Column */}
+                        <div className="space-y-1">
+                            <div className="flex gap-2">
+                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "عناية / المستلم:" : "Att:"}</span>
+                                <span className="font-bold text-black">{voucher.recipient_name || user?.name || "أمين المستودع"}</span>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="flex gap-2 flex-1">
+                                    <span className="font-bold text-gray-600 w-24 shrink-0">{isReception ? (lang === "ar" ? "تاريخ الاستلام:" : "Date:") : (lang === "ar" ? "تاريخ الخروج:" : "Date:")}</span>
+                                    <span className="font-mono font-bold text-black">
                                         {isReception 
                                             ? (voucher.reception_date ? new Date(voucher.reception_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—")
                                             : (voucher.delivery_date ? new Date(voucher.delivery_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—")
                                         }
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Column 2: Driver & Transport / Permit */}
-                    <div className="space-y-2 py-1">
-                        <h3 className="font-extrabold border-b border-gray-300 pb-1 text-gray-900">
-                            {isReception 
-                                ? (lang === "ar" ? "بيانات السائق والنقل" : "Driver & Vehicle Details")
-                                : (lang === "ar" ? "بيانات النقل والمرجع" : "Transport & Reference Details")}
-                        </h3>
-                        <table className="w-full text-start border-none">
-                            <tbody>
-                                {!isReception && (
-                                    <tr className="align-top">
-                                        <td className="w-24 text-gray-600 font-medium py-1">{lang === "ar" ? "المرجع/الإذن:" : "Permit / Ref:"}</td>
-                                        <td className="font-bold py-1 text-gray-900">
-                                            {voucher.exit_authorization 
-                                                ? `${lang === "ar" ? "إذن خروج" : "Exit Permit"} ${voucher.exit_authorization.serial_number}` 
-                                                : voucher.written_reference || "—"}
-                                        </td>
-                                    </tr>
-                                )}
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">{lang === "ar" ? "اسم السائق:" : "Driver Name:"}</td>
-                                    <td className="font-bold py-1 text-gray-900">{voucher.driver?.name || "—"}</td>
-                                </tr>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">{lang === "ar" ? "رقم الجوال:" : "Phone No.:"}</td>
-                                    <td className="font-bold font-mono py-1 text-gray-900">{voucher.driver?.phone_number || "—"}</td>
-                                </tr>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">{lang === "ar" ? "رقم اللوحة:" : "Plate No.:"}</td>
-                                    <td className="font-bold font-mono py-1 text-gray-900">{voucher.driver?.vehicle_plate || "—"}</td>
-                                </tr>
-                                <tr className="align-top">
-                                    <td className="w-24 text-gray-600 font-medium py-1">{lang === "ar" ? "نوع السيارة:" : "Vehicle Type:"}</td>
-                                    <td className="font-semibold py-1 text-gray-900">{voucher.driver?.vehicle_type || "—"}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Notes if present */}
-                {voucher.notes && (
-                    <div className="py-2 text-xs text-start">
-                        <span className="font-bold text-gray-700 block mb-1">{lang === "ar" ? "ملاحظات السند:" : "Remarks:"}</span>
-                        <p className="leading-relaxed text-gray-900">{voucher.notes}</p>
-                    </div>
-                )}
-
-                {/* Items Table */}
-                <div className="space-y-1">
-                    <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider text-start">
-                        {isReception 
-                            ? (lang === "ar" ? "تفاصيل الأصناف والكميات المستلمة" : "Received Products & Quantities")
-                            : (lang === "ar" ? "تفاصيل الأصناف والكميات المصروفة" : "Delivered Products & Quantities")}
-                    </h3>
-                    <table className="w-full text-xs border border-collapse border-black">
-                        <thead>
-                            <tr className="bg-gray-100 border-b border-black">
-                                <th className="border border-black px-3 py-2 text-start w-12">{lang === "ar" ? "م" : "#"}</th>
-                                <th className="border border-black px-3 py-2 text-start">{lang === "ar" ? "الصنف المخزني" : "Inventory Item"}</th>
-                                <th className="border border-black px-3 py-2 text-start w-32">{lang === "ar" ? "الشكل/العبوة" : "Variant"}</th>
-                                <th className="border border-black px-3 py-2 text-start w-32">{lang === "ar" ? "رقم الطبلية" : "Pallet Number"}</th>
-                                <th className="border border-black px-3 py-2 text-end w-28">{lang === "ar" ? "الكمية" : "Quantity"}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {entries.map((entry, idx) => (
-                                <tr key={entry.id} className="border-b border-black text-start">
-                                    <td className="border border-black px-3 py-2 font-mono">{idx + 1}</td>
-                                    <td className="border border-black px-3 py-2 font-bold">{displayBilingual(entry.inventory_item?.name)}</td>
-                                    <td className="border border-black px-3 py-2 text-gray-600">
-                                        {displayBilingual(entry.variant?.name)}{entry.variant?.quality ? ` (${displayBilingual(entry.variant.quality)})` : ""}
-                                    </td>
-                                    <td className="border border-black px-3 py-2 font-mono font-bold">
-                                        {entry.pallet?.pallet_number ? `${entry.pallet.pallet_number} / ${getPalletSizeDisplay(entry.pallet)}` : "—"}
-                                    </td>
-                                    <td className={`border border-black px-3 py-2 font-mono font-bold text-end ${!isReception ? 'text-red-600' : ''}`}>
-                                        {Math.round(parseFloat(isReception ? (entry.quantity_in || 0) : (entry.quantity_out || 0)))}
-                                    </td>
-                                </tr>
-                            ))}
-                            {/* Totals Row */}
-                            <tr className="bg-gray-100 font-bold text-start">
-                                <td colSpan="3" className="border border-black px-3 py-2 text-end">
-                                    {isReception ? (lang === "ar" ? "الإجمالي الكلي" : "Grand Total") : (lang === "ar" ? "الإجمالي الكلي للمنصرف" : "Grand Total Out")}
-                                </td>
-                                <td className="border border-black px-3 py-2 font-mono">
-                                    {totalPallets} {lang === "ar" ? "طبلية" : "Pallets"}
-                                </td>
-                                <td className={`border border-black px-3 py-2 font-mono text-end ${!isReception ? 'text-red-700' : ''}`}>
-                                    {Math.round(totalQty).toLocaleString()}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Signatures Panel */}
-                <div className="grid grid-cols-3 gap-6 pt-12 text-center text-xs">
-                    <div className="space-y-12">
-                        <p className="font-bold text-gray-700">{lang === "ar" ? "توقيع العميل / المستلم" : "Customer / Recipient Signature"}</p>
-                        <div className="pt-2 mx-6 text-start">
-                            <p className="font-semibold text-[11px] text-gray-950 mb-6">
-                                {lang === "ar" ? "الاسم: " : "Name: "}{getSignatoryName(voucher)}
-                            </p>
-                            <div className="border-t border-dashed border-black pt-1">
-                                <span className="text-[10px] text-gray-400 font-mono">{lang === "ar" ? "التوقيع" : "Signature"}</span>
+                                    </span>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                    <span className="font-bold text-gray-600">{lang === "ar" ? "الوردية:" : "Shift:"}</span>
+                                    <span className="font-mono font-bold text-black">{voucher.shift || "م / M"}</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "ملاحظات:" : "Note:"}</span>
+                                <span className="text-[10px] text-gray-800 leading-tight">{voucher.notes || "—"}</span>
                             </div>
                         </div>
                     </div>
-                    <div className="space-y-12">
-                        <p className="font-bold text-gray-700">{lang === "ar" ? "توقيع أمين المخزن" : "Storekeeper Signature"}</p>
-                        <div className="border-t border-dashed border-black pt-2 mx-6 mt-[42px]">
-                            <span className="text-[10px] text-gray-400 font-mono">{lang === "ar" ? "التوقيع والاسم" : "Signature & Name"}</span>
-                        </div>
-                    </div>
-                    <div className="space-y-12">
-                        <p className="font-bold text-gray-700">{lang === "ar" ? "توقيع إدارة المخازن" : "Warehouse Management Signature"}</p>
-                        <div className="border-t border-dashed border-black pt-2 mx-6 mt-[42px]">
-                            <span className="text-[10px] text-gray-400 font-mono">{lang === "ar" ? "التوقيع والاسم" : "Signature & Name"}</span>
-                        </div>
+
+                    {/* Items Table */}
+                    <div className="space-y-1">
+                        <table className="w-full text-xs text-center border-b border-gray-400">
+                            <thead>
+                                <tr className="border-b border-black text-black font-bold">
+                                    <th className="py-1.5 text-start w-10">#</th>
+                                    <th className="py-1.5 text-start">{lang === "ar" ? "الصنف (Items)" : "Items"}</th>
+                                    <th className="py-1.5 w-32">{lang === "ar" ? "الدرجة (Grade)" : "Grade"}</th>
+                                    <th className="py-1.5 w-36">{lang === "ar" ? "الطبلية (Table)" : "Table"}</th>
+                                    <th className="py-1.5 w-32">{lang === "ar" ? "العبوة (Box)" : "Box"}</th>
+                                    <th className="py-1.5 w-24">{isReception ? (lang === "ar" ? "الإجمالي (Total)" : "Total") : (lang === "ar" ? "المصروف (Out)" : "Out")}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {entries.map((entry, idx) => {
+                                    const { cleanItemName, cleanVarName, finalBoxDisplay } = formatItemAndPackage(entry, isReception);
+                                    const gradeDisplay = getGradeDisplay(entry);
+                                    const palletFormatted = getPalletFormatted(entry);
+                                    const qty = Math.round(parseFloat(isReception ? (entry.quantity_in || 0) : (entry.quantity_out || 0)));
+
+                                    return (
+                                        <tr key={entry.id || idx} className="text-gray-900">
+                                            <td className="py-1.5 text-start font-mono">{String(idx + 1).padStart(2, '0')}</td>
+                                            <td className="py-1.5 text-start font-bold">
+                                                {cleanItemName}
+                                                {cleanVarName ? <span className="text-gray-500 text-[10px] font-normal block">{cleanVarName}</span> : null}
+                                            </td>
+                                            <td className="py-1.5 font-medium">
+                                                {gradeDisplay}
+                                            </td>
+                                            <td className="py-1.5 font-mono font-bold">
+                                                {palletFormatted}
+                                            </td>
+                                            <td className="py-1.5 font-medium">
+                                                {finalBoxDisplay}
+                                            </td>
+                                            <td className={`py-1.5 font-mono font-bold ${!isReception ? 'text-red-700' : ''}`}>
+                                                {qty}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+
+                                {/* Summary Row */}
+                                <tr className="border-t-2 border-black font-extrabold text-black">
+                                    <td colSpan="3" className="py-2 px-4 text-start font-bold">
+                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الطبالي:" : "Total Tables:"}</span>
+                                        <span className="font-mono text-sm font-black text-black">{totalPallets}</span>
+                                    </td>
+                                    <td colSpan="3" className="py-2 px-4 text-end font-bold">
+                                        <span className="text-gray-700 me-2">{isReception ? (lang === "ar" ? "إجمالي العبوات:" : "Total Packs:") : (lang === "ar" ? "إجمالي العبوات المنصرفة:" : "Total Packs Out:")}</span>
+                                        <span className={`font-mono text-sm font-black ${!isReception ? 'text-red-700' : 'text-black'}`}>{Math.round(totalQty).toLocaleString()}</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                {/* Print Footer Metadata */}
-                <div className="border-t border-gray-300 pt-3 mt-8 flex justify-between items-center text-[9px] text-gray-500 font-mono">
-                    <div>
-                        <span>{lang === "ar" ? "طبع بواسطة: " : "Printed by: "}</span>
-                        <span className="font-bold">{user?.name}</span>
+                {/* ═══ SIGNATURES & FOOTER PANEL (Strictly Pinned to Bottom) ═════════ */}
+                <div className="mt-auto pt-3 print:pt-2 space-y-2 pb-0 print:pb-0">
+                    
+                    {/* Signatures */}
+                    <div className="grid grid-cols-3 gap-8 text-center text-xs">
+                        <div className="space-y-4">
+                            <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                Client/Represent
+                            </p>
+                            <div className="text-start text-[11px] space-y-0.5">
+                                <p className="text-gray-800 font-semibold truncate">
+                                    {lang === "ar" ? "الاسم: " : "Name: "}{voucher.representative?.name || voucher.customer?.name || "________________"}
+                                </p>
+                                <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                Stores Manager
+                            </p>
+                            <div className="text-start text-[11px] space-y-0.5">
+                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: ________________" : "Name: ________________"}</p>
+                                <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                Stores Admin
+                            </p>
+                            <div className="text-start text-[11px] space-y-0.5">
+                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{voucher.recipient_name || user?.name || "________________"}</p>
+                                <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <span>{lang === "ar" ? "تاريخ الطباعة: " : "Print Date: "}</span>
-                        <span>{new Date().toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}</span>
+
+                    {/* Footer Metadata */}
+                    <div className="border-t border-gray-300 pt-1.5 text-center text-[9px] text-gray-600 space-y-0.5">
+                        <p className="font-medium">
+                            {compAddress} – Phone: <span className="font-mono font-bold">{compPhone}</span> Email: <span className="font-mono">{compEmail}</span> <span className="font-mono">{compWebsite}</span>
+                        </p>
                     </div>
-                    <div>
-                        <span>{lang === "ar" ? "معرّف السند: " : "Voucher ID: "}</span>
-                        <span>{voucher.id}</span>
-                    </div>
+
                 </div>
             </div>
         );
@@ -331,7 +346,7 @@ export default function BulkPrint({ vouchers = [], contract }) {
 
     return (
         <div 
-            className="min-h-screen bg-slate-50 text-black font-sans pb-16" 
+            className="min-h-screen bg-slate-100 text-black font-sans pb-16 print:p-0 print:m-0 print:bg-white print:pb-0" 
             dir={lang === "ar" ? "rtl" : "ltr"}
         >
             <Head title={lang === "ar" ? "صفحة معاينة وطباعة السندات" : "Bulk Print Preview Vouchers"} />
@@ -364,19 +379,19 @@ export default function BulkPrint({ vouchers = [], contract }) {
                         <button
                             type="button"
                             onClick={selectAll}
-                            className="text-[11px] font-bold text-emerald-400 hover:underline px-2"
+                            className="text-[11px] font-bold text-emerald-400 hover:underline px-2 shrink-0"
                         >
                             {lang === "ar" ? "تحديد الكل" : "Select All"}
                         </button>
                         <button
                             type="button"
                             onClick={deselectAll}
-                            className="text-[11px] font-bold text-amber-400 hover:underline px-2"
+                            className="text-[11px] font-bold text-amber-400 hover:underline px-2 shrink-0"
                         >
                             {lang === "ar" ? "إلغاء الكل" : "Deselect All"}
                         </button>
 
-                        <div className="h-4 w-px bg-slate-700"></div>
+                        <div className="h-4 w-px bg-slate-700 shrink-0"></div>
 
                         {vouchers.map((v) => {
                             const key = `${v.voucher_type || 'voucher'}-${v.id}`;
@@ -386,7 +401,7 @@ export default function BulkPrint({ vouchers = [], contract }) {
                                     key={key}
                                     type="button"
                                     onClick={() => toggleVoucher(key)}
-                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold shrink-0 transition-all ${
                                         isChecked
                                             ? "bg-primary text-white"
                                             : "bg-slate-800 text-slate-400 hover:text-white"
@@ -408,7 +423,7 @@ export default function BulkPrint({ vouchers = [], contract }) {
                             type="button"
                             onClick={handlePrint}
                             disabled={visibleVouchers.length === 0}
-                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-extrabold flex items-center gap-2 shadow-lg transition-all"
+                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-extrabold flex items-center gap-2 shadow-lg transition-all shrink-0"
                         >
                             <Printer className="h-4 w-4" />
                             <span>
@@ -431,26 +446,46 @@ export default function BulkPrint({ vouchers = [], contract }) {
                     {lang === "ar" ? "برجاء تحديد سند واحد على الأقل للطباعة من الشريط العلوي" : "Please select at least one voucher from top toolbar"}
                 </div>
             ) : (
-                <div className="space-y-12 pt-6">
-                    {visibleVouchers.map((voucher, idx) => (
+                <div className="space-y-6 pt-6 print:pt-0 print:space-y-0">
+                    {visibleVouchers.map((voucher) => (
                         <React.Fragment key={`${voucher.voucher_type}-${voucher.id}`}>
-                            {/* Copy 1: Customer Copy */}
-                            {renderDocumentCopy(voucher, lang === "ar" ? "نسخة العميل" : "Customer Copy")}
-
-                            {/* Page break between copies */}
-                            <div className="page-break" style={{ pageBreakAfter: "always", breakAfter: "page" }}></div>
-
-                            {/* Copy 2: Warehouse Copy */}
-                            {renderDocumentCopy(voucher, lang === "ar" ? "نسخة المستودع (التوقيع)" : "Warehouse Copy (Signature)")}
-
-                            {/* Page break between vouchers (if not last) */}
-                            {idx < visibleVouchers.length - 1 && (
-                                <div className="page-break" style={{ pageBreakAfter: "always", breakAfter: "page" }}></div>
-                            )}
+                            {renderAuthenticVoucher(voucher)}
                         </React.Fragment>
                     ))}
                 </div>
             )}
+
+            {/* Print CSS Rules - Strictly 1 Page per Voucher without blank pages or duplicates */}
+            <style>{`
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 0.6cm;
+                    }
+                    html, body {
+                        background: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        height: auto !important;
+                    }
+                    .print\\:hidden {
+                        display: none !important;
+                    }
+                    .bulk-voucher-page {
+                        page-break-after: always !important;
+                        break-after: page !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        box-sizing: border-box !important;
+                    }
+                    .bulk-voucher-page:last-child {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }
