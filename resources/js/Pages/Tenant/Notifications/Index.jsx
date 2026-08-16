@@ -56,25 +56,18 @@ export default function Index({ notifications }) {
                         </div>
                         
                         <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={handleSendTest}
-                                className="px-3 py-1.5 rounded-none border border-primary/30 bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20 transition-colors flex items-center gap-1.5 shadow-2xs"
-                            >
-                                <Bell className="h-4 w-4" />
-                                {lang === "ar" ? "تجربة إشعار جديد 🔔" : "Send Test Alert"}
-                            </button>
                             {notifications.data.length > 0 && (
                                 <>
                                     <button
                                         onClick={handleMarkAllRead}
-                                        className="px-3 py-1.5 rounded-none border border-border bg-white text-xs font-bold text-text hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+                                        className="px-3 py-1.5 rounded-md border border-border bg-white text-xs font-bold text-text hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs"
                                     >
                                         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                                         {lang === "ar" ? "تحديد الكل كمقروء" : "Mark All as Read"}
                                     </button>
                                     <button
                                         onClick={handleClearAll}
-                                        className="px-3 py-1.5 rounded-none border border-rose-200 bg-rose-50 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors flex items-center gap-1.5"
+                                        className="px-3 py-1.5 rounded-md border border-rose-200 bg-rose-50 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors flex items-center gap-1.5 shadow-xs"
                                     >
                                         <Trash2 className="h-4 w-4 text-rose-500" />
                                         {lang === "ar" ? "حذف الكل" : "Clear All"}

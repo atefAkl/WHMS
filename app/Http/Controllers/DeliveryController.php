@@ -194,12 +194,16 @@ class DeliveryController extends Controller
 
         // if delivery date is in active storing period
         $activeStoringPeriod = ContractPeriod::find($request->period_id);
-        if ($activeStoringPeriod && (
-            $request->delivery_date < $activeStoringPeriod->start_date ||
-            $request->delivery_date > $activeStoringPeriod->end_date)) {
-            return redirect()->back()->withErrors([
-                'delivery_date' => 'تاريخ السند لا يمكن أن يكون قبل تاريخ بداية فترة التخزين النشطة للعقد.'
-            ])->withInput();
+        if ($activeStoringPeriod) {
+            $delDateStr = \Carbon\Carbon::parse($request->delivery_date)->format('Y-m-d');
+            $pStartStr  = \Carbon\Carbon::parse($activeStoringPeriod->start_date)->format('Y-m-d');
+            $pEndStr    = \Carbon\Carbon::parse($activeStoringPeriod->end_date)->format('Y-m-d');
+
+            if ($delDateStr < $pStartStr || $delDateStr > $pEndStr) {
+                return redirect()->back()->withErrors([
+                    'delivery_date' => 'تاريخ السند لا يمكن أن يكون خارج نطاق تاريخ فترة التخزين النشطة للعقد.'
+                ])->withInput();
+            }
         }
 
         try {

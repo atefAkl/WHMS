@@ -104,12 +104,16 @@ class ReceptionController extends Controller
         }
 
         $activeStoringPeriod = \App\Models\ContractPeriod::find($request->period_id);
-        if ($activeStoringPeriod && (
-            $request->reception_date < $activeStoringPeriod->start_date ||
-            $request->reception_date > $activeStoringPeriod->end_date)) {
-            return redirect()->back()->withErrors([
-                'reception_date' => 'تاريخ السند لا يمكن أن يكون خارج نطاق تاريخ فترة التخزين النشطة للعقد.'
-            ])->withInput();
+        if ($activeStoringPeriod) {
+            $recDateStr = \Carbon\Carbon::parse($request->reception_date)->format('Y-m-d');
+            $pStartStr  = \Carbon\Carbon::parse($activeStoringPeriod->start_date)->format('Y-m-d');
+            $pEndStr    = \Carbon\Carbon::parse($activeStoringPeriod->end_date)->format('Y-m-d');
+
+            if ($recDateStr < $pStartStr || $recDateStr > $pEndStr) {
+                return redirect()->back()->withErrors([
+                    'reception_date' => 'تاريخ السند لا يمكن أن يكون خارج نطاق تاريخ فترة التخزين النشطة للعقد.'
+                ])->withInput();
+            }
         }
 
         $reception = DB::transaction(function () use ($request) {
@@ -146,7 +150,7 @@ class ReceptionController extends Controller
         });
 
         try {
-            $users = \App\Models\User::all()->filter(fn($u) => $u->wantsNotification('reception_created'));
+            $users = \App\Models\User::all()->filter(fn($u) => $u->id !== auth()->id() && $u->wantsNotification('reception_created'));
             $serial = $reception->serial_number;
             foreach ($users as $user) {
                 $user->notify(new \App\Notifications\SystemNotification(
@@ -271,12 +275,16 @@ class ReceptionController extends Controller
         }
 
         $activeStoringPeriod = \App\Models\ContractPeriod::find($request->period_id);
-        if ($activeStoringPeriod && (
-            $request->reception_date < $activeStoringPeriod->start_date ||
-            $request->reception_date > $activeStoringPeriod->end_date)) {
-            return redirect()->back()->withErrors([
-                'reception_date' => 'تاريخ السند لا يمكن أن يكون خارج نطاق تاريخ فترة التخزين النشطة للعقد.'
-            ])->withInput();
+        if ($activeStoringPeriod) {
+            $recDateStr = \Carbon\Carbon::parse($request->reception_date)->format('Y-m-d');
+            $pStartStr  = \Carbon\Carbon::parse($activeStoringPeriod->start_date)->format('Y-m-d');
+            $pEndStr    = \Carbon\Carbon::parse($activeStoringPeriod->end_date)->format('Y-m-d');
+
+            if ($recDateStr < $pStartStr || $recDateStr > $pEndStr) {
+                return redirect()->back()->withErrors([
+                    'reception_date' => 'تاريخ السند لا يمكن أن يكون خارج نطاق تاريخ فترة التخزين النشطة للعقد.'
+                ])->withInput();
+            }
         }
 
         DB::transaction(function () use ($request, $reception) {

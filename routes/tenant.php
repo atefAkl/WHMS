@@ -117,6 +117,18 @@ Route::middleware([
                     'notifications' => auth()->user() ? auth()->user()->notifications()->paginate(20) : []
                 ]);
             })->name('notifications.index');
+            Route::post('/notifications/mark-all-read', function () {
+                if (auth()->user()) {
+                    auth()->user()->unreadNotifications->markAsRead();
+                }
+                return back()->with('success', 'تم تعليم جميع التنبيهات كمقروءة.');
+            })->name('notifications.markAllRead');
+            Route::delete('/notifications/clear-all', function () {
+                if (auth()->user()) {
+                    auth()->user()->notifications()->delete();
+                }
+                return back()->with('success', 'تم حذف جميع التنبيهات.');
+            })->name('notifications.clearAll');
             Route::post('/notifications/{id}/mark-read', function ($id) {
                 if (auth()->user()) {
                     auth()->user()->notifications()->where('id', $id)->first()?->markAsRead();
@@ -320,9 +332,13 @@ Route::middleware([
                 Route::get('/accounting/reports/trial-balance', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
                 Route::get('/accounting/reports/income-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'incomeStatement'])->name('accounting.reports.income-statement');
 
-                // Services & Queue Tickets Placeholders
+                // Services & Queue Tickets
                 Route::get('/sales/services', function () { return redirect()->route('dashboard'); })->name('sales.services.index');
-                Route::get('/queue-tickets', function () { return redirect()->route('dashboard'); })->name('queue-tickets.index');
+                Route::get('/queue-tickets', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'index'])->name('queue-tickets.index');
+                Route::post('/queue-tickets', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'store'])->name('queue-tickets.store');
+                Route::get('/queue-tickets/{queueTicket}/print', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'print'])->name('queue-tickets.print');
+                Route::get('/api/queue-tickets/contract-info/{contract}', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getContractInfo'])->name('api.queue-tickets.contract-info');
+                Route::get('/api/queue-tickets/customer-contracts/{customer}', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getCustomerContracts'])->name('api.queue-tickets.customer-contracts');
 
                 // Terms Management
                 Route::get('terms', [\App\Http\Controllers\TermController::class, 'index'])->name('terms.index');

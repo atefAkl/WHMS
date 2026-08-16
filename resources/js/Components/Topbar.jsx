@@ -162,15 +162,31 @@ export default function Topbar({ header }) {
                                 <Bell className="h-4 w-4 text-primary" />
                                 <span>{lang === "ar" ? "التنبيهات والأحداث المباشرة" : "Live Notifications & Events"}</span>
                             </div>
-                            {unreadCount > 0 ? (
-                                <span className="text-[10px] bg-primary/10 text-primary font-black px-2 py-0.5 rounded-[0.5rem] border border-primary/20">
-                                    {unreadCount} {lang === "ar" ? "غير مقروء" : "unread"}
-                                </span>
-                            ) : (
-                                <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-[0.5rem] border border-emerald-200">
-                                    {lang === "ar" ? "الكل مقروء" : "All read"}
-                                </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                                {unreadCount > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            axios.post(route('notifications.markAllRead')).then(() => {
+                                                setUnreadCount(0);
+                                                setRecentNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })));
+                                            });
+                                        }}
+                                        className="text-[10px] text-primary hover:underline font-extrabold"
+                                    >
+                                        {lang === "ar" ? "تعليم الكل كمقروء" : "Mark all read"}
+                                    </button>
+                                )}
+                                {unreadCount > 0 ? (
+                                    <span className="text-[10px] bg-primary/10 text-primary font-black px-2 py-0.5 rounded-[0.5rem] border border-primary/20">
+                                        {unreadCount} {lang === "ar" ? "غير مقروء" : "unread"}
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-[0.5rem] border border-emerald-200">
+                                        {lang === "ar" ? "الكل مقروء" : "All read"}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         <div className="max-h-80 overflow-y-auto divide-y divide-border" dir={lang === "ar" ? "rtl" : "ltr"}>

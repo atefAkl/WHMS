@@ -211,7 +211,7 @@ class ContractController extends Controller
             $contract = $this->contractService->storeContract($request->validated());
 
             try {
-                $users = \App\Models\User::all()->filter(fn($u) => $u->wantsNotification('contract_created'));
+                $users = \App\Models\User::all()->filter(fn($u) => $u->id !== auth()->id() && $u->wantsNotification('contract_created'));
                 $customerName = $contract->customer ? $contract->customer->name : '';
                 foreach ($users as $user) {
                     $user->notify(new \App\Notifications\SystemNotification(
