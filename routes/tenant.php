@@ -424,6 +424,7 @@ Route::middleware([
 
                 // Sales System
                 Route::get('sales/dashboard', [\App\Http\Controllers\Sales\SalesDashboardController::class, 'index'])->name('sales.dashboard');
+                Route::get('sales/contract-pallet-stats', [\App\Http\Controllers\Sales\ContractPalletStatsController::class, 'index'])->name('sales.contract-pallet-stats.index');
                 Route::resource('sales/categories', \App\Http\Controllers\Sales\SalesCategoryController::class, ['names' => 'sales.categories']);
                 Route::resource('sales/invoices', \App\Http\Controllers\Sales\SalesInvoiceController::class, ['names' => 'sales.invoices']);
                 Route::get('sales/invoices/{invoice}/print', [\App\Http\Controllers\Sales\SalesInvoiceController::class, 'print'])->name('sales.invoices.print');

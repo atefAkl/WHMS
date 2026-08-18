@@ -21,6 +21,7 @@ import {
     BookOpen,
     FileSpreadsheet,
     LineChart,
+    BarChart3,
     DoorClosed,
     Box,
     Layers,
@@ -77,6 +78,7 @@ const tenantNavItems = [
         children: [
             { name: { ar: 'العملاء', en: 'Customers' }, icon: UsersRound, route: 'customers.index', active: 'customers.*' },
             { name: { ar: 'العقود', en: 'Contracts' }, icon: FileText, route: 'contracts.index', active: 'contracts.*' },
+            { name: { ar: 'إحصائيات العقود والطبالي', en: 'Contract & Pallet Stats' }, icon: BarChart3, route: 'sales.contract-pallet-stats.index', active: 'sales.contract-pallet-stats.*' },
             { name: { ar: 'الفواتير', en: 'Invoices' }, icon: Receipt, route: 'dashboard', active: 'invoices.*' },
             { name: { ar: 'الخدمات', en: 'Services' }, icon: Wrench, route: 'sales.services.index', active: 'sales.services.*' },
         ],
