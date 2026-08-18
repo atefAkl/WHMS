@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Pallet;
+use App\Models\Reception;
+use App\Models\Delivery;
+use App\Models\InventoryAdjustment;
+use App\Models\PalletRearrangement;
 use App\Models\ContractSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,33 +46,49 @@ class ContractPalletStatsController extends Controller
 
         $contracts = $query->orderBy('updated_at', 'desc')->get();
 
+        // Helper voucher morph classes for contract matching
+        $voucherMorphClasses = [
+            Reception::class,
+            Delivery::class,
+            InventoryAdjustment::class,
+            PalletRearrangement::class,
+        ];
+
         // Calculate detailed stats per contract
-        $reportData = $contracts->map(function ($contract) {
+        $reportData = $contracts->map(function ($contract) use ($voucherMorphClasses) {
             // Determine active period or contract items
             $activePeriod = $contract->periods->first();
             $periodItems = $activePeriod && $activePeriod->items->count() > 0 
                 ? $activePeriod->items 
                 : $contract->items;
 
-            // Fetch pallets with active stock balances for this contract
-            $occupiedPallets = Pallet::where('contract_id', $contract->id)
-                ->whereHas('inventoryEntries', function ($q) {
-                    $q->select('pallet_id', DB::raw('SUM(quantity_in - quantity_out) as balance'))
-                      ->groupBy('pallet_id')
-                      ->having('balance', '>', 0);
-                })
-                ->select('size', DB::raw('count(*) as count'))
-                ->groupBy('size')
-                ->pluck('count', 'size')
-                ->all();
+            // Fetch pallets with active stock balances for this contract via polymorphic voucher relationship
+            $occupiedPallets = Pallet::whereHas('inventoryEntries', function ($q) use ($contract, $voucherMorphClasses) {
+                $q->whereHasMorph('voucher', $voucherMorphClasses, function ($vQuery) use ($contract) {
+                    $vQuery->where('contract_id', $contract->id);
+                });
+            })
+            ->whereHas('inventoryEntries', function ($q) {
+                $q->select('pallet_id', DB::raw('SUM(quantity_in - quantity_out) as balance'))
+                  ->groupBy('pallet_id')
+                  ->having('balance', '>', 0);
+            })
+            ->select('size', DB::raw('count(*) as count'))
+            ->groupBy('size')
+            ->pluck('count', 'size')
+            ->all();
 
-            $totalOccupiedPalletsCount = Pallet::where('contract_id', $contract->id)
-                ->whereHas('inventoryEntries', function ($q) {
-                    $q->select('pallet_id', DB::raw('SUM(quantity_in - quantity_out) as balance'))
-                      ->groupBy('pallet_id')
-                      ->having('balance', '>', 0);
-                })
-                ->count();
+            $totalOccupiedPalletsCount = Pallet::whereHas('inventoryEntries', function ($q) use ($contract, $voucherMorphClasses) {
+                $q->whereHasMorph('voucher', $voucherMorphClasses, function ($vQuery) use ($contract) {
+                    $vQuery->where('contract_id', $contract->id);
+                });
+            })
+            ->whereHas('inventoryEntries', function ($q) {
+                $q->select('pallet_id', DB::raw('SUM(quantity_in - quantity_out) as balance'))
+                  ->groupBy('pallet_id')
+                  ->having('balance', '>', 0);
+            })
+            ->count();
 
             $itemsBreakdown = [];
             $totalBooked = 0;

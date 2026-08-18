@@ -271,14 +271,14 @@ Route::middleware([
                 Route::delete('customer-categories/{category}', [\App\Http\Controllers\CustomerController::class, 'categoriesDestroy'])->name('customer-categories.destroy');
 
                 // Storage Items & Categories
-                Route::get('storage-items', [\App\Http\Controllers\StorageItemController::class, 'index'])->name('storage-items.index');
-                Route::post('storage-items', [\App\Http\Controllers\StorageItemController::class, 'store'])->name('storage-items.store');
-                Route::put('storage-items/{storageItem}', [\App\Http\Controllers\StorageItemController::class, 'update'])->name('storage-items.update');
-                Route::delete('storage-items/{storageItem}', [\App\Http\Controllers\StorageItemController::class, 'destroy'])->name('storage-items.destroy');
-                Route::get('storage-categories', [\App\Http\Controllers\StorageItemController::class, 'categoriesIndex'])->name('storage-categories.index');
-                Route::post('storage-categories', [\App\Http\Controllers\StorageItemController::class, 'categoriesStore'])->name('storage-categories.store');
-                Route::put('storage-categories/{category}', [\App\Http\Controllers\StorageItemController::class, 'categoriesUpdate'])->name('storage-categories.update');
-                Route::delete('storage-categories/{category}', [\App\Http\Controllers\StorageItemController::class, 'categoriesDestroy'])->name('storage-categories.destroy');
+                Route::get('storage-items', [\App\Http\Controllers\Settings\StorageItemController::class, 'index'])->name('storage-items.index');
+                Route::post('storage-items', [\App\Http\Controllers\Settings\StorageItemController::class, 'store'])->name('storage-items.store');
+                Route::put('storage-items/{storageItem}', [\App\Http\Controllers\Settings\StorageItemController::class, 'update'])->name('storage-items.update');
+                Route::delete('storage-items/{storageItem}', [\App\Http\Controllers\Settings\StorageItemController::class, 'destroy'])->name('storage-items.destroy');
+                Route::get('storage-categories', [\App\Http\Controllers\Settings\StorageItemController::class, 'categoriesIndex'])->name('storage-categories.index');
+                Route::post('storage-categories', [\App\Http\Controllers\Settings\StorageItemController::class, 'categoriesStore'])->name('storage-categories.store');
+                Route::put('storage-categories/{category}', [\App\Http\Controllers\Settings\StorageItemController::class, 'categoriesUpdate'])->name('storage-categories.update');
+                Route::delete('storage-categories/{category}', [\App\Http\Controllers\Settings\StorageItemController::class, 'categoriesDestroy'])->name('storage-categories.destroy');
 
                 // Inventory Item Categories
                 Route::get('inventory-categories', [\App\Http\Controllers\InventoryItemController::class, 'categoriesIndex'])->name('inventory-categories.index');
@@ -321,16 +321,16 @@ Route::middleware([
                 Route::get('/accounting/financial-vouchers/{financialVoucher}', [\App\Http\Controllers\Accounting\FinancialVoucherController::class, 'show'])->name('accounting.financial-vouchers.show');
                 Route::post('/accounting/financial-vouchers/{financialVoucher}/approve', [\App\Http\Controllers\Accounting\FinancialVoucherController::class, 'approve'])->name('accounting.financial-vouchers.approve');
 
-                Route::get('/accounting/statements/trial-balance', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'trialBalance'])->name('accounting.statements.trial-balance');
-                Route::get('/accounting/statements/income-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'incomeStatement'])->name('accounting.statements.income-statement');
-                Route::get('/accounting/statements/balance-sheet', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'balanceSheet'])->name('accounting.statements.balance-sheet');
-                Route::get('/accounting/statements/account-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'accountStatement'])->name('accounting.statements.account-statement');
+                Route::get('/accounting/statements/trial-balance', [\App\Http\Controllers\Accounting\ReportController::class, 'trialBalance'])->name('accounting.statements.trial-balance');
+                Route::get('/accounting/statements/income-statement', [\App\Http\Controllers\Accounting\ReportController::class, 'incomeStatement'])->name('accounting.statements.income-statement');
+                Route::get('/accounting/statements/balance-sheet', [\App\Http\Controllers\Accounting\ReportController::class, 'balanceSheet'])->name('accounting.statements.balance-sheet');
+                Route::get('/accounting/statements/account-statement', [\App\Http\Controllers\Accounting\ReportController::class, 'accountStatement'])->name('accounting.statements.account-statement');
 
                 // Accounting Route Aliases for Sidebar
                 Route::get('/accounting', [\App\Http\Controllers\Accounting\FinancialVoucherController::class, 'index'])->name('accounting.index');
-                Route::get('/accounting/reports/account-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'accountStatement'])->name('accounting.reports.account-statement');
-                Route::get('/accounting/reports/trial-balance', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
-                Route::get('/accounting/reports/income-statement', [\App\Http\Controllers\Accounting\FinancialStatementController::class, 'incomeStatement'])->name('accounting.reports.income-statement');
+                Route::get('/accounting/reports/account-statement', [\App\Http\Controllers\Accounting\ReportController::class, 'accountStatement'])->name('accounting.reports.account-statement');
+                Route::get('/accounting/reports/trial-balance', [\App\Http\Controllers\Accounting\ReportController::class, 'trialBalance'])->name('accounting.reports.trial-balance');
+                Route::get('/accounting/reports/income-statement', [\App\Http\Controllers\Accounting\ReportController::class, 'incomeStatement'])->name('accounting.reports.income-statement');
 
                 // Services & Queue Tickets
                 Route::get('/sales/services', function () { return redirect()->route('dashboard'); })->name('sales.services.index');
@@ -414,20 +414,18 @@ Route::middleware([
                 Route::post('/saas/contract-settings', [\App\Http\Controllers\SaaSController::class, 'updateContractSettings'])->name('saas.contract-settings.update');
 
                 // Countries Management
-                Route::get('countries', [\App\Http\Controllers\CountryController::class, 'index'])->name('countries.index');
-                Route::post('countries', [\App\Http\Controllers\CountryController::class, 'store'])->name('countries.store');
-                Route::put('countries/{country}', [\App\Http\Controllers\CountryController::class, 'update'])->name('countries.update');
-                Route::delete('countries/{country}', [\App\Http\Controllers\CountryController::class, 'destroy'])->name('countries.destroy');
-                Route::post('countries/{country}/cities', [\App\Http\Controllers\CountryController::class, 'storeCity'])->name('countries.cities.store');
-                Route::put('countries/{country}/cities/{city}', [\App\Http\Controllers\CountryController::class, 'updateCity'])->name('countries.cities.update');
-                Route::delete('countries/{country}/cities/{city}', [\App\Http\Controllers\CountryController::class, 'destroyCity'])->name('countries.cities.destroy');
+                Route::get('countries', [\App\Http\Controllers\Settings\CountryController::class, 'index'])->name('countries.index');
+                Route::post('countries', [\App\Http\Controllers\Settings\CountryController::class, 'store'])->name('countries.store');
+                Route::put('countries/{country}', [\App\Http\Controllers\Settings\CountryController::class, 'update'])->name('countries.update');
+                Route::delete('countries/{country}', [\App\Http\Controllers\Settings\CountryController::class, 'destroy'])->name('countries.destroy');
+                Route::post('countries/{country}/cities', [\App\Http\Controllers\Settings\CountryController::class, 'storeCity'])->name('countries.cities.store');
+                Route::put('countries/{country}/cities/{city}', [\App\Http\Controllers\Settings\CountryController::class, 'updateCity'])->name('countries.cities.update');
+                Route::delete('countries/{country}/cities/{city}', [\App\Http\Controllers\Settings\CountryController::class, 'destroyCity'])->name('countries.cities.destroy');
 
                 // Sales System
-                Route::get('sales/dashboard', [\App\Http\Controllers\Sales\SalesDashboardController::class, 'index'])->name('sales.dashboard');
                 Route::get('sales/contract-pallet-stats', [\App\Http\Controllers\Sales\ContractPalletStatsController::class, 'index'])->name('sales.contract-pallet-stats.index');
-                Route::resource('sales/categories', \App\Http\Controllers\Sales\SalesCategoryController::class, ['names' => 'sales.categories']);
-                Route::resource('sales/invoices', \App\Http\Controllers\Sales\SalesInvoiceController::class, ['names' => 'sales.invoices']);
-                Route::get('sales/invoices/{invoice}/print', [\App\Http\Controllers\Sales\SalesInvoiceController::class, 'print'])->name('sales.invoices.print');
+                Route::resource('sales/invoices', \App\Http\Controllers\Accounting\SalesInvoiceController::class, ['names' => 'sales.invoices']);
+                Route::get('sales/invoices/{invoice}/print', [\App\Http\Controllers\Accounting\SalesInvoiceController::class, 'print'])->name('sales.invoices.print');
             });
         });
     });
