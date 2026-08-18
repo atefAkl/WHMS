@@ -69,9 +69,9 @@ class ContractPalletStatsController extends Controller
                 });
             })
             ->whereHas('inventoryEntries', function ($q) {
-                $q->select('pallet_id', DB::raw('SUM(quantity_in - quantity_out) as balance'))
+                $q->select('pallet_id')
                   ->groupBy('pallet_id')
-                  ->having('balance', '>', 0);
+                  ->havingRaw('SUM(quantity_in - quantity_out) > 0');
             })
             ->select('size', DB::raw('count(*) as count'))
             ->groupBy('size')
@@ -84,9 +84,9 @@ class ContractPalletStatsController extends Controller
                 });
             })
             ->whereHas('inventoryEntries', function ($q) {
-                $q->select('pallet_id', DB::raw('SUM(quantity_in - quantity_out) as balance'))
+                $q->select('pallet_id')
                   ->groupBy('pallet_id')
-                  ->having('balance', '>', 0);
+                  ->havingRaw('SUM(quantity_in - quantity_out) > 0');
             })
             ->count();
 
