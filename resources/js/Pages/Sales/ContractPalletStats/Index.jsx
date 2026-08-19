@@ -67,6 +67,25 @@ export default function Index({
         </div>
     );
 
+    // Color Tier Determination based on Consumption Rate % (نسبة الاستهلاك)
+    const getConsumptionColor = (used, booked) => {
+        const rate = booked > 0 ? (used / booked) * 100 : (used > 0 ? 100 : 0);
+
+        if (rate > 100) {
+            // أحمر: تجاوز 100%
+            return "bg-rose-500/20 text-rose-950 dark:text-rose-200 font-extrabold print:bg-rose-200 print:text-rose-950";
+        } else if (rate >= 67) {
+            // برتقالي: بين 67% و 100%
+            return "bg-amber-500/20 text-amber-950 dark:text-amber-200 font-extrabold print:bg-amber-200 print:text-amber-950";
+        } else if (rate >= 10) {
+            // أخضر: بين 10% وأقل من 67%
+            return "bg-emerald-500/20 text-emerald-950 dark:text-emerald-200 font-extrabold print:bg-emerald-200 print:text-emerald-950";
+        } else {
+            // أزرق: أقل من 10%
+            return "bg-blue-500/20 text-blue-950 dark:text-blue-200 font-extrabold print:bg-blue-200 print:text-blue-950";
+        }
+    };
+
     return (
         <AuthenticatedLayout header={breadcrumbs}>
             <Head title={lang === "ar" ? "إحصائيات الطبالي" : "Pallet Capacity Statistics"} />
@@ -148,6 +167,31 @@ export default function Index({
                         <p className="text-[10px] text-text-muted">
                             {lang === "ar" ? "وفقاً لفترات العقود" : "According to contract periods"}
                         </p>
+                    </div>
+                </div>
+
+                {/* ═══ COLOR GUIDE LEGEND BAR ═══════════════════════════════════════ */}
+                <div className="print:hidden bg-surface border border-border rounded-xl p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <span className="font-extrabold text-text text-[11px]">
+                        {lang === "ar" ? "دليل دلالة الألوان لنسبة استهلاك الباقة:" : "Consumption Rate Color Guide:"}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-500/20 text-blue-900 border border-blue-500/30">
+                            <span className="h-2 w-2 rounded-full bg-blue-600"></span>
+                            <span>{lang === "ar" ? "استهلاك أقل من 10% (أزرق)" : "< 10% (Blue)"}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-500/20 text-emerald-900 border border-emerald-500/30">
+                            <span className="h-2 w-2 rounded-full bg-emerald-600"></span>
+                            <span>{lang === "ar" ? "استهلاك 10% - 67% (أخضر)" : "10% - 67% (Green)"}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500/20 text-amber-900 border border-amber-500/30">
+                            <span className="h-2 w-2 rounded-full bg-amber-600"></span>
+                            <span>{lang === "ar" ? "قرب استهلاك الباقة 67% - 100% (برتقالي)" : "67% - 100% (Orange)"}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-500/20 text-rose-900 border border-rose-500/30">
+                            <span className="h-2 w-2 rounded-full bg-rose-600"></span>
+                            <span>{lang === "ar" ? "تجاوز الباقة > 100% (أحمر)" : "> 100% (Red)"}</span>
+                        </span>
                     </div>
                 </div>
 
@@ -237,7 +281,7 @@ export default function Index({
                     </div>
                 </div>
 
-                {/* ═══ PRINTABLE DOCUMENT CONTAINER (A4 Landscape) ═════════════════ */}
+                {/* ═══ PRINTABLE DOCUMENT CONTAINER (A4 Portrait) ══════════════════ */}
                 <div className="report-print-container bg-surface border border-border rounded-xl p-6 shadow-xs print:shadow-none print:border-none print:p-0">
                     
                     {/* PRINT HEADER - Visible on Print */}
@@ -388,26 +432,26 @@ export default function Index({
                                                 </td>
                                             ))}
 
-                                            {/* Columns for المستخدم per size */}
-                                            {allSizes.map((sz) => (
-                                                <td key={`u-${sz}`} className="p-2 text-center font-mono font-bold text-amber-700 print:text-black border-e border-border print:border-gray-300">
-                                                    {row.used_by_size[sz] !== undefined ? row.used_by_size[sz] : 0}
-                                                </td>
-                                            ))}
-
-                                            {/* Columns for المتاح per size with cell background color indicators */}
+                                            {/* Columns for المستخدم per size (Colored based on consumption rate) */}
                                             {allSizes.map((sz) => {
-                                                const remVal = row.remaining_by_size[sz] !== undefined ? row.remaining_by_size[sz] : 0;
-                                                const isAvailable = remVal > 0;
+                                                const usedVal = row.used_by_size[sz] !== undefined ? row.used_by_size[sz] : 0;
+                                                const bookedVal = row.booked_by_size[sz] !== undefined ? row.booked_by_size[sz] : 0;
+                                                const colorClass = getConsumptionColor(usedVal, bookedVal);
                                                 return (
-                                                    <td
-                                                        key={`r-${sz}`}
-                                                        className={`p-2 text-center font-mono font-black border-e border-border print:border-gray-300 ${
-                                                            isAvailable
-                                                                ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 print:bg-emerald-100 print:text-emerald-950"
-                                                                : "bg-rose-500/15 text-rose-800 dark:text-rose-300 print:bg-rose-100 print:text-rose-950"
-                                                        }`}
-                                                    >
+                                                    <td key={`u-${sz}`} className={`p-2 text-center font-mono border-e border-border print:border-gray-300 ${colorClass}`}>
+                                                        {usedVal}
+                                                    </td>
+                                                );
+                                            })}
+
+                                            {/* Columns for المتاح per size (Colored with SAME consumption rate color) */}
+                                            {allSizes.map((sz) => {
+                                                const usedVal = row.used_by_size[sz] !== undefined ? row.used_by_size[sz] : 0;
+                                                const bookedVal = row.booked_by_size[sz] !== undefined ? row.booked_by_size[sz] : 0;
+                                                const remVal = row.remaining_by_size[sz] !== undefined ? row.remaining_by_size[sz] : 0;
+                                                const colorClass = getConsumptionColor(usedVal, bookedVal);
+                                                return (
+                                                    <td key={`r-${sz}`} className={`p-2 text-center font-mono border-e border-border print:border-gray-300 ${colorClass}`}>
                                                         {remVal}
                                                     </td>
                                                 );
@@ -437,29 +481,26 @@ export default function Index({
                                             );
                                         })}
 
-                                        {/* Total Used per size */}
+                                        {/* Total Used per size with consumption color */}
                                         {allSizes.map((sz) => {
+                                            const totBookedSz = reportData.reduce((sum, r) => sum + (r.booked_by_size[sz] || 0), 0);
                                             const totUsedSz = reportData.reduce((sum, r) => sum + (r.used_by_size[sz] || 0), 0);
+                                            const totColorClass = getConsumptionColor(totUsedSz, totBookedSz);
                                             return (
-                                                <td key={`tot-u-${sz}`} className="p-2 text-center font-mono font-black text-amber-700 print:text-black border-e border-border print:border-gray-400">
+                                                <td key={`tot-u-${sz}`} className={`p-2 text-center font-mono border-e border-border print:border-gray-400 ${totColorClass}`}>
                                                     {totUsedSz}
                                                 </td>
                                             );
                                         })}
 
-                                        {/* Total Remaining per size with background color */}
+                                        {/* Total Remaining per size with SAME consumption color */}
                                         {allSizes.map((sz) => {
+                                            const totBookedSz = reportData.reduce((sum, r) => sum + (r.booked_by_size[sz] || 0), 0);
+                                            const totUsedSz = reportData.reduce((sum, r) => sum + (r.used_by_size[sz] || 0), 0);
                                             const totRemSz = reportData.reduce((sum, r) => sum + (r.remaining_by_size[sz] || 0), 0);
-                                            const isAvailable = totRemSz > 0;
+                                            const totColorClass = getConsumptionColor(totUsedSz, totBookedSz);
                                             return (
-                                                <td
-                                                    key={`tot-r-${sz}`}
-                                                    className={`p-2 text-center font-mono font-black border-e border-border print:border-gray-400 ${
-                                                        isAvailable
-                                                            ? "bg-emerald-500/20 text-emerald-900 dark:text-emerald-200 print:bg-emerald-200 print:text-black"
-                                                            : "bg-rose-500/20 text-rose-900 dark:text-rose-200 print:bg-rose-200 print:text-black"
-                                                    }`}
-                                                >
+                                                <td key={`tot-r-${sz}`} className={`p-2 text-center font-mono border-e border-border print:border-gray-400 ${totColorClass}`}>
                                                     {totRemSz}
                                                 </td>
                                             );
