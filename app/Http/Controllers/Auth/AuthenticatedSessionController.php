@@ -47,6 +47,11 @@ class AuthenticatedSessionController extends Controller
             ? route('saas.tenants.index', absolute: false) 
             : route('dashboard', absolute: false);
 
+        $intendedUrl = $request->input('redirect_to') ?: session()->pull('url.intended');
+        if ($intendedUrl && !str_contains($intendedUrl, '/login')) {
+            return redirect()->to($intendedUrl);
+        }
+
         return redirect()->intended($redirectRoute);
     }
 

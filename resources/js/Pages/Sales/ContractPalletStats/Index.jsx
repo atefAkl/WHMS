@@ -3,22 +3,25 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
 import {
-    BarChart3,
     Printer,
     Search,
     Filter,
-    FileText,
     Boxes,
     PackageCheck,
     PackageX,
     TrendingUp,
     Building2,
     RotateCcw,
-    CheckCircle2,
-    XCircle,
 } from "lucide-react";
 
-export default function Index({ reportData = [], summary = {}, customers = [], companySettings = {}, filters = {} }) {
+export default function Index({
+    reportData = [],
+    allSizes = ["صغيرة", "كبيرة"],
+    summary = {},
+    customers = [],
+    companySettings = {},
+    filters = {},
+}) {
     const { lang } = useLang();
 
     const [statusFilter, setStatusFilter] = useState(filters.status || "");
@@ -48,34 +51,6 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
         window.print();
     };
 
-    // Helper for status badge colors
-    const getUtilizationBadge = (rate) => {
-        if (rate >= 95) {
-            return {
-                bg: "bg-rose-500/10 text-rose-700 border-rose-500/20",
-                dot: "bg-rose-500",
-                label: lang === "ar" ? "ممتلئ شبه كاملاً" : "Full / Critical",
-            };
-        } else if (rate >= 80) {
-            return {
-                bg: "bg-amber-500/10 text-amber-700 border-amber-500/20",
-                dot: "bg-amber-500",
-                label: lang === "ar" ? "إشغال مرتفع" : "High Capacity",
-            };
-        } else if (rate > 0) {
-            return {
-                bg: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
-                dot: "bg-emerald-500",
-                label: lang === "ar" ? "استغلال متوازن" : "Balanced",
-            };
-        }
-        return {
-            bg: "bg-slate-500/10 text-slate-700 border-slate-500/20",
-            dot: "bg-slate-400",
-            label: lang === "ar" ? "شبه فارغ" : "Empty",
-        };
-    };
-
     // Company info defaults
     const compName = companySettings.company_name || "مخازن أيمن محمد عبد الله الغماس للتخزين";
     const compSlogan = companySettings.company_slogan || "تخزين - تبريد - تجميد - تعبئة وتغليف - بيع - تصدير";
@@ -85,130 +60,107 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
 
     const breadcrumbs = (
         <div className="flex items-center gap-2 text-xs text-text-muted">
-            <BarChart3 className="h-3.5 w-3.5 text-primary" />
+            <Boxes className="h-3.5 w-3.5 text-primary" />
             <span>{lang === "ar" ? "المبيعات" : "Sales"}</span>
             <span>/</span>
-            <span className="text-primary font-bold">{lang === "ar" ? "إحصائيات العقود والطبالي" : "Contract & Pallet Stats"}</span>
+            <span className="text-primary font-bold">{lang === "ar" ? "إحصائيات الطبالي" : "Pallet Capacity Stats"}</span>
         </div>
     );
 
     return (
         <AuthenticatedLayout header={breadcrumbs}>
-            <Head title={lang === "ar" ? "تقرير إحصائيات العقود والطبالي" : "Contract & Pallet Statistics Report"} />
+            <Head title={lang === "ar" ? "إحصائيات الطبالي" : "Pallet Capacity Statistics"} />
 
-            <div className="pb-12 space-y-6" dir={lang === "ar" ? "rtl" : "ltr"}>
+            <div className="pb-12 space-y-6 font-sans text-xs" dir={lang === "ar" ? "rtl" : "ltr"}>
                 
-                {/* ═══ SCREEN TOP BAR (Hidden on Print) ═════════════════════════════ */}
-                <div className="print:hidden bg-surface border border-border rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* ═══ TOP TITLE CARD WITH PRINT BUTTON (Match Image Header) ═════════ */}
+                <div className="print:hidden bg-surface border border-border rounded-xl p-5 shadow-xs flex items-center justify-between gap-4">
                     <div className="space-y-1 text-start">
-                        <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-                            <BarChart3 className="h-4 w-4" />
-                            <span>{lang === "ar" ? "تقارير المبيعات والمخزون" : "Sales & Inventory Reports"}</span>
-                        </div>
-                        <h1 className="text-xl font-black text-text">
-                            {lang === "ar" ? "تقرير إحصائيات العقود ورصيد الطبالي" : "Contract & Pallet Capacity Statistics"}
+                        <h1 className="text-xl font-black text-text flex items-center gap-2">
+                            {lang === "ar" ? "إحصائيات الطبالي" : "Pallet Capacity Statistics"}
                         </h1>
                         <p className="text-xs text-text-muted">
                             {lang === "ar"
-                                ? "عرض تحليلي مفصل لرصيد المحجوزات، الطبالي المستخدمة بالمخزن، والرصيد المتبقي المتاح لكل عقد"
-                                : "Detailed analytical report of booked capacity, occupied pallets, and remaining balances per contract"}
+                                ? "عرض تحليلي مفصل لرصيد المحجوزات، الطبالي، والرصيد المتبقي"
+                                : "Detailed analytical breakdown of booked, occupied, and remaining pallet balances"}
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={handlePrint}
-                            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
-                        >
-                            <Printer className="h-4 w-4" />
-                            <span>{lang === "ar" ? "طباعة التقرير (A4 Landscape)" : "Print Report (A4 Landscape)"}</span>
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={handlePrint}
+                        title={lang === "ar" ? "طباعة التقرير" : "Print Report"}
+                        className="p-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center shrink-0"
+                    >
+                        <Printer className="h-5 w-5" />
+                    </button>
                 </div>
 
-                {/* ═══ SUMMARY STATS CARDS (Hidden on Print) ═══════════════════════ */}
+                {/* ═══ TOP 4 SUMMARY STATS CARDS (Match Image Top Row) ═══════════════ */}
                 <div className="print:hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-                            <Boxes className="h-6 w-6" />
-                        </div>
-                        <div className="text-start">
-                            <p className="text-[11px] font-bold text-text-muted">
-                                {lang === "ar" ? "إجمالي الطبالي المحجوزة" : "Total Booked Pallets"}
-                            </p>
-                            <h3 className="text-lg font-black text-text font-mono mt-0.5">
-                                {(summary.total_booked || 0).toLocaleString()}
-                            </h3>
-                            <p className="text-[10px] text-text-muted">
-                                {lang === "ar" ? "المحجوز ببنود عقود الفترات" : "Contracted Capacity"}
-                            </p>
-                        </div>
+                    {/* Card 1: Booked */}
+                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs text-center space-y-1">
+                        <p className="text-[11px] font-bold text-text-muted">
+                            {lang === "ar" ? "إجمالي الطبالي المحجوزة" : "Total Booked Pallets"}
+                        </p>
+                        <h3 className="text-2xl font-black text-text font-mono">
+                            {(summary.total_booked || 0).toLocaleString()}
+                        </h3>
+                        <p className="text-[10px] text-text-muted">
+                            {lang === "ar" ? "المحجوز بنود عقود الفترات" : "Contracted Capacity"}
+                        </p>
                     </div>
 
-                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                            <PackageCheck className="h-6 w-6" />
-                        </div>
-                        <div className="text-start">
-                            <p className="text-[11px] font-bold text-text-muted">
-                                {lang === "ar" ? "الطبالي الممتلئة (المستخدمة)" : "Occupied Pallets"}
-                            </p>
-                            <h3 className="text-lg font-black text-amber-700 font-mono mt-0.5">
-                                {(summary.total_used || 0).toLocaleString()}
-                            </h3>
-                            <p className="text-[10px] text-amber-600 font-bold">
-                                {lang === "ar" ? "المشغولة بالمخزن حالياً" : "Currently Stored"}
-                            </p>
-                        </div>
+                    {/* Card 2: Occupied */}
+                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs text-center space-y-1">
+                        <p className="text-[11px] font-bold text-text-muted">
+                            {lang === "ar" ? "الطبالي الممتلئة (المستخدمة)" : "Occupied Pallets"}
+                        </p>
+                        <h3 className="text-2xl font-black text-amber-700 font-mono">
+                            {(summary.total_used || 0).toLocaleString()}
+                        </h3>
+                        <p className="text-[10px] text-amber-600 font-bold">
+                            {lang === "ar" ? "المشغولة بالمخزن حالياً" : "Currently Stored"}
+                        </p>
                     </div>
 
-                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                            <PackageX className="h-6 w-6" />
-                        </div>
-                        <div className="text-start">
-                            <p className="text-[11px] font-bold text-text-muted">
-                                {lang === "ar" ? "رصيد الطبالي المتبقي" : "Remaining Pallet Balance"}
-                            </p>
-                            <h3 className="text-lg font-black text-emerald-700 font-mono mt-0.5">
-                                {(summary.total_remaining || 0).toLocaleString()}
-                            </h3>
-                            <p className="text-[10px] text-emerald-600 font-bold">
-                                {lang === "ar" ? "المتاح للإدخال الجديد" : "Available Capacity"}
-                            </p>
-                        </div>
+                    {/* Card 3: Remaining */}
+                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs text-center space-y-1">
+                        <p className="text-[11px] font-bold text-text-muted">
+                            {lang === "ar" ? "رصيد الطبالي المتبقي" : "Remaining Pallets"}
+                        </p>
+                        <h3 className="text-2xl font-black text-emerald-700 font-mono">
+                            {(summary.total_remaining || 0).toLocaleString()}
+                        </h3>
+                        <p className="text-[10px] text-emerald-600 font-bold">
+                            {lang === "ar" ? "المتاح للإدخال الجديد" : "Available Capacity"}
+                        </p>
                     </div>
 
-                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                            <TrendingUp className="h-6 w-6" />
-                        </div>
-                        <div className="text-start">
-                            <p className="text-[11px] font-bold text-text-muted">
-                                {lang === "ar" ? "معدل الإشغال العام" : "Overall Occupancy Rate"}
-                            </p>
-                            <h3 className="text-lg font-black text-primary font-mono mt-0.5">
-                                {summary.utilization_rate || 0}%
-                            </h3>
-                            <p className="text-[10px] text-text-muted">
-                                {lang === "ar" ? "نسبة استغلال السعة الإجمالية" : "Capacity Utilization %"}
-                            </p>
-                        </div>
+                    {/* Card 4: Rate */}
+                    <div className="bg-surface border border-border rounded-xl p-4 shadow-2xs text-center space-y-1">
+                        <p className="text-[11px] font-bold text-text-muted">
+                            {lang === "ar" ? "معدل الإشغال العام" : "Occupancy Rate"}
+                        </p>
+                        <h3 className="text-2xl font-black text-primary font-mono">
+                            %{summary.utilization_rate || 0}
+                        </h3>
+                        <p className="text-[10px] text-text-muted">
+                            {lang === "ar" ? "وفقاً لفترات العقود" : "According to contract periods"}
+                        </p>
                     </div>
                 </div>
 
-                {/* ═══ FILTERS BAR (Hidden on Print) ═══════════════════════════════ */}
-                <div className="print:hidden bg-surface border border-border rounded-xl p-4 shadow-xs space-y-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-text border-b border-border pb-2">
-                        <Filter className="h-4 w-4 text-primary" />
-                        <span>{lang === "ar" ? "تصفية نتائج التقرير" : "Filter Report Results"}</span>
+                {/* ═══ FILTERS BOX (Match Image Filter Section) ═════════════════════ */}
+                <div className="print:hidden bg-surface border border-border rounded-xl p-4 shadow-xs space-y-3">
+                    <div className="text-start text-xs font-extrabold text-text-muted border-b border-border pb-2">
+                        {lang === "ar" ? "تصفية النتائج" : "Filter Results"}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {/* Status Filter */}
-                        <div>
-                            <label className="block text-[11px] font-bold text-text-muted mb-1 text-start">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
+                        {/* Contract Status */}
+                        <div className="text-start">
+                            <label className="block text-[11px] font-bold text-text-muted mb-1">
                                 {lang === "ar" ? "حالة العقد" : "Contract Status"}
                             </label>
                             <select
@@ -216,24 +168,24 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
                                 onChange={(e) => setStatusFilter(e.target.value)}
                                 className="w-full text-xs h-9 rounded-lg border-border bg-surface text-text font-semibold focus:ring-primary focus:border-primary"
                             >
-                                <option value="">{lang === "ar" ? "النشطة والمنتهية (افتراضي)" : "Active & Ended (Default)"}</option>
-                                <option value="active">{lang === "ar" ? "العقود النشطة فقط" : "Active Contracts Only"}</option>
-                                <option value="ended">{lang === "ar" ? "العقود المنتهية فقط" : "Ended Contracts Only"}</option>
-                                <option value="draft">{lang === "ar" ? "مسودات العقود" : "Draft Contracts"}</option>
+                                <option value="">{lang === "ar" ? "الكل (نشط ومنتهي)" : "All (Active & Ended)"}</option>
+                                <option value="active">{lang === "ar" ? "نشط" : "Active"}</option>
+                                <option value="ended">{lang === "ar" ? "منتهي" : "Ended"}</option>
+                                <option value="draft">{lang === "ar" ? "مسودة" : "Draft"}</option>
                             </select>
                         </div>
 
-                        {/* Customer Filter */}
-                        <div>
-                            <label className="block text-[11px] font-bold text-text-muted mb-1 text-start">
-                                {lang === "ar" ? "تصفية بالعميل" : "Client"}
+                        {/* Customer */}
+                        <div className="text-start">
+                            <label className="block text-[11px] font-bold text-text-muted mb-1">
+                                {lang === "ar" ? "نوع العميل" : "Customer"}
                             </label>
                             <select
                                 value={customerIdFilter}
                                 onChange={(e) => setCustomerIdFilter(e.target.value)}
                                 className="w-full text-xs h-9 rounded-lg border-border bg-surface text-text font-semibold focus:ring-primary focus:border-primary"
                             >
-                                <option value="">{lang === "ar" ? "جميع العملاء" : "All Customers"}</option>
+                                <option value="">{lang === "ar" ? "الكل" : "All Customers"}</option>
                                 {customers.map((c) => (
                                     <option key={c.id} value={c.id}>
                                         {c.name}
@@ -243,8 +195,8 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
                         </div>
 
                         {/* Search Input */}
-                        <div>
-                            <label className="block text-[11px] font-bold text-text-muted mb-1 text-start">
+                        <div className="text-start">
+                            <label className="block text-[11px] font-bold text-text-muted mb-1">
                                 {lang === "ar" ? "البحث" : "Search"}
                             </label>
                             <div className="relative">
@@ -259,29 +211,34 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
                             </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-end gap-2">
+                        {/* Apply Filter Button */}
+                        <div>
                             <button
                                 type="button"
                                 onClick={handleFilter}
-                                className="flex-1 h-9 bg-primary hover:bg-primary/90 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                                className="w-full h-9 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
                             >
                                 <Filter className="h-3.5 w-3.5" />
-                                <span>{lang === "ar" ? "تطبيق الفلتر" : "Apply Filter"}</span>
+                                <span>{lang === "ar" ? "تطبيق التصفية" : "Apply Filter"}</span>
                             </button>
+                        </div>
+
+                        {/* Reset Button */}
+                        <div>
                             <button
                                 type="button"
                                 onClick={handleReset}
-                                className="h-9 px-3 border border-border bg-surface hover:bg-surface-muted text-text-muted rounded-lg text-xs font-bold transition-colors"
+                                className="w-full h-9 border border-border bg-surface hover:bg-surface-muted text-text-muted rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
                             >
                                 <RotateCcw className="h-3.5 w-3.5" />
+                                <span>{lang === "ar" ? "إعادة تعيين" : "Reset"}</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 {/* ═══ PRINTABLE DOCUMENT CONTAINER (A4 Landscape) ═════════════════ */}
-                <div className="report-print-container bg-surface border border-border rounded-2xl p-6 shadow-sm print:shadow-none print:border-none print:p-0">
+                <div className="report-print-container bg-surface border border-border rounded-xl p-6 shadow-xs print:shadow-none print:border-none print:p-0">
                     
                     {/* PRINT HEADER - Visible on Print */}
                     <div className="hidden print:flex justify-between items-start border-b border-gray-400 pb-3 mb-4">
@@ -308,8 +265,11 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
 
                         <div className="text-end space-y-0.5">
                             <h1 className="text-sm font-black uppercase tracking-wide text-black">
-                                {lang === "ar" ? "تقرير إحصائيات العقود ورصيد الطبالي" : "Contract & Pallet Statistics Report"}
+                                {lang === "ar" ? "إحصائيات الطبالي" : "Pallet Capacity Statistics Report"}
                             </h1>
+                            <p className="text-[10px] text-gray-600">
+                                {lang === "ar" ? "عرض تحليلي مفصل لرصيد المحجوزات، الطبالي، والرصيد المتبقي" : "Detailed analytical breakdown of booked, occupied, and remaining pallet balances"}
+                            </p>
                             <div className="text-[10px] font-bold text-gray-700">
                                 {lang === "ar" ? "تاريخ الإصدار:" : "Date:"} <span className="font-mono">{new Date().toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}</span>
                             </div>
@@ -323,7 +283,7 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
                             <span className="font-mono font-black text-sm text-black">{(summary.total_booked || 0).toLocaleString()}</span>
                         </div>
                         <div>
-                            <span className="block text-[10px] font-bold text-gray-600">{lang === "ar" ? "إجمالي المستخدم (المقتبس):" : "Total Occupied:"}</span>
+                            <span className="block text-[10px] font-bold text-gray-600">{lang === "ar" ? "إجمالي المستخدم:" : "Total Occupied:"}</span>
                             <span className="font-mono font-black text-sm text-black">{(summary.total_used || 0).toLocaleString()}</span>
                         </div>
                         <div>
@@ -331,12 +291,12 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
                             <span className="font-mono font-black text-sm text-black">{(summary.total_remaining || 0).toLocaleString()}</span>
                         </div>
                         <div>
-                            <span className="block text-[10px] font-bold text-gray-600">{lang === "ar" ? "معدل الاستغلال العام:" : "Occupancy Rate:"}</span>
-                            <span className="font-mono font-black text-sm text-black">{summary.utilization_rate || 0}%</span>
+                            <span className="block text-[10px] font-bold text-gray-600">{lang === "ar" ? "معدل الإشغال العام:" : "Occupancy Rate:"}</span>
+                            <span className="font-mono font-black text-sm text-black">%{summary.utilization_rate || 0}</span>
                         </div>
                     </div>
 
-                    {/* ═══ DETAILED REPORT TABLE ═════════════════════════════════════ */}
+                    {/* ═══ MULTI-HEADER TABLE EXACTLY MATCHING USER IMAGE ══════════════ */}
                     {reportData.length === 0 ? (
                         <div className="py-16 text-center text-text-muted space-y-2">
                             <Boxes className="h-10 w-10 mx-auto text-text-muted/40" />
@@ -346,160 +306,148 @@ export default function Index({ reportData = [], summary = {}, customers = [], c
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-start border-collapse border border-border print:border-gray-400">
+                            <table className="w-full text-xs text-center border-collapse border border-border print:border-gray-800">
                                 <thead>
-                                    <tr className="bg-surface-muted/60 print:bg-gray-100 text-text print:text-black font-extrabold border-b border-border print:border-gray-400">
-                                        <th className="p-3 text-start w-64 border-e border-border print:border-gray-300">
+                                    {/* Level 1 Headers */}
+                                    <tr className="bg-surface-muted/80 print:bg-gray-200 text-text print:text-black font-black border-b border-border print:border-gray-600">
+                                        <th rowSpan={2} className="p-3 text-center align-middle border-e border-border print:border-gray-400 min-w-[220px]">
                                             {lang === "ar" ? "العقد والعميل" : "Contract & Client"}
                                         </th>
-                                        <th className="p-3 text-start border-e border-border print:border-gray-300">
-                                            {lang === "ar" ? "المحجوزات (أصناف الفترات)" : "Booked Pallets"}
+                                        <th colSpan={allSizes.length} className="p-2 text-center border-e border-border print:border-gray-400 bg-blue-500/5 print:bg-transparent">
+                                            {lang === "ar" ? "المحجوز" : "Booked"}
                                         </th>
-                                        <th className="p-3 text-start border-e border-border print:border-gray-300">
-                                            {lang === "ar" ? "المستخدم (المخزون الفعلي)" : "Occupied Pallets"}
+                                        <th colSpan={allSizes.length} className="p-2 text-center border-e border-border print:border-gray-400 bg-amber-500/5 print:bg-transparent">
+                                            {lang === "ar" ? "المستخدم" : "Occupied"}
                                         </th>
-                                        <th className="p-3 text-start border-e border-border print:border-gray-300">
-                                            {lang === "ar" ? "الرصيد الباقي المتاح" : "Remaining Pallets"}
+                                        <th colSpan={allSizes.length} className="p-2 text-center border-e border-border print:border-gray-400 bg-emerald-500/5 print:bg-transparent">
+                                            {lang === "ar" ? "المتاح" : "Remaining"}
                                         </th>
-                                        <th className="p-3 text-center w-36">
-                                            {lang === "ar" ? "نسبة الاستغلال" : "Utilization Rate"}
+                                        <th rowSpan={2} className="p-3 text-center align-middle w-28">
+                                            {lang === "ar" ? "نسبة الاستغلال" : "Utilization"}
                                         </th>
                                     </tr>
+
+                                    {/* Level 2 Sub-Headers per Size */}
+                                    <tr className="bg-surface-muted/50 print:bg-gray-100 text-text print:text-black font-bold border-b border-border print:border-gray-600">
+                                        {/* Under المحجوز */}
+                                        {allSizes.map((sz) => (
+                                            <th key={`h-booked-${sz}`} className="p-2 text-center border-e border-border print:border-gray-300 min-w-[60px]">
+                                                {sz}
+                                            </th>
+                                        ))}
+
+                                        {/* Under المستخدم */}
+                                        {allSizes.map((sz) => (
+                                            <th key={`h-used-${sz}`} className="p-2 text-center border-e border-border print:border-gray-300 min-w-[60px]">
+                                                {sz}
+                                            </th>
+                                        ))}
+
+                                        {/* Under المتاح */}
+                                        {allSizes.map((sz) => (
+                                            <th key={`h-rem-${sz}`} className="p-2 text-center border-e border-border print:border-gray-300 min-w-[60px]">
+                                                {sz}
+                                            </th>
+                                        ))}
+                                    </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border print:divide-gray-300">
-                                    {reportData.map((row) => {
-                                        const badge = getUtilizationBadge(row.utilization_rate);
-                                        return (
-                                            <tr key={row.id} className="hover:bg-surface-muted/30 print:hover:bg-transparent text-start">
-                                                
-                                                {/* 1. العقد والعميل */}
-                                                <td className="p-3 align-top border-e border-border print:border-gray-300">
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-extrabold text-text print:text-black text-xs">
-                                                                {row.customer_name}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 font-mono text-[11px]">
-                                                            <span className="font-bold text-primary print:text-black">
-                                                                {row.contract_number}
-                                                            </span>
-                                                            <span
-                                                                className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                                                                    row.status === "active"
-                                                                        ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
-                                                                        : "bg-slate-500/10 text-slate-700 border border-slate-500/20"
-                                                                }`}
-                                                            >
-                                                                {row.status === "active"
-                                                                    ? (lang === "ar" ? "نشط" : "Active")
-                                                                    : (lang === "ar" ? "منتهي" : "Ended")}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </td>
 
-                                                {/* 2. المحجوزات مقسمة حسب الحجم والنوع */}
-                                                <td className="p-3 align-top border-e border-border print:border-gray-300">
-                                                    <div className="space-y-1.5">
-                                                        {row.items_breakdown.map((item, idx) => (
-                                                            <div key={idx} className="flex justify-between items-center text-[11px] gap-3">
-                                                                <span className="text-text-muted print:text-gray-700 font-medium">
-                                                                    {item.label}:
-                                                                </span>
-                                                                <span className="font-mono font-bold text-text print:text-black">
-                                                                    {item.booked.toLocaleString()}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                        <div className="border-t border-border/60 print:border-gray-300 pt-1 flex justify-between items-center font-extrabold text-xs">
-                                                            <span>{lang === "ar" ? "الإجمالي:" : "Total:"}</span>
-                                                            <span className="font-mono text-blue-700 print:text-black">
-                                                                {row.total_booked.toLocaleString()}
-                                                            </span>
-                                                        </div>
+                                <tbody className="divide-y divide-border print:divide-gray-400">
+                                    {reportData.map((row) => (
+                                        <tr key={row.id} className="hover:bg-surface-muted/30 print:hover:bg-transparent">
+                                            
+                                            {/* Column 1: Client Name + Contract Number + Status Badge */}
+                                            <td className="p-3 text-start align-middle border-e border-border print:border-gray-400">
+                                                <div className="space-y-0.5">
+                                                    <div className="font-extrabold text-text print:text-black text-xs">
+                                                        {row.customer_name}
                                                     </div>
-                                                </td>
-
-                                                {/* 3. المستخدم مقسم حسب الحجم والنوع */}
-                                                <td className="p-3 align-top border-e border-border print:border-gray-300">
-                                                    <div className="space-y-1.5">
-                                                        {row.items_breakdown.map((item, idx) => (
-                                                            <div key={idx} className="flex justify-between items-center text-[11px] gap-3">
-                                                                <span className="text-text-muted print:text-gray-700 font-medium">
-                                                                    {item.label}:
-                                                                </span>
-                                                                <span className="font-mono font-bold text-amber-700 print:text-black">
-                                                                    {item.used.toLocaleString()}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                        <div className="border-t border-border/60 print:border-gray-300 pt-1 flex justify-between items-center font-extrabold text-xs">
-                                                            <span>{lang === "ar" ? "الإجمالي:" : "Total:"}</span>
-                                                            <span className="font-mono text-amber-700 print:text-black">
-                                                                {row.total_used.toLocaleString()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-
-                                                {/* 4. الرصيد الباقي مقسم حسب الحجم والنوع */}
-                                                <td className="p-3 align-top border-e border-border print:border-gray-300">
-                                                    <div className="space-y-1.5">
-                                                        {row.items_breakdown.map((item, idx) => (
-                                                            <div key={idx} className="flex justify-between items-center text-[11px] gap-3">
-                                                                <span className="text-text-muted print:text-gray-700 font-medium">
-                                                                    {item.label}:
-                                                                </span>
-                                                                <span className="font-mono font-bold text-emerald-700 print:text-black">
-                                                                    {item.remaining.toLocaleString()}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                        <div className="border-t border-border/60 print:border-gray-300 pt-1 flex justify-between items-center font-extrabold text-xs">
-                                                            <span>{lang === "ar" ? "الإجمالي:" : "Total:"}</span>
-                                                            <span className="font-mono text-emerald-700 print:text-black">
-                                                                {row.total_remaining.toLocaleString()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-
-                                                {/* 5. نسبة الاستغلال مع التلوين */}
-                                                <td className="p-3 align-middle text-center">
-                                                    <div className="inline-flex flex-col items-center gap-1">
-                                                        <span className="font-mono font-black text-sm text-text print:text-black">
-                                                            {row.utilization_rate}%
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono text-xs font-bold text-text-muted print:text-gray-800">
+                                                            {row.contract_number}
                                                         </span>
                                                         <span
-                                                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${badge.bg}`}
+                                                            className={`text-[9px] px-2 py-0.5 rounded font-extrabold ${
+                                                                row.status === "active"
+                                                                    ? "bg-emerald-500/15 text-emerald-700 print:bg-emerald-100 print:text-emerald-900 border border-emerald-500/20"
+                                                                    : "bg-slate-500/15 text-slate-700 print:bg-gray-100 print:text-gray-900 border border-slate-500/20"
+                                                            }`}
                                                         >
-                                                            <span className={`h-1.5 w-1.5 rounded-full ${badge.dot}`}></span>
-                                                            <span>{badge.label}</span>
+                                                            {row.status === "active"
+                                                                ? (lang === "ar" ? "نشط" : "Active")
+                                                                : (lang === "ar" ? "منتهي" : "Ended")}
                                                         </span>
                                                     </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Columns for المحجوز per size */}
+                                            {allSizes.map((sz) => (
+                                                <td key={`b-${sz}`} className="p-2 text-center font-mono font-bold text-text print:text-black border-e border-border print:border-gray-300">
+                                                    {row.booked_by_size[sz] !== undefined ? row.booked_by_size[sz] : 0}
                                                 </td>
+                                            ))}
 
-                                            </tr>
-                                        );
-                                    })}
+                                            {/* Columns for المستخدم per size */}
+                                            {allSizes.map((sz) => (
+                                                <td key={`u-${sz}`} className="p-2 text-center font-mono font-bold text-amber-700 print:text-black border-e border-border print:border-gray-300">
+                                                    {row.used_by_size[sz] !== undefined ? row.used_by_size[sz] : 0}
+                                                </td>
+                                            ))}
 
-                                    {/* Overall Total Row */}
+                                            {/* Columns for المتاح per size */}
+                                            {allSizes.map((sz) => (
+                                                <td key={`r-${sz}`} className="p-2 text-center font-mono font-bold text-emerald-700 print:text-black border-e border-border print:border-gray-300">
+                                                    {row.remaining_by_size[sz] !== undefined ? row.remaining_by_size[sz] : 0}
+                                                </td>
+                                            ))}
+
+                                            {/* Column Last: Utilization Rate % */}
+                                            <td className="p-3 text-center align-middle font-mono font-black text-text print:text-black">
+                                                %{row.utilization_rate}
+                                            </td>
+
+                                        </tr>
+                                    ))}
+
+                                    {/* Grand Total Summary Row */}
                                     <tr className="bg-surface-muted/90 print:bg-gray-200 font-black text-text print:text-black border-t-2 border-border print:border-black">
                                         <td className="p-3 text-start border-e border-border print:border-gray-400 text-xs">
-                                            {lang === "ar" ? "المجموع الكلي لكافة العقود" : "Grand Total All Contracts"}
+                                            {lang === "ar" ? "الإجمالي الكلي لكافة العقود" : "Grand Total All Contracts"}
                                         </td>
-                                        <td className="p-3 text-start font-mono text-sm text-blue-700 print:text-black border-e border-border print:border-gray-400">
-                                            {(summary.total_booked || 0).toLocaleString()}
-                                        </td>
-                                        <td className="p-3 text-start font-mono text-sm text-amber-700 print:text-black border-e border-border print:border-gray-400">
-                                            {(summary.total_used || 0).toLocaleString()}
-                                        </td>
-                                        <td className="p-3 text-start font-mono text-sm text-emerald-700 print:text-black border-e border-border print:border-gray-400">
-                                            {(summary.total_remaining || 0).toLocaleString()}
-                                        </td>
+
+                                        {/* Total Booked per size */}
+                                        {allSizes.map((sz) => {
+                                            const totBookedSz = reportData.reduce((sum, r) => sum + (r.booked_by_size[sz] || 0), 0);
+                                            return (
+                                                <td key={`tot-b-${sz}`} className="p-2 text-center font-mono font-black text-blue-700 print:text-black border-e border-border print:border-gray-400">
+                                                    {totBookedSz}
+                                                </td>
+                                            );
+                                        })}
+
+                                        {/* Total Used per size */}
+                                        {allSizes.map((sz) => {
+                                            const totUsedSz = reportData.reduce((sum, r) => sum + (r.used_by_size[sz] || 0), 0);
+                                            return (
+                                                <td key={`tot-u-${sz}`} className="p-2 text-center font-mono font-black text-amber-700 print:text-black border-e border-border print:border-gray-400">
+                                                    {totUsedSz}
+                                                </td>
+                                            );
+                                        })}
+
+                                        {/* Total Remaining per size */}
+                                        {allSizes.map((sz) => {
+                                            const totRemSz = reportData.reduce((sum, r) => sum + (r.remaining_by_size[sz] || 0), 0);
+                                            return (
+                                                <td key={`tot-r-${sz}`} className="p-2 text-center font-mono font-black text-emerald-700 print:text-black border-e border-border print:border-gray-400">
+                                                    {totRemSz}
+                                                </td>
+                                            );
+                                        })}
+
                                         <td className="p-3 text-center font-mono text-sm text-primary print:text-black">
-                                            {summary.utilization_rate || 0}%
+                                            %{summary.utilization_rate || 0}
                                         </td>
                                     </tr>
                                 </tbody>

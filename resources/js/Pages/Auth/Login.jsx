@@ -7,10 +7,14 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Login({ status, canResetPassword }) {
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    const redirectTo = searchParams.get('redirect') || searchParams.get('redirect_to') || searchParams.get('intended') || '';
+
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
         remember: false,
+        redirect_to: redirectTo,
     });
 
     const submit = (e) => {

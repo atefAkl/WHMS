@@ -54,8 +54,11 @@ class ContractPalletStatsController extends Controller
             PalletRearrangement::class,
         ];
 
+        // Global list of unique pallet size categories found across active/selected contracts
+        $allSizesSet = collect();
+
         // Calculate detailed stats per contract
-        $reportData = $contracts->map(function ($contract) use ($voucherMorphClasses) {
+        $reportData = $contracts->map(function ($contract) use ($voucherMorphClasses, &$allSizesSet) {
             // Determine active period or contract items
             $activePeriod = $contract->periods->first();
             $periodItems = $activePeriod && $activePeriod->items->count() > 0 
@@ -90,20 +93,37 @@ class ContractPalletStatsController extends Controller
             })
             ->count();
 
-            $itemsBreakdown = [];
+            $bookedBySize = [];
+            $usedBySize = [];
+            $remainingBySize = [];
+
             $totalBooked = 0;
             $totalUsed = 0;
             $totalRemaining = 0;
 
             foreach ($periodItems as $item) {
-                $label = $item->short_name ?: ($item->storageItem->short_name ?? $item->storageItem->name_ar ?? 'طبلية');
+                // Determine size label using short_name or extracted name
+                $rawLabel = $item->short_name ?: ($item->storageItem->short_name ?? $item->storageItem->name_ar ?? 'طبلية');
+                
+                // Clean size label (e.g. "صغيرة", "كبيرة", "وسط")
+                $sizeKey = $rawLabel;
+                if (mb_strpos($rawLabel, 'صغير') !== false || mb_strpos($rawLabel, 'سمول') !== false) {
+                    $sizeKey = 'صغيرة';
+                } elseif (mb_strpos($rawLabel, 'كبير') !== false || mb_strpos($rawLabel, 'لارج') !== false) {
+                    $sizeKey = 'كبيرة';
+                } elseif (mb_strpos($rawLabel, 'وسط') !== false || mb_strpos($rawLabel, 'ميديوم') !== false) {
+                    $sizeKey = 'وسط';
+                }
+
+                $allSizesSet->push($sizeKey);
+
                 $booked = (int) ($item->unit_count ?? 0);
 
-                // Match occupied pallets by size/label
-                $used = $occupiedPallets[$label] ?? 0;
+                // Match occupied pallets by sizeKey
+                $used = $occupiedPallets[$sizeKey] ?? $occupiedPallets[$rawLabel] ?? 0;
                 if ($used === 0) {
                     foreach ($occupiedPallets as $sz => $cnt) {
-                        if (str_contains($label, $sz) || str_contains($sz, $label)) {
+                        if (str_contains($sizeKey, $sz) || str_contains($sz, $sizeKey) || str_contains($rawLabel, $sz)) {
                             $used += $cnt;
                         }
                     }
@@ -111,30 +131,25 @@ class ContractPalletStatsController extends Controller
 
                 $remaining = max(0, $booked - $used);
 
+                $bookedBySize[$sizeKey] = ($bookedBySize[$sizeKey] ?? 0) + $booked;
+                $usedBySize[$sizeKey] = ($usedBySize[$sizeKey] ?? 0) + $used;
+                $remainingBySize[$sizeKey] = ($remainingBySize[$sizeKey] ?? 0) + $remaining;
+
                 $totalBooked += $booked;
                 $totalUsed += $used;
                 $totalRemaining += $remaining;
-
-                $itemsBreakdown[] = [
-                    'label' => $label,
-                    'full_name' => $item->storageItem->name_ar ?? $label,
-                    'booked' => $booked,
-                    'used' => $used,
-                    'remaining' => $remaining,
-                ];
             }
 
             // Fallback if no items configured but pallets exist
-            if (empty($itemsBreakdown) && $totalOccupiedPalletsCount > 0) {
+            if ($totalBooked === 0 && $totalOccupiedPalletsCount > 0) {
+                $sizeKey = 'عامة';
+                $allSizesSet->push($sizeKey);
+                $bookedBySize[$sizeKey] = $totalOccupiedPalletsCount;
+                $usedBySize[$sizeKey] = $totalOccupiedPalletsCount;
+                $remainingBySize[$sizeKey] = 0;
+                $totalBooked = $totalOccupiedPalletsCount;
                 $totalUsed = $totalOccupiedPalletsCount;
-                $itemsBreakdown[] = [
-                    'label' => 'طبالي عامة',
-                    'full_name' => 'طبالي عامة',
-                    'booked' => $totalUsed,
-                    'used' => $totalUsed,
-                    'remaining' => 0,
-                ];
-                $totalBooked = $totalUsed;
+                $totalRemaining = 0;
             }
 
             $utilizationRate = $totalBooked > 0 ? round(($totalUsed / $totalBooked) * 100, 1) : 0;
@@ -146,13 +161,21 @@ class ContractPalletStatsController extends Controller
                 'customer_id' => $contract->customer_id,
                 'customer_name' => $contract->customer ? $contract->customer->name : '—',
                 'customer_phone' => $contract->customer ? $contract->customer->phone_number : '—',
-                'items_breakdown' => $itemsBreakdown,
+                'booked_by_size' => $bookedBySize,
+                'used_by_size' => $usedBySize,
+                'remaining_by_size' => $remainingBySize,
                 'total_booked' => $totalBooked,
                 'total_used' => $totalUsed,
                 'total_remaining' => $totalRemaining,
                 'utilization_rate' => $utilizationRate,
             ];
         });
+
+        // Ensure default sizes "صغيرة", "كبيرة" exist if set is empty or small
+        $allSizes = $allSizesSet->unique()->values()->all();
+        if (empty($allSizes)) {
+            $allSizes = ['صغيرة', 'كبيرة'];
+        }
 
         // Overall summary statistics
         $overallBooked = $reportData->sum('total_booked');
@@ -165,6 +188,7 @@ class ContractPalletStatsController extends Controller
 
         return Inertia::render('Sales/ContractPalletStats/Index', [
             'reportData' => $reportData,
+            'allSizes' => $allSizes,
             'summary' => [
                 'total_booked' => $overallBooked,
                 'total_used' => $overallUsed,
