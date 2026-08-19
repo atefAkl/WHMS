@@ -49,6 +49,7 @@ export default function Index({ tickets, customers, drivers }) {
             setData("contract_id", "");
             
             axios.get(`/api/customers/${data.customer_id}/contracts`)
+                .catch(() => axios.get(`/api/queue-tickets/customer-contracts/${data.customer_id}`))
                 .then(res => {
                     const contractsList = Array.isArray(res.data) ? res.data : [];
                     setCustomerContracts(contractsList);
@@ -69,6 +70,7 @@ export default function Index({ tickets, customers, drivers }) {
         if (data.contract_id) {
             setLoadingInfo(true);
             axios.get(`/api/contracts/${data.contract_id}/queue-info`)
+                .catch(() => axios.get(`/api/queue-tickets/contract-info/${data.contract_id}`))
                 .then(res => {
                     setQueueInfo(res.data);
                 })

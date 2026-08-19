@@ -339,6 +339,8 @@ Route::middleware([
                 Route::get('/queue-tickets/{queueTicket}/print', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'print'])->name('queue-tickets.print');
                 Route::get('/api/queue-tickets/contract-info/{contract}', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getContractInfo'])->name('api.queue-tickets.contract-info');
                 Route::get('/api/queue-tickets/customer-contracts/{customer}', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getCustomerContracts'])->name('api.queue-tickets.customer-contracts');
+                Route::get('/api/customers/{customer}/contracts', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getCustomerContracts'])->name('api.customers.contracts');
+                Route::get('/api/contracts/{contract}/queue-info', [\App\Http\Controllers\Tenant\QueueTicketController::class, 'getContractInfo'])->name('api.contracts.queue-info');
 
                 // Terms Management
                 Route::get('terms', [\App\Http\Controllers\TermController::class, 'index'])->name('terms.index');
