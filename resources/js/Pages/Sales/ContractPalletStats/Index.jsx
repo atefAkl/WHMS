@@ -395,12 +395,23 @@ export default function Index({
                                                 </td>
                                             ))}
 
-                                            {/* Columns for المتاح per size */}
-                                            {allSizes.map((sz) => (
-                                                <td key={`r-${sz}`} className="p-2 text-center font-mono font-bold text-emerald-700 print:text-black border-e border-border print:border-gray-300">
-                                                    {row.remaining_by_size[sz] !== undefined ? row.remaining_by_size[sz] : 0}
-                                                </td>
-                                            ))}
+                                            {/* Columns for المتاح per size with cell background color indicators */}
+                                            {allSizes.map((sz) => {
+                                                const remVal = row.remaining_by_size[sz] !== undefined ? row.remaining_by_size[sz] : 0;
+                                                const isAvailable = remVal > 0;
+                                                return (
+                                                    <td
+                                                        key={`r-${sz}`}
+                                                        className={`p-2 text-center font-mono font-black border-e border-border print:border-gray-300 ${
+                                                            isAvailable
+                                                                ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 print:bg-emerald-100 print:text-emerald-950"
+                                                                : "bg-rose-500/15 text-rose-800 dark:text-rose-300 print:bg-rose-100 print:text-rose-950"
+                                                        }`}
+                                                    >
+                                                        {remVal}
+                                                    </td>
+                                                );
+                                            })}
 
                                             {/* Column Last: Utilization Rate % */}
                                             <td className="p-3 text-center align-middle font-mono font-black text-text print:text-black">
@@ -436,11 +447,19 @@ export default function Index({
                                             );
                                         })}
 
-                                        {/* Total Remaining per size */}
+                                        {/* Total Remaining per size with background color */}
                                         {allSizes.map((sz) => {
                                             const totRemSz = reportData.reduce((sum, r) => sum + (r.remaining_by_size[sz] || 0), 0);
+                                            const isAvailable = totRemSz > 0;
                                             return (
-                                                <td key={`tot-r-${sz}`} className="p-2 text-center font-mono font-black text-emerald-700 print:text-black border-e border-border print:border-gray-400">
+                                                <td
+                                                    key={`tot-r-${sz}`}
+                                                    className={`p-2 text-center font-mono font-black border-e border-border print:border-gray-400 ${
+                                                        isAvailable
+                                                            ? "bg-emerald-500/20 text-emerald-900 dark:text-emerald-200 print:bg-emerald-200 print:text-black"
+                                                            : "bg-rose-500/20 text-rose-900 dark:text-rose-200 print:bg-rose-200 print:text-black"
+                                                    }`}
+                                                >
                                                     {totRemSz}
                                                 </td>
                                             );
@@ -481,11 +500,11 @@ export default function Index({
 
             </div>
 
-            {/* Print CSS Rules - Strictly A4 Landscape */}
+            {/* Print CSS Rules - Strictly A4 Portrait */}
             <style>{`
                 @media print {
                     @page {
-                        size: A4 landscape;
+                        size: A4 portrait;
                         margin: 0.8cm;
                     }
                     html, body {
