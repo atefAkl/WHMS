@@ -376,31 +376,44 @@ class ContractController extends Controller
             abort(404);
         }
 
-        if ($period->period_number !== (int) $contract->periods()->max('period_number')) {
-            return back()->with('error', 'يمكن تعديل مدة آخر فترة فقط للحفاظ على التسلسل الزمني.');
-        }
-
         $validated = $request->validate([
-            'duration_months' => 'required|integer|min:1',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'duration_months' => 'nullable|integer|min:1',
             'notes' => 'nullable|string',
         ]);
 
-        $durationMonths = (int) $validated['duration_months'];
+        $updateData = [];
 
-        $newEnd = Carbon::parse($period->start_date)
-            ->addMonths($durationMonths)
-            ->subDay();
-
-        $period->update([
-            'end_date' => $newEnd,
-            'notes' => $validated['notes'] ?? $period->notes,
-        ]);
-
-        if ($period->is($contract->periods()->orderByDesc('period_number')->first())) {
-            $contract->update(['end_date' => $newEnd]);
+        if (!empty($validated['start_date'])) {
+            $updateData['start_date'] = $validated['start_date'];
         }
 
-        return back()->with('success', 'تم تحديث بيانات الفترة بنجاح.');
+        if (!empty($validated['end_date'])) {
+            $updateData['end_date'] = $validated['end_date'];
+        } elseif (!empty($validated['duration_months'])) {
+            $durationMonths = (int) $validated['duration_months'];
+            $baseStart = !empty($validated['start_date']) ? $validated['start_date'] : $period->start_date;
+            $updateData['end_date'] = Carbon::parse($baseStart)
+                ->addMonths($durationMonths)
+                ->subDay();
+        }
+
+        if (isset($validated['notes'])) {
+            $updateData['notes'] = $validated['notes'];
+        }
+
+        if (!empty($updateData)) {
+            $period->update($updateData);
+        }
+
+        // If this is the latest period, update contract end_date
+        $latestPeriod = $contract->periods()->orderByDesc('period_number')->first();
+        if ($latestPeriod && $latestPeriod->id === $period->id && isset($updateData['end_date'])) {
+            $contract->update(['end_date' => $updateData['end_date']]);
+        }
+
+        return back()->with('success', 'تم تحديث تاريخ وبيانات الفترة بنجاح.');
     }
 
     public function updatePeriodItems(Request $request, Contract $contract, ContractPeriod $period)
@@ -411,26 +424,48 @@ class ContractController extends Controller
 
         $validated = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|exists:contract_period_items,id',
+            'items.*.id' => 'nullable|exists:contract_period_items,id',
+            'items.*.storage_item_id' => 'required|exists:storage_items,id',
             'items.*.unit_count' => 'required|integer|min:0',
+            'items.*.monthly_rent' => 'required|numeric|min:0',
+            'items.*.discount' => 'nullable|numeric|min:0',
+            'items.*.vat_rate' => 'nullable|numeric|min:0',
         ]);
 
-        $periodItems = $period->items()->get()->keyBy('id');
+        DB::transaction(function () use ($period, $validated) {
+            $keptItemIds = [];
+            foreach ($validated['items'] as $itemPayload) {
+                if (!empty($itemPayload['id'])) {
+                    $periodItem = $period->items()->find($itemPayload['id']);
+                    if ($periodItem) {
+                        $periodItem->update([
+                            'storage_item_id' => $itemPayload['storage_item_id'],
+                            'unit_count' => (int) $itemPayload['unit_count'],
+                            'monthly_rent' => (float) $itemPayload['monthly_rent'],
+                            'discount' => (float) ($itemPayload['discount'] ?? 0),
+                            'vat_rate' => (float) ($itemPayload['vat_rate'] ?? 15),
+                        ]);
+                        $keptItemIds[] = $periodItem->id;
+                        continue;
+                    }
+                }
 
-        foreach ($validated['items'] as $itemPayload) {
-            $periodItem = $periodItems->get((int) $itemPayload['id']);
-            if (!$periodItem) {
-                return back()->withErrors(['items' => 'تم العثور على عنصر غير تابع للفترة المحددة.']);
+                $newItem = $period->items()->create([
+                    'storage_item_id' => $itemPayload['storage_item_id'],
+                    'unit_count' => (int) $itemPayload['unit_count'],
+                    'monthly_rent' => (float) $itemPayload['monthly_rent'],
+                    'discount' => (float) ($itemPayload['discount'] ?? 0),
+                    'vat_rate' => (float) ($itemPayload['vat_rate'] ?? 15),
+                ]);
+                $keptItemIds[] = $newItem->id;
             }
 
+            if (!empty($keptItemIds)) {
+                $period->items()->whereNotIn('id', $keptItemIds)->delete();
+            }
+        });
 
-
-            $periodItem->update([
-                'unit_count' => (int) $itemPayload['unit_count'],
-            ]);
-        }
-
-        return back()->with('success', 'تم تحديث أصناف الفترة بنجاح.');
+        return back()->with('success', 'تم تحديث أصناف الفترة وأسعارها وكمياتها بنجاح.');
     }
 
     public function updatePeriodStatus(Request $request, Contract $contract, ContractPeriod $period)
@@ -735,8 +770,8 @@ class ContractController extends Controller
 
     public function update(Request $request, Contract $contract)
     {
-        if ($contract->status !== 'draft') {
-            return back()->with('error', app()->getLocale() === 'ar' ? 'لا يمكن تعديل العقد بعد تنشيطه أو اعتماده.' : 'Cannot edit the contract after it is activated or approved.');
+        if (!in_array($contract->status, ['draft', 'active'])) {
+            return back()->with('error', app()->getLocale() === 'ar' ? 'لا يمكن تعديل العقد بعد إنهائه أو إلغائه.' : 'Cannot edit ended or cancelled contract.');
         }
 
         $validated = $request->validate([

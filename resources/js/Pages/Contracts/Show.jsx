@@ -1811,7 +1811,9 @@ export default function Show({
     const openPeriodEdit = (period) => {
         setSelectedPeriod(period);
         setPeriodEditForm({
-            duration_months: getPeriodDurationMonths(period),
+            duration_months: period.duration_months || 1,
+            start_date: period.start_date || "",
+            end_date: period.end_date || "",
             notes: period.notes || "",
         });
         setShowPeriodEditModal(true);
@@ -1822,6 +1824,7 @@ export default function Show({
         setPeriodItemsForm({
             items: (period.items || []).map((item) => ({
                 id: item.id,
+                storage_item_id: item.storage_item_id,
                 label: displayBilingual(
                     item.storage_item?.name_ar
                         ? `${item.storage_item.name_ar}|${item.storage_item.name_en || item.storage_item.name_ar}`
@@ -2088,16 +2091,15 @@ export default function Show({
                             {/* Activate */}
                             {(contract.status === "draft" ||
                                 contract.status === "suspended") && (
-                                <Tooltip text={t("show.activate")}>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAction("activate")}
-                                        disabled={processing || formProcessing}
-                                        className="flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm"
-                                    >
-                                        <Play className="h-4 w-4" />
-                                    </button>
-                                </Tooltip>
+                                <button
+                                    type="button"
+                                    onClick={() => handleAction("activate")}
+                                    disabled={processing || formProcessing}
+                                    className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-sm"
+                                >
+                                    <Play className="h-3.5 w-3.5" />
+                                    <span>{lang === "ar" ? "تنشيط العقد" : "Activate Contract"}</span>
+                                </button>
                             )}
 
                             {/* Suspend */}
@@ -6719,20 +6721,49 @@ export default function Show({
                     <h3 className="text-lg font-bold text-text mb-4">
                         {t("show.edit_period")}
                     </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <InputLabel value={lang === "ar" ? "تاريخ بداية الفترة" : "Start Date"} />
+                            <TextInput
+                                type="date"
+                                className="mt-1 block w-full"
+                                value={periodEditForm.start_date || ""}
+                                onChange={(e) =>
+                                    setPeriodEditForm({
+                                        ...periodEditForm,
+                                        start_date: e.target.value,
+                                    })
+                                }
+                            />
+                        </div>
+                        <div>
+                            <InputLabel value={lang === "ar" ? "تاريخ نهاية الفترة" : "End Date"} />
+                            <TextInput
+                                type="date"
+                                className="mt-1 block w-full"
+                                value={periodEditForm.end_date || ""}
+                                onChange={(e) =>
+                                    setPeriodEditForm({
+                                        ...periodEditForm,
+                                        end_date: e.target.value,
+                                    })
+                                }
+                            />
+                        </div>
+                    </div>
                     <div>
                         <InputLabel value={t("show.extension_months")} />
                         <TextInput
                             type="number"
                             min="1"
                             className="mt-1 block w-full"
-                            value={periodEditForm.duration_months}
+                            value={periodEditForm.duration_months || 1}
                             onChange={(e) =>
                                 setPeriodEditForm({
                                     ...periodEditForm,
                                     duration_months: e.target.value,
                                 })
                             }
-                            required
                         />
                     </div>
                     <div>
@@ -6766,7 +6797,7 @@ export default function Show({
             <Modal
                 show={showPeriodItemsModal}
                 onClose={() => setShowPeriodItemsModal(false)}
-                maxWidth="lg"
+                maxWidth="2xl"
             >
                 <form
                     onSubmit={(e) => {
@@ -6776,8 +6807,12 @@ export default function Show({
                             "patch",
                             {
                                 items: periodItemsForm.items.map((item) => ({
-                                    id: item.id,
+                                    id: item.id || null,
+                                    storage_item_id: item.storage_item_id,
                                     unit_count: item.unit_count,
+                                    monthly_rent: item.monthly_rent,
+                                    discount: item.discount,
+                                    vat_rate: item.vat_rate,
                                 })),
                             },
                             setShowPeriodItemsModal,
@@ -6785,54 +6820,142 @@ export default function Show({
                     }}
                     className="p-6 space-y-4"
                 >
-                    <h3 className="text-lg font-bold text-text mb-4">
-                        {t("show.edit_period_items")}
-                    </h3>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-text">
+                            {t("show.edit_period_items")}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const defaultItem = storageItems && storageItems.length > 0 ? storageItems[0] : null;
+                                setPeriodItemsForm({
+                                    items: [
+                                        ...periodItemsForm.items,
+                                        {
+                                            id: null,
+                                            storage_item_id: defaultItem ? defaultItem.id : "",
+                                            label: defaultItem ? defaultItem.name_ar : "",
+                                            unit_count: 1,
+                                            monthly_rent: defaultItem ? defaultItem.default_price || 0 : 0,
+                                            discount: 0,
+                                            vat_rate: 15,
+                                        },
+                                    ],
+                                });
+                            }}
+                            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>{lang === "ar" ? "إضافة صنف جديد للفترة" : "Add Item"}</span>
+                        </button>
+                    </div>
+
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-start">
-                            <thead className="bg-surface-muted text-text-muted text-[11px] uppercase tracking-wider">
+                        <table className="w-full text-xs text-start border-collapse">
+                            <thead className="bg-surface-muted text-text-muted text-[11px] font-bold uppercase border-b border-border">
                                 <tr>
-                                    <th className="px-3 py-2">
-                                        {t("show.item")}
-                                    </th>
-                                    <th className="px-3 py-2 text-center w-40">
-                                        {t("show.qty")}
-                                    </th>
+                                    <th className="px-3 py-2 text-start">{lang === "ar" ? "نوع الصنف / الخدمة" : "Storage Item"}</th>
+                                    <th className="px-3 py-2 text-center w-24">{lang === "ar" ? "العدد / الطبالي" : "Qty"}</th>
+                                    <th className="px-3 py-2 text-center w-28">{lang === "ar" ? "السعر الشهري" : "Monthly Rent"}</th>
+                                    <th className="px-3 py-2 text-center w-24">{lang === "ar" ? "الخصم %" : "Discount %"}</th>
+                                    <th className="px-3 py-2 text-center w-12">#</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {periodItemsForm.items.map((item, index) => (
-                                    <tr key={item.id}>
-                                        <td className="px-3 py-2 text-xs font-bold text-text">
-                                            {item.label}
+                                    <tr key={index}>
+                                        <td className="px-3 py-2">
+                                            <select
+                                                className="w-full text-xs h-9 rounded-lg border-border bg-surface text-text font-bold"
+                                                value={item.storage_item_id || ""}
+                                                onChange={(e) => {
+                                                    const selected = storageItems.find((s) => s.id == e.target.value);
+                                                    const nextItems = [...periodItemsForm.items];
+                                                    nextItems[index] = {
+                                                        ...nextItems[index],
+                                                        storage_item_id: e.target.value,
+                                                        monthly_rent: selected ? selected.default_price || nextItems[index].monthly_rent : nextItems[index].monthly_rent,
+                                                    };
+                                                    setPeriodItemsForm({ items: nextItems });
+                                                }}
+                                            >
+                                                {storageItems.map((s) => (
+                                                    <option key={s.id} value={s.id}>
+                                                        {s.name_ar} {s.short_name ? `(${s.short_name})` : ""}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </td>
                                         <td className="px-3 py-2">
                                             <TextInput
                                                 type="number"
                                                 min="0"
-                                                className="block w-full text-center"
+                                                className="block w-full text-center text-xs h-9 font-mono font-bold"
                                                 value={item.unit_count}
                                                 onChange={(e) => {
-                                                    const nextItems = [
-                                                        ...periodItemsForm.items,
-                                                    ];
+                                                    const nextItems = [...periodItemsForm.items];
                                                     nextItems[index] = {
                                                         ...nextItems[index],
-                                                        unit_count:
-                                                            e.target.value,
+                                                        unit_count: e.target.value,
                                                     };
-                                                    setPeriodItemsForm({
-                                                        items: nextItems,
-                                                    });
+                                                    setPeriodItemsForm({ items: nextItems });
                                                 }}
                                             />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <TextInput
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                className="block w-full text-center text-xs h-9 font-mono font-bold"
+                                                value={item.monthly_rent}
+                                                onChange={(e) => {
+                                                    const nextItems = [...periodItemsForm.items];
+                                                    nextItems[index] = {
+                                                        ...nextItems[index],
+                                                        monthly_rent: e.target.value,
+                                                    };
+                                                    setPeriodItemsForm({ items: nextItems });
+                                                }}
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <TextInput
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                className="block w-full text-center text-xs h-9 font-mono font-bold"
+                                                value={item.discount}
+                                                onChange={(e) => {
+                                                    const nextItems = [...periodItemsForm.items];
+                                                    nextItems[index] = {
+                                                        ...nextItems[index],
+                                                        discount: e.target.value,
+                                                    };
+                                                    setPeriodItemsForm({ items: nextItems });
+                                                }}
+                                            />
+                                        </td>
+                                        <td className="px-2 py-2 text-center">
+                                            <button
+                                                type="button"
+                                                disabled={periodItemsForm.items.length <= 1}
+                                                onClick={() => {
+                                                    const nextItems = periodItemsForm.items.filter((_, i) => i !== index);
+                                                    setPeriodItemsForm({ items: nextItems });
+                                                }}
+                                                className="text-rose-600 hover:text-rose-800 disabled:opacity-30 p-1"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex justify-end gap-3 pt-1 border-t border-border">
+
+                    <div className="flex justify-end gap-3 pt-3 border-t border-border">
                         <SecondaryButton
                             type="button"
                             onClick={() => setShowPeriodItemsModal(false)}

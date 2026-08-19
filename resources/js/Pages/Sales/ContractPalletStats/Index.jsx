@@ -354,6 +354,9 @@ export default function Index({
                                 <thead>
                                     {/* Level 1 Headers */}
                                     <tr className="bg-surface-muted/80 print:bg-gray-200 text-text print:text-black font-black border-b border-border print:border-gray-600">
+                                        <th rowSpan={2} className="p-3 text-center align-middle border-e border-border print:border-gray-400 w-12">
+                                            #
+                                        </th>
                                         <th rowSpan={2} className="p-3 text-center align-middle border-e border-border print:border-gray-400 min-w-[220px]">
                                             {lang === "ar" ? "العقد والعميل" : "Contract & Client"}
                                         </th>
@@ -397,9 +400,14 @@ export default function Index({
                                 </thead>
 
                                 <tbody className="divide-y divide-border print:divide-gray-400">
-                                    {reportData.map((row) => (
+                                    {reportData.map((row, idx) => (
                                         <tr key={row.id} className="hover:bg-surface-muted/30 print:hover:bg-transparent">
                                             
+                                            {/* Serial Number # */}
+                                            <td className="p-3 text-center align-middle font-mono font-extrabold text-text-muted print:text-black border-e border-border print:border-gray-300">
+                                                {idx + 1}
+                                            </td>
+
                                             {/* Column 1: Client Name + Contract Number + Status Badge */}
                                             <td className="p-3 text-start align-middle border-e border-border print:border-gray-400">
                                                 <div className="space-y-0.5">
@@ -467,7 +475,7 @@ export default function Index({
 
                                     {/* Grand Total Summary Row */}
                                     <tr className="bg-surface-muted/90 print:bg-gray-200 font-black text-text print:text-black border-t-2 border-border print:border-black">
-                                        <td className="p-3 text-start border-e border-border print:border-gray-400 text-xs">
+                                        <td colSpan={2} className="p-3 text-start border-e border-border print:border-gray-400 text-xs font-black">
                                             {lang === "ar" ? "الإجمالي الكلي لكافة العقود" : "Grand Total All Contracts"}
                                         </td>
 

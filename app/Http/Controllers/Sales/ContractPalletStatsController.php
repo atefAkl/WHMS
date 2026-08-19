@@ -44,7 +44,7 @@ class ContractPalletStatsController extends Controller
             });
         }
 
-        $contracts = $query->orderBy('updated_at', 'desc')->get();
+        $contracts = $query->orderBy('contract_number', 'asc')->get();
 
         // Helper voucher morph classes for contract matching
         $voucherMorphClasses = [

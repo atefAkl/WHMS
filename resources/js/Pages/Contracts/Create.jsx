@@ -1616,17 +1616,17 @@ export default function Create({
                                     <FileEdit className="h-4 w-4 me-1.5" />
                                     {lang === "ar"
                                         ? "حفظ كمسودة"
-                                        : "Save as Draft"}
+                                        : "Save Draft"}
                                 </SecondaryButton>
                                 <PrimaryButton
                                     type="button"
                                     disabled={processing}
-                                    onClick={() => submit("active")}
+                                    onClick={() => submit("draft")}
                                 >
                                     <Save className="h-4 w-4 me-1.5" />
                                     {lang === "ar"
-                                        ? "حفظ واعتماد"
-                                        : "Save & Activate"}
+                                        ? "حفظ العقد"
+                                        : "Save Contract"}
                                 </PrimaryButton>
                             </>
                         )}
