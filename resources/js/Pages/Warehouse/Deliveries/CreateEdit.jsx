@@ -386,11 +386,13 @@ export default function CreateEdit({
                     ]),
                 )
                 .then((res) => {
-                    setPosItems(res.data);
+                    const itemsData = Array.isArray(res.data) ? res.data : Object.values(res.data || {});
+                    setPosItems(itemsData);
                     setLoadingItems(false);
                 })
                 .catch((err) => {
                     console.error(err);
+                    setLoadingItems([]);
                     setLoadingItems(false);
                 });
         }
@@ -413,7 +415,8 @@ export default function CreateEdit({
                     ]),
                 )
                 .then((res) => {
-                    setPosVariants(res.data);
+                    const variantsData = Array.isArray(res.data) ? res.data : Object.values(res.data || {});
+                    setPosVariants(variantsData);
                     setLoadingVariants(false);
                 })
                 .catch((err) => {

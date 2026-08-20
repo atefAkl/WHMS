@@ -204,7 +204,8 @@ export default function CreateEdit({
                 // Load Available Contract Inventory (Pallets, Items, Variants & Balances)
                 axios.get(route("api.contracts.available-inventory", contract.id))
                     .then((res) => {
-                        setContractInventory(res.data || []);
+                        const invData = Array.isArray(res.data) ? res.data : Object.values(res.data || {});
+                        setContractInventory(invData);
                     })
                     .catch((err) => {
                         console.error("Could not fetch available contract inventory:", err);

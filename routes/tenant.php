@@ -220,7 +220,7 @@ Route::middleware([
                             'name' => $first->inventoryItem?->name ?? 'غير محدد',
                             'balance' => $qtyIn - $qtyOut,
                         ];
-                    })->values()->filter(fn($i) => $i['balance'] > 0);
+                    })->filter(fn($i) => $i['balance'] > 0)->values();
 
                     return response()->json($items);
                 })->name('api.contracts.pallets.items');
@@ -251,7 +251,7 @@ Route::middleware([
                             ],
                             'balance' => $qtyIn - $qtyOut,
                         ];
-                    })->values()->filter(fn($v) => $v['balance'] > 0);
+                    })->filter(fn($v) => $v['balance'] > 0)->values();
 
                     return response()->json($variants);
                 })->name('api.contracts.pallets.items.variants');
