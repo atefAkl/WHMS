@@ -96,21 +96,19 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
                     </div>
                 </div>
 
-                {/* Customer Info Card */}
-                <div className="grid grid-cols-3 gap-6 text-xs mb-6 text-start py-2 border-y border-gray-300">
+                {/* Single Row Clean Info Bar - Customer Name & Contract info */}
+                <div className="flex justify-between items-center py-2.5 px-3 mb-6 border-y-2 border-black text-xs font-bold bg-gray-50">
                     <div>
-                        <span className="text-gray-500 font-medium block">{lang === "ar" ? "اسم العميل:" : "Customer Name:"}</span>
-                        <span className="font-bold text-gray-900 text-sm">{contract?.customer?.name || "—"}</span>
+                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "العميل:" : "Customer:"}</span>
+                        <span className="font-black text-sm text-gray-900">{contract?.customer?.name || "—"}</span>
                     </div>
                     <div>
-                        <span className="text-gray-500 font-medium block">
-                            {contract?.customer?.cr_number ? (lang === "ar" ? "السجل التجاري:" : "CR Number:") : (lang === "ar" ? "رقم الهوية:" : "ID Number:")}
-                        </span>
-                        <span className="font-bold font-mono text-gray-900">{contract?.customer?.cr_number || contract?.customer?.id_number || "—"}</span>
+                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "رقم العقد:" : "Contract No:"}</span>
+                        <span className="font-mono text-sm font-black text-gray-900">{contract?.contract_number}</span>
                     </div>
                     <div>
-                        <span className="text-gray-500 font-medium block">{lang === "ar" ? "رقم الجوال:" : "Phone Number:"}</span>
-                        <span className="font-bold font-mono text-gray-900">{contract?.customer?.phone_number || "—"}</span>
+                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "تاريخ العقد:" : "Date:"}</span>
+                        <span className="font-mono text-gray-900">{contract?.write_date || "—"}</span>
                     </div>
                 </div>
 

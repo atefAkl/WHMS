@@ -1330,6 +1330,37 @@ class ContractController extends Controller
             $pallet->total_in = $palletTotalIn;
             $pallet->total_out = $palletTotalOut;
 
+            // Calculate total stay duration from sum of all active presence periods
+            $sortedEntries = $palletEntries->sortBy('created_at');
+            $runningBalance = 0;
+            $totalStayDays = 0;
+            $periodStart = null;
+
+            foreach ($sortedEntries as $entry) {
+                $in = (float) $entry->quantity_in;
+                $out = (float) $entry->quantity_out;
+
+                if ($runningBalance == 0 && $in > 0) {
+                    $periodStart = \Carbon\Carbon::parse($entry->created_at);
+                }
+
+                $runningBalance += ($in - $out);
+
+                if ($runningBalance <= 0 && $periodStart) {
+                    $periodEnd = \Carbon\Carbon::parse($entry->created_at);
+                    $totalStayDays += max(1, $periodStart->diffInDays($periodEnd));
+                    $periodStart = null;
+                    $runningBalance = 0;
+                }
+            }
+
+            if ($runningBalance > 0 && $periodStart) {
+                $totalStayDays += max(1, $periodStart->diffInDays(\Carbon\Carbon::now()));
+            }
+
+            $pallet->stay_duration_days = max(1, $totalStayDays);
+            $pallet->stay_duration_months = max(1, (int) ceil($totalStayDays / 30));
+
             // If filter item_id is specified, verify if it is in contents
             if ($request->filled('item_id')) {
                 $itemId = (int) $request->input('item_id');

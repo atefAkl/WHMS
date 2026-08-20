@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useLang } from "@/Contexts/LanguageContext";
 
 export default function PalletsPrintReport({ contract, pallets = [], onClose }) {
     const { lang } = useLang();
+    const [showCost, setShowCost] = useState(false);
 
     const handlePrint = () => {
         window.print();
@@ -18,7 +19,6 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
     };
 
     const calculatePalletCost = (pallet) => {
-        // Calculate total monthly rent / cost for items on this pallet from contract items
         let cost = 0;
         if (pallet.contents && Array.isArray(pallet.contents)) {
             pallet.contents.forEach((c) => {
@@ -76,7 +76,17 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                         {lang === "ar" ? `العقد رقم: ${contract?.contract_number}` : `Contract No: ${contract?.contract_number}`}
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs bg-slate-800 px-3 py-2 rounded-md border border-slate-700 hover:bg-slate-750 transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={showCost}
+                            onChange={(e) => setShowCost(e.target.checked)}
+                            className="rounded text-emerald-500 focus:ring-emerald-500"
+                        />
+                        <span className="font-bold">{lang === "ar" ? "إظهار عمود التكلفة التقديرية" : "Show Rent Cost Column"}</span>
+                    </label>
+
                     <button
                         type="button"
                         onClick={handlePrint}
@@ -112,27 +122,25 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                             <span className="font-mono text-sm">{contract?.contract_number}</span>
                         </p>
                         <p className="text-gray-600">
-                            {lang === "ar" ? "تاريخ تحرير العقد: " : "Date Written: "}
+                            {lang === "ar" ? "تاريخ التحرير: " : "Date Written: "}
                             <span className="font-mono">{contract?.write_date || "—"}</span>
                         </p>
                     </div>
                 </div>
 
-                {/* Customer Info Card - Clean, borderless non-table info */}
-                <div className="grid grid-cols-3 gap-6 text-xs mb-6 text-start py-2 border-y border-gray-300">
+                {/* Single Row Clean Customer Header */}
+                <div className="flex justify-between items-center py-2.5 px-3 mb-6 border-y-2 border-black text-xs font-bold bg-gray-50">
                     <div>
-                        <span className="text-gray-500 font-medium block">{lang === "ar" ? "اسم العميل:" : "Customer Name:"}</span>
-                        <span className="font-bold text-gray-900 text-sm">{contract?.customer?.name || "—"}</span>
+                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "العميل:" : "Customer:"}</span>
+                        <span className="font-black text-sm text-gray-900">{contract?.customer?.name || "—"}</span>
                     </div>
                     <div>
-                        <span className="text-gray-500 font-medium block">
-                            {contract?.customer?.cr_number ? (lang === "ar" ? "السجل التجاري:" : "CR Number:") : (lang === "ar" ? "رقم الهوية:" : "ID Number:")}
-                        </span>
-                        <span className="font-bold font-mono text-gray-900">{contract?.customer?.cr_number || contract?.customer?.id_number || "—"}</span>
+                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "رقم العقد:" : "Contract No:"}</span>
+                        <span className="font-mono text-sm font-black text-gray-900">{contract?.contract_number}</span>
                     </div>
                     <div>
-                        <span className="text-gray-500 font-medium block">{lang === "ar" ? "رقم الجوال:" : "Phone Number:"}</span>
-                        <span className="font-bold font-mono text-gray-900">{contract?.customer?.phone_number || "—"}</span>
+                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "تاريخ العقد:" : "Date:"}</span>
+                        <span className="font-mono text-gray-900">{contract?.write_date || "—"}</span>
                     </div>
                 </div>
 
@@ -145,7 +153,7 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                             <th className="border border-black px-3 py-2 text-start">{lang === "ar" ? "الأصناف على الطبلية" : "Items on Pallet"}</th>
                             <th className="border border-black px-3 py-2 text-center">{lang === "ar" ? "حجم الكرتون / العبوة" : "Variant / Size"}</th>
                             <th className="border border-black px-3 py-2 text-center">{lang === "ar" ? "مدة البقاء (شهر)" : "Duration (Mo)"}</th>
-                            <th className="border border-black px-3 py-2 text-center">{lang === "ar" ? "التكلفة التقديرية" : "Est. Rent Cost"}</th>
+                            {showCost && <th className="border border-black px-3 py-2 text-center">{lang === "ar" ? "التكلفة التقديرية" : "Est. Rent Cost"}</th>}
                             <th className="border border-black px-3 py-2 text-center w-16">{lang === "ar" ? "المدخلات" : "In"}</th>
                             <th className="border border-black px-3 py-2 text-center w-16">{lang === "ar" ? "المخرجات" : "Out"}</th>
                             <th className="border border-black px-3 py-2 text-center w-20">{lang === "ar" ? "الرصيد" : "Balance"}</th>
@@ -154,7 +162,7 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                     <tbody>
                         {pallets.length === 0 ? (
                             <tr>
-                                <td colSpan="9" className="text-center py-6 text-gray-500">
+                                <td colSpan={showCost ? 9 : 8} className="text-center py-6 text-gray-500">
                                     {lang === "ar" ? "لا توجد طبالي مسجلة على هذا العقد" : "No pallets found for this contract"}
                                 </td>
                             </tr>
@@ -166,7 +174,7 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                                 const variantNames = pallet.contents
                                     ? pallet.contents.map((c) => c.variant_name || c.quality || "").filter(Boolean).join("، ")
                                     : pallet.variant_name || "—";
-                                const durationMonths = getStayDurationMonths(pallet.created_at || pallet.reception_date);
+                                const durationMonths = pallet.stay_duration_months || getStayDurationMonths(pallet.created_at || pallet.reception_date);
                                 const cost = calculatePalletCost(pallet);
 
                                 return (
@@ -177,8 +185,8 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                                         </td>
                                         <td className="border border-black px-3 py-2 font-bold text-start">{itemNames || "—"}</td>
                                         <td className="border border-black px-3 py-2 text-center text-gray-700">{variantNames || "—"}</td>
-                                        <td className="border border-black px-3 py-2 text-center font-mono">{durationMonths}</td>
-                                        <td className="border border-black px-3 py-2 text-center font-mono font-semibold" dir="ltr">{cost}</td>
+                                        <td className="border border-black px-3 py-2 text-center font-mono font-bold">{durationMonths}</td>
+                                        {showCost && <td className="border border-black px-3 py-2 text-center font-mono font-semibold" dir="ltr">{cost}</td>}
                                         <td className="border border-black px-3 py-2 text-center font-mono">{pallet.total_in || pallet.quantity_in || 0}</td>
                                         <td className="border border-black px-3 py-2 text-center font-mono text-red-600">{pallet.total_out || pallet.quantity_out || 0}</td>
                                         <td className="border border-black px-3 py-2 text-center font-mono font-extrabold text-blue-700">
