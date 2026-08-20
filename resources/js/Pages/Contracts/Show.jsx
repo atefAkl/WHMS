@@ -7564,102 +7564,104 @@ export default function Show({
                 </form>
             </Modal>
 
-            {/* A4 Print View Container (Hidden on screen, visible on print) */}
-            <div
-                className="hidden print:block print:w-full print:bg-white print:text-black print:p-8 font-sans contract-print-area"
-                dir={lang === "ar" ? "rtl" : "ltr"}
-            >
-                <style dangerouslySetInnerHTML={{ __html: `
-                    /* Screen & Print List Styles */
-                    .contract-rich-text ol, .contract-view-wrapper ol, .contract-print-area ol {
-                        list-style-type: decimal !important;
-                        margin-right: 25px !important;
-                        margin-left: 25px !important;
-                        padding-right: 5px !important;
-                        padding-left: 5px !important;
-                        list-style-position: outside !important;
-                        display: block !important;
-                    }
-                    .contract-rich-text ul, .contract-view-wrapper ul, .contract-print-area ul {
-                        list-style-type: disc !important;
-                        margin-right: 25px !important;
-                        margin-left: 25px !important;
-                        padding-right: 5px !important;
-                        padding-left: 5px !important;
-                        list-style-position: outside !important;
-                        display: block !important;
-                    }
-                    .contract-rich-text li, .contract-view-wrapper li, .contract-print-area li {
-                        display: list-item !important;
-                        margin-bottom: 4px !important;
-                    }
-                    
-                    @media print {
-                        @page {
-                            size: A4;
-                            margin: 15mm 15mm 15mm 15mm;
+            {/* A4 Print View Container for Contract (Hidden on screen, visible on print only when no report modal is open) */}
+            {!showPalletsReport && !showItemsReport && (
+                <div
+                    className="hidden print:block print:w-full print:bg-white print:text-black print:p-8 font-sans contract-print-area"
+                    dir={lang === "ar" ? "rtl" : "ltr"}
+                >
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        /* Screen & Print List Styles */
+                        .contract-rich-text ol, .contract-view-wrapper ol, .contract-print-area ol {
+                            list-style-type: decimal !important;
+                            margin-right: 25px !important;
+                            margin-left: 25px !important;
+                            padding-right: 5px !important;
+                            padding-left: 5px !important;
+                            list-style-position: outside !important;
+                            display: block !important;
                         }
-                        body {
-                            background-color: #fff !important;
-                            color: #000 !important;
+                        .contract-rich-text ul, .contract-view-wrapper ul, .contract-print-area ul {
+                            list-style-type: disc !important;
+                            margin-right: 25px !important;
+                            margin-left: 25px !important;
+                            padding-right: 5px !important;
+                            padding-left: 5px !important;
+                            list-style-position: outside !important;
+                            display: block !important;
                         }
-                        body * {
-                            visibility: hidden !important;
+                        .contract-rich-text li, .contract-view-wrapper li, .contract-print-area li {
+                            display: list-item !important;
+                            margin-bottom: 4px !important;
                         }
-                        .contract-print-area, .contract-print-area * {
-                            visibility: visible !important;
+                        
+                        @media print {
+                            @page {
+                                size: A4;
+                                margin: 15mm 15mm 15mm 15mm;
+                            }
+                            body {
+                                background-color: #fff !important;
+                                color: #000 !important;
+                            }
+                            body * {
+                                visibility: hidden !important;
+                            }
+                            .contract-print-area, .contract-print-area * {
+                                visibility: visible !important;
+                            }
+                            .contract-print-area {
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                width: 100% !important;
+                                padding: 0px !important;
+                                margin: 0 !important;
+                                background: white !important;
+                                box-shadow: none !important;
+                                border: none !important;
+                            }
+                            .contract-print-area table {
+                                width: 100% !important;
+                                border-collapse: collapse !important;
+                                table-layout: auto !important;
+                            }
+                            .contract-print-area th, .contract-print-area td {
+                                border: 1px solid #000 !important;
+                                padding: 6px 8px !important;
+                            }
+                            .contract-print-area .col-item-name {
+                                min-width: 220px !important;
+                                width: 35% !important;
+                                white-space: normal !important;
+                                word-break: normal !important;
+                                overflow-wrap: break-word !important;
+                            }
+                            .print-layout-table {
+                                width: 100% !important;
+                                border-collapse: collapse !important;
+                                border: none !important;
+                            }
+                            .print-layout-table thead {
+                                display: table-header-group !important;
+                            }
+                            .print-layout-table tfoot {
+                                display: table-footer-group !important;
+                            }
+                            .print-layout-table tr {
+                                page-break-inside: avoid !important;
+                            }
+                            .contract-print-area .border {
+                                page-break-inside: avoid !important;
+                            }
+                            .print\\:hidden {
+                                display: none !important;
+                            }
                         }
-                        .contract-print-area {
-                            position: absolute !important;
-                            left: 0 !important;
-                            top: 0 !important;
-                            width: 100% !important;
-                            padding: 0px !important;
-                            margin: 0 !important;
-                            background: white !important;
-                            box-shadow: none !important;
-                            border: none !important;
-                        }
-                        .contract-print-area table {
-                            width: 100% !important;
-                            border-collapse: collapse !important;
-                            table-layout: auto !important;
-                        }
-                        .contract-print-area th, .contract-print-area td {
-                            border: 1px solid #000 !important;
-                            padding: 6px 8px !important;
-                        }
-                        .contract-print-area .col-item-name {
-                            min-width: 220px !important;
-                            width: 35% !important;
-                            white-space: normal !important;
-                            word-break: normal !important;
-                            overflow-wrap: break-word !important;
-                        }
-                        .print-layout-table {
-                            width: 100% !important;
-                            border-collapse: collapse !important;
-                            border: none !important;
-                        }
-                        .print-layout-table thead {
-                            display: table-header-group !important;
-                        }
-                        .print-layout-table tfoot {
-                            display: table-footer-group !important;
-                        }
-                        .print-layout-table tr {
-                            page-break-inside: avoid !important;
-                        }
-                        .contract-print-area .border {
-                            page-break-inside: avoid !important;
-                        }
-                        .print\\:hidden {
-                            display: none !important;
-                        }
-                    }
-                `}} />
-                {renderUnifiedLayout(true)}
-            </div>
+                    `}} />
+                    {renderUnifiedLayout(true)}
+                </div>
+            )}
 
             <ConfirmationModal
                 show={!!itemToDelete}
