@@ -38,20 +38,30 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                         size: A4 landscape;
                         margin: 10mm 12mm 10mm 12mm;
                     }
-                    body * {
-                        visibility: hidden !important;
-                    }
-                    .pallets-print-container, .pallets-print-container * {
-                        visibility: visible !important;
+                    html, body {
+                        background: white !important;
+                        color: black !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
                     .pallets-print-container {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
+                        position: static !important;
+                        display: block !important;
                         width: 100% !important;
+                        max-width: 100% !important;
                         padding: 0 !important;
                         margin: 0 !important;
+                        box-shadow: none !important;
+                        border: none !important;
                         background: white !important;
+                    }
+                    .pallets-print-container table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        page-break-inside: auto !important;
+                    }
+                    .pallets-print-container tr {
+                        page-break-inside: avoid !important;
                     }
                 }
             ` }} />

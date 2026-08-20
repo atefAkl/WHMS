@@ -2003,7 +2003,7 @@ export default function Show({
                 title={`${t("show.breadcrumb_contract")} ${contract.contract_number}`}
             />
 
-            <div className="max-w-7xl mx-auto px-3 sm:px-3 lg:px-8 py-2 space-y-2">
+            <div className={`max-w-7xl mx-auto px-3 sm:px-3 lg:px-8 py-2 space-y-2 ${(showItemsReport || showPalletsReport) ? "print:hidden" : ""}`}>
                 {/* Header Info & Actions Bar */}
                 <div className="rounded-xl border border-border bg-surface shadow-sm p-4 mb-4">
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-2">

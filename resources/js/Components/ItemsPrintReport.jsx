@@ -14,22 +14,32 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 10mm 15mm 10mm 15mm;
+                        margin: 10mm 12mm 10mm 12mm;
                     }
-                    body * {
-                        visibility: hidden !important;
-                    }
-                    .items-print-container, .items-print-container * {
-                        visibility: visible !important;
+                    html, body {
+                        background: white !important;
+                        color: black !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
                     .items-print-container {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
+                        position: static !important;
+                        display: block !important;
                         width: 100% !important;
+                        max-width: 100% !important;
                         padding: 0 !important;
                         margin: 0 !important;
+                        box-shadow: none !important;
+                        border: none !important;
                         background: white !important;
+                    }
+                    .items-print-container table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        page-break-inside: auto !important;
+                    }
+                    .items-print-container tr {
+                        page-break-inside: avoid !important;
                     }
                 }
             ` }} />
