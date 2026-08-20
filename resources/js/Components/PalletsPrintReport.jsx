@@ -9,13 +9,15 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
         window.print();
     };
 
-    const getStayDurationMonths = (createdAt) => {
-        if (!createdAt) return 1;
-        const start = new Date(createdAt);
+    const getStayDurationMonths = (pallet) => {
+        if (pallet.stay_duration_months) return pallet.stay_duration_months;
+        const mandatory = parseInt(contract?.mandatory_period || 1, 10);
+        if (!pallet?.created_at && !pallet?.reception_date) return mandatory;
+        const start = new Date(pallet.created_at || pallet.reception_date);
         const now = new Date();
-        const diffMs = now - start;
-        const months = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24 * 30)));
-        return months;
+        const diffDays = Math.max(1, Math.ceil((now - start) / (1000 * 60 * 60 * 24)));
+        const periodsCount = Math.ceil(diffDays / (mandatory * 30));
+        return Math.max(mandatory, periodsCount * mandatory);
     };
 
     const calculatePalletCost = (pallet) => {
@@ -174,7 +176,7 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                                 const variantNames = pallet.contents
                                     ? pallet.contents.map((c) => c.variant_name || c.quality || "").filter(Boolean).join("، ")
                                     : pallet.variant_name || "—";
-                                const durationMonths = pallet.stay_duration_months || getStayDurationMonths(pallet.created_at || pallet.reception_date);
+                                const durationMonths = getStayDurationMonths(pallet);
                                 const cost = calculatePalletCost(pallet);
 
                                 return (

@@ -1300,6 +1300,11 @@ class ContractController extends Controller
         $entriesByPallet = $entries->groupBy('pallet_id');
         $filteredPallets = collect();
 
+        // Load contract periods and mandatory period length
+        $contract->loadMissing('periods');
+        $contractPeriods = $contract->periods ? $contract->periods->sortBy('start_date') : collect();
+        $mandatoryPeriod = max(1, (int) ($contract->mandatory_period ?: 1));
+
         foreach ($allPallets as $pallet) {
             $palletEntries = $entriesByPallet->get($pallet->id, collect());
             $contents = [];
@@ -1330,11 +1335,11 @@ class ContractController extends Controller
             $pallet->total_in = $palletTotalIn;
             $pallet->total_out = $palletTotalOut;
 
-            // Calculate total stay duration from sum of all active presence periods
+            // Calculate total stay duration based on sum of full contract period lengths (مجموع أطوال فترات العقد الإلزامية بالشهور)
             $sortedEntries = $palletEntries->sortBy('created_at');
             $runningBalance = 0;
-            $totalStayDays = 0;
             $periodStart = null;
+            $presenceIntervals = [];
 
             foreach ($sortedEntries as $entry) {
                 $in = (float) $entry->quantity_in;
@@ -1348,18 +1353,64 @@ class ContractController extends Controller
 
                 if ($runningBalance <= 0 && $periodStart) {
                     $periodEnd = \Carbon\Carbon::parse($entry->created_at);
-                    $totalStayDays += max(1, $periodStart->diffInDays($periodEnd));
+                    $presenceIntervals[] = [
+                        'start' => $periodStart,
+                        'end'   => $periodEnd,
+                    ];
                     $periodStart = null;
                     $runningBalance = 0;
                 }
             }
 
             if ($runningBalance > 0 && $periodStart) {
-                $totalStayDays += max(1, $periodStart->diffInDays(\Carbon\Carbon::now()));
+                $presenceIntervals[] = [
+                    'start' => $periodStart,
+                    'end'   => \Carbon\Carbon::now(),
+                ];
+            }
+
+            $totalStayMonths = 0;
+            $totalStayDays = 0;
+
+            foreach ($presenceIntervals as $interval) {
+                $iStart = $interval['start'];
+                $iEnd   = $interval['end'];
+                $iDays  = max(1, $iStart->diffInDays($iEnd));
+                $totalStayDays += $iDays;
+
+                if ($contractPeriods->count() > 0) {
+                    $intervalMonths = 0;
+                    foreach ($contractPeriods as $cp) {
+                        if (!$cp->start_date || !$cp->end_date) continue;
+                        $cpStart = \Carbon\Carbon::parse($cp->start_date);
+                        $cpEnd   = \Carbon\Carbon::parse($cp->end_date);
+
+                        // Check if presence interval overlaps with contract period
+                        if ($iStart <= $cpEnd && $iEnd >= $cpStart) {
+                            $cpLength = max(1, (int) round($cpStart->diffInDays($cpEnd->copy()->addDay()) / 30));
+                            if ($cpLength <= 1 && $mandatoryPeriod > 1) {
+                                $cpLength = $mandatoryPeriod;
+                            }
+                            $intervalMonths += $cpLength;
+                        }
+                    }
+                    if ($intervalMonths == 0) {
+                        $periodsCount = (int) ceil($iDays / ($mandatoryPeriod * 30));
+                        $intervalMonths = max(1, $periodsCount * $mandatoryPeriod);
+                    }
+                    $totalStayMonths += $intervalMonths;
+                } else {
+                    $periodsCount = (int) ceil($iDays / ($mandatoryPeriod * 30));
+                    $totalStayMonths += max(1, $periodsCount * $mandatoryPeriod);
+                }
+            }
+
+            if ($totalStayMonths == 0 && count($presenceIntervals) > 0) {
+                $totalStayMonths = $mandatoryPeriod;
             }
 
             $pallet->stay_duration_days = max(1, $totalStayDays);
-            $pallet->stay_duration_months = max(1, (int) ceil($totalStayDays / 30));
+            $pallet->stay_duration_months = max(1, $totalStayMonths);
 
             // If filter item_id is specified, verify if it is in contents
             if ($request->filled('item_id')) {
