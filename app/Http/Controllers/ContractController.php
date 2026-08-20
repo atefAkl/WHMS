@@ -1371,6 +1371,7 @@ class ContractController extends Controller
 
             $totalStayMonths = 0;
             $totalStayDays = 0;
+            $renewalPeriod = max(1, (int) ($contract->renewal_period ?: $mandatoryPeriod));
 
             foreach ($presenceIntervals as $interval) {
                 $iStart = $interval['start'];
@@ -1389,19 +1390,27 @@ class ContractController extends Controller
                         if ($iStart <= $cpEnd && $iEnd >= $cpStart) {
                             $cpLength = max(1, (int) round($cpStart->diffInDays($cpEnd->copy()->addDay()) / 30));
                             if ($cpLength <= 1 && $mandatoryPeriod > 1) {
-                                $cpLength = $mandatoryPeriod;
+                                $cpLength = ($cp->period_number == 1) ? $mandatoryPeriod : $renewalPeriod;
                             }
                             $intervalMonths += $cpLength;
                         }
                     }
-                    if ($intervalMonths == 0) {
-                        $periodsCount = (int) ceil($iDays / ($mandatoryPeriod * 30));
-                        $intervalMonths = max(1, $periodsCount * $mandatoryPeriod);
+
+                    if ($intervalMonths > 0) {
+                        $totalStayMonths += $intervalMonths;
+                        continue;
                     }
-                    $totalStayMonths += $intervalMonths;
+                }
+
+                // Fallback when contract periods are not explicitly generated in DB:
+                // Mandatory Period 1 (mandatoryPeriod months) + subsequent Renewal Periods (renewalPeriod months each)
+                $mandatoryDays = $mandatoryPeriod * 30;
+                if ($iDays <= $mandatoryDays) {
+                    $totalStayMonths += $mandatoryPeriod;
                 } else {
-                    $periodsCount = (int) ceil($iDays / ($mandatoryPeriod * 30));
-                    $totalStayMonths += max(1, $periodsCount * $mandatoryPeriod);
+                    $remainingDays = $iDays - $mandatoryDays;
+                    $renewalCount  = (int) ceil($remainingDays / ($renewalPeriod * 30));
+                    $totalStayMonths += ($mandatoryPeriod + ($renewalCount * $renewalPeriod));
                 }
             }
 

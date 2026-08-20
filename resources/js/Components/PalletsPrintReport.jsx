@@ -12,12 +12,18 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
     const getStayDurationMonths = (pallet) => {
         if (pallet.stay_duration_months) return pallet.stay_duration_months;
         const mandatory = parseInt(contract?.mandatory_period || 1, 10);
+        const renewal = parseInt(contract?.renewal_period || mandatory, 10);
         if (!pallet?.created_at && !pallet?.reception_date) return mandatory;
         const start = new Date(pallet.created_at || pallet.reception_date);
         const now = new Date();
         const diffDays = Math.max(1, Math.ceil((now - start) / (1000 * 60 * 60 * 24)));
-        const periodsCount = Math.ceil(diffDays / (mandatory * 30));
-        return Math.max(mandatory, periodsCount * mandatory);
+        const mandatoryDays = mandatory * 30;
+        if (diffDays <= mandatoryDays) {
+            return mandatory;
+        }
+        const remainingDays = diffDays - mandatoryDays;
+        const renewalCount = Math.ceil(remainingDays / (renewal * 30));
+        return mandatory + (renewalCount * renewal);
     };
 
     const calculatePalletCost = (pallet) => {
