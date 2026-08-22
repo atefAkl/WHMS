@@ -1832,7 +1832,10 @@ export default function Show({
                           ? `${item.storageItem.name_ar}|${item.storageItem.name_en || item.storageItem.name_ar}`
                           : "",
                 ),
-                unit_count: item.unit_count,
+                unit_count: item.unit_count || 1,
+                monthly_rent: item.monthly_rent || item.storage_item?.default_price || item.storageItem?.default_price || 0,
+                discount: item.discount || 0,
+                vat_rate: item.vat_rate || 15,
             })),
         });
         setShowPeriodItemsModal(true);

@@ -173,33 +173,78 @@ class Contract extends Model
         );
     }
 
+    public function syncItemsFromFirstPeriod(): void
+    {
+        $period = $this->periods()->where('period_number', 1)->first() ?? $this->periods()->first();
+        if (!$period) {
+            return;
+        }
+
+        $periodItems = $period->items()->get();
+        if ($periodItems->isEmpty()) {
+            return;
+        }
+
+        $this->items()->delete();
+        $mandatoryPeriod = max(1, (int) ($this->mandatory_period ?: 1));
+
+        foreach ($periodItems as $pItem) {
+            $rent = (float) ($pItem->monthly_rent ?? 0);
+            $count = (int) ($pItem->unit_count ?? 1);
+            $discPercent = (float) ($pItem->discount ?? 0);
+
+            $total_inclusive = $mandatoryPeriod * $count * $rent * (1 - ($discPercent / 100));
+            $total_before_vat = ($total_inclusive * 100) / 115;
+
+            $this->items()->create([
+                'storage_item_id'     => $pItem->storage_item_id,
+                'unit_count'          => $count,
+                'monthly_rent'        => $rent,
+                'discount'            => $discPercent,
+                'vat_rate'            => $pItem->vat_rate ?? 15,
+                'subtotal_before_vat' => round($total_before_vat, 2),
+                'subtotal'            => round($total_inclusive, 2),
+            ]);
+        }
+    }
+
     public function syncFirstPeriodItems(): void
     {
         $period = $this->ensureMandatoryPeriod();
-        $this->loadMissing('items');
+        $periodItems = $period->items()->get();
+        $contractItems = $this->items()->get();
 
-        $incomingStorageIds = [];
-        $existingItems = $period->items()->get()->keyBy('storage_item_id');
+        if ($contractItems->isNotEmpty() && $periodItems->isEmpty()) {
+            $incomingStorageIds = [];
+            $existingItems = $periodItems->keyBy('storage_item_id');
 
-        foreach ($this->items as $item) {
-            $incomingStorageIds[] = $item->storage_item_id;
-            $existing = $existingItems->get($item->storage_item_id);
+            foreach ($contractItems as $item) {
+                $incomingStorageIds[] = $item->storage_item_id;
+                $existing = $existingItems->get($item->storage_item_id);
 
-            if ($existing) {
-                continue;
+                if ($existing) {
+                    $existing->update([
+                        'unit_count'   => $item->unit_count,
+                        'monthly_rent' => $item->monthly_rent,
+                        'discount'     => $item->discount,
+                        'vat_rate'     => $item->vat_rate,
+                    ]);
+                } else {
+                    $period->items()->create([
+                        'storage_item_id' => $item->storage_item_id,
+                        'unit_count'      => $item->unit_count,
+                        'monthly_rent'    => $item->monthly_rent,
+                        'discount'        => $item->discount,
+                        'vat_rate'        => $item->vat_rate,
+                    ]);
+                }
             }
 
-            $period->items()->create([
-                'storage_item_id' => $item->storage_item_id,
-                'unit_count' => $item->unit_count,
-                'monthly_rent' => $item->monthly_rent,
-                'discount' => $item->discount,
-                'vat_rate' => $item->vat_rate,
-            ]);
-        }
-
-        if (!empty($incomingStorageIds)) {
-            $period->items()->whereNotIn('storage_item_id', $incomingStorageIds)->delete();
+            if (!empty($incomingStorageIds)) {
+                $period->items()->whereNotIn('storage_item_id', $incomingStorageIds)->delete();
+            }
+        } elseif ($periodItems->isNotEmpty()) {
+            $this->syncItemsFromFirstPeriod();
         }
     }
 

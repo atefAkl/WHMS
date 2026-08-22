@@ -422,9 +422,20 @@ class ContractController extends Controller
             abort(404);
         }
 
+        // Clean up empty/null IDs before validation
+        if ($request->has('items') && is_array($request->input('items'))) {
+            $cleanedItems = array_map(function ($item) {
+                if (isset($item['id']) && ($item['id'] === '' || $item['id'] === 'null' || $item['id'] === null)) {
+                    unset($item['id']);
+                }
+                return $item;
+            }, $request->input('items'));
+            $request->merge(['items' => $cleanedItems]);
+        }
+
         $validated = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.id' => 'nullable|exists:contract_period_items,id',
+            'items.*.id' => 'nullable',
             'items.*.storage_item_id' => 'required|exists:storage_items,id',
             'items.*.unit_count' => 'required|integer|min:0',
             'items.*.monthly_rent' => 'required|numeric|min:0',
@@ -432,38 +443,47 @@ class ContractController extends Controller
             'items.*.vat_rate' => 'nullable|numeric|min:0',
         ]);
 
-        DB::transaction(function () use ($period, $validated) {
+        DB::transaction(function () use ($contract, $period, $validated) {
             $keptItemIds = [];
             foreach ($validated['items'] as $itemPayload) {
+                $periodItem = null;
                 if (!empty($itemPayload['id'])) {
                     $periodItem = $period->items()->find($itemPayload['id']);
-                    if ($periodItem) {
-                        $periodItem->update([
-                            'storage_item_id' => $itemPayload['storage_item_id'],
-                            'unit_count' => (int) $itemPayload['unit_count'],
-                            'monthly_rent' => (float) $itemPayload['monthly_rent'],
-                            'discount' => (float) ($itemPayload['discount'] ?? 0),
-                            'vat_rate' => (float) ($itemPayload['vat_rate'] ?? 15),
-                        ]);
-                        $keptItemIds[] = $periodItem->id;
-                        continue;
-                    }
                 }
 
-                $newItem = $period->items()->create([
-                    'storage_item_id' => $itemPayload['storage_item_id'],
-                    'unit_count' => (int) $itemPayload['unit_count'],
-                    'monthly_rent' => (float) $itemPayload['monthly_rent'],
-                    'discount' => (float) ($itemPayload['discount'] ?? 0),
-                    'vat_rate' => (float) ($itemPayload['vat_rate'] ?? 15),
-                ]);
-                $keptItemIds[] = $newItem->id;
+                if ($periodItem) {
+                    $periodItem->update([
+                        'storage_item_id' => $itemPayload['storage_item_id'],
+                        'unit_count' => (int) $itemPayload['unit_count'],
+                        'monthly_rent' => (float) $itemPayload['monthly_rent'],
+                        'discount' => (float) ($itemPayload['discount'] ?? 0),
+                        'vat_rate' => (float) ($itemPayload['vat_rate'] ?? 15),
+                    ]);
+                    $keptItemIds[] = $periodItem->id;
+                } else {
+                    $newItem = $period->items()->create([
+                        'storage_item_id' => $itemPayload['storage_item_id'],
+                        'unit_count' => (int) $itemPayload['unit_count'],
+                        'monthly_rent' => (float) $itemPayload['monthly_rent'],
+                        'discount' => (float) ($itemPayload['discount'] ?? 0),
+                        'vat_rate' => (float) ($itemPayload['vat_rate'] ?? 15),
+                    ]);
+                    $keptItemIds[] = $newItem->id;
+                }
             }
 
             if (!empty($keptItemIds)) {
                 $period->items()->whereNotIn('id', $keptItemIds)->delete();
             }
+
+            // Sync Period 1 items to contract_items so both tables remain synchronized
+            if ($period->period_number == 1 || $contract->periods()->orderBy('period_number')->first()?->id === $period->id) {
+                $contract->syncItemsFromFirstPeriod();
+            }
         });
+
+        $contract->load('items.storageItem');
+        $contract->load('periods.items.storageItem');
 
         return back()->with('success', 'تم تحديث أصناف الفترة وأسعارها وكمياتها بنجاح.');
     }
