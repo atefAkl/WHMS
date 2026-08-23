@@ -1569,6 +1569,17 @@ export default function Show({
         term_ids: contract.terms?.map((t) => t.id) || [],
     });
 
+    useEffect(() => {
+        if (showPalletsReport || showItemsReport) {
+            document.body.classList.add("report-modal-open");
+        } else {
+            document.body.classList.remove("report-modal-open");
+        }
+        return () => {
+            document.body.classList.remove("report-modal-open");
+        };
+    }, [showPalletsReport, showItemsReport]);
+
     const getHijriDate = (dateStr) => {
         if (!dateStr) return "";
         const d = new Date(dateStr);
@@ -7607,11 +7618,15 @@ export default function Show({
                                 background-color: #fff !important;
                                 color: #000 !important;
                             }
-                            body * {
+                            body:not(.report-modal-open) * {
                                 visibility: hidden !important;
                             }
-                            .contract-print-area, .contract-print-area * {
+                            body:not(.report-modal-open) .contract-print-area, body:not(.report-modal-open) .contract-print-area * {
                                 visibility: visible !important;
+                            }
+                            body.report-modal-open .contract-print-area {
+                                display: none !important;
+                                visibility: hidden !important;
                             }
                             .contract-print-area {
                                 position: absolute !important;

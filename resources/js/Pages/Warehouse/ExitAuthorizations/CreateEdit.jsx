@@ -147,77 +147,73 @@ export default function CreateEdit({
 
     // Filter contracts when customer_id changes
     useEffect(() => {
-        if (data.customer_id) {
-            const customerObj = customers.find(
-                (c) => c.id === parseInt(data.customer_id),
-            );
-            setFilteredContracts(customerObj?.contracts || []);
+    const allContracts = useMemo(() => {
+        const list = [];
+        customers.forEach((cust) => {
+            (cust.contracts || []).forEach((cnt) => {
+                list.push({
+                    ...cnt,
+                    customer: cust,
+                    customer_name: cust.name,
+                    customer_id: cust.id,
+                });
+            });
+        });
+        return list;
+    }, [customers]);
 
-            // Reset dependencies if customer changes
-            if (
-                !isEdit &&
-                !customerObj?.contracts?.some(
-                    (c) => c.id === parseInt(data.contract_id),
-                )
-            ) {
-                setData((d) => ({
-                    ...d,
-                    contract_id: "",
-                    period_id: "",
-                    representative_id: "",
-                }));
-            }
-        } else {
-            setFilteredContracts([]);
-            setAvailablePeriods([]);
-            setAvailableRepresentatives([]);
-            setContractStats(null);
+    const handleContractSelect = (contractId) => {
+        if (!contractId) {
             setData((d) => ({
                 ...d,
                 contract_id: "",
                 period_id: "",
                 representative_id: "",
             }));
-        }
-    }, [data.customer_id, customers]);
-
-    // Handle contract selection change
-    useEffect(() => {
-        if (data.contract_id) {
-            const contract = filteredContracts.find(
-                (c) => c.id === parseInt(data.contract_id),
-            );
-            if (contract) {
-                const activePeriods = (contract.periods || []).filter(
-                    (period) => period.status === "active",
-                );
-                setAvailablePeriods(activePeriods);
-                setAvailableRepresentatives(contract.contract_agents || []);
-                if (!data.period_id) {
-                    setData((d) => ({
-                        ...d,
-                        period_id: activePeriods?.[0]?.id || "",
-                    }));
-                }
-                loadContractStats(contract.id);
-
-                // Load Available Contract Inventory (Pallets, Items, Variants & Balances)
-                axios.get(route("api.contracts.available-inventory", contract.id))
-                    .then((res) => {
-                        const invData = Array.isArray(res.data) ? res.data : Object.values(res.data || {});
-                        setContractInventory(invData);
-                    })
-                    .catch((err) => {
-                        console.error("Could not fetch available contract inventory:", err);
-                        setContractInventory([]);
-                    });
-            }
-        } else {
             setAvailablePeriods([]);
             setAvailableRepresentatives([]);
-            setContractStats(null);
             setContractInventory([]);
+            setContractStats(null);
+            return;
         }
+
+        const selectedContract = allContracts.find(
+            (c) => c.id === parseInt(contractId)
+        );
+
+        if (selectedContract) {
+            const cust = customers.find((c) => c.id === selectedContract.customer_id) || selectedContract.customer;
+            const activePeriods = (selectedContract.periods || []).filter(
+                (p) => p.status === "active"
+            );
+            const activePeriod = activePeriods[0] || (selectedContract.periods || [])[0];
+
+            setCustomerSearch(cust?.name || "");
+            setFilteredContracts(cust?.contracts || [selectedContract]);
+            setAvailablePeriods(activePeriods.length > 0 ? activePeriods : (selectedContract.periods || []));
+            setAvailableRepresentatives(selectedContract.contract_agents || []);
+
+            setData((d) => ({
+                ...d,
+                customer_id: selectedContract.customer_id,
+                contract_id: selectedContract.id,
+                period_id: activePeriod?.id || "",
+                representative_id: selectedContract.contract_agents?.[0]?.id || "",
+            }));
+
+            loadContractStats(selectedContract.id);
+
+            axios.get(route("api.contracts.available-inventory", selectedContract.id))
+                .then((res) => {
+                    const invData = Array.isArray(res.data) ? res.data : Object.values(res.data || {});
+                    setContractInventory(invData);
+                })
+                .catch((err) => {
+                    console.error("Could not fetch available contract inventory:", err);
+                    setContractInventory([]);
+                });
+        }
+    };
     }, [data.contract_id, filteredContracts]);
 
     // Cascade inventory filtering for contract items, variants, and pallets
@@ -779,28 +775,20 @@ export default function CreateEdit({
                                             }
                                         />
                                         <select
-                                            className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2.5"
+                                            className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2.5 font-semibold"
                                             value={data.contract_id}
-                                            onChange={(e) =>
-                                                setData(
-                                                    "contract_id",
-                                                    e.target.value,
-                                                )
-                                            }
+                                            onChange={(e) => handleContractSelect(e.target.value)}
                                             required
-                                            disabled={
-                                                isEdit || !data.customer_id
-                                            }
+                                            disabled={isEdit}
                                         >
                                             <option value="">
                                                 {lang === "ar"
-                                                    ? "اختر العقد..."
-                                                    : "Select Contract..."}
+                                                    ? "-- ابحث / اختر رقم العقد --"
+                                                    : "-- Select / Search Contract --"}
                                             </option>
-                                            {filteredContracts.map((c) => (
+                                            {(data.customer_id ? filteredContracts : allContracts).map((c) => (
                                                 <option key={c.id} value={c.id}>
-                                                    {c.contract_number} (
-                                                    {c.status})
+                                                    {c.contract_number} {c.customer_name ? `(${c.customer_name})` : ""}
                                                 </option>
                                             ))}
                                         </select>

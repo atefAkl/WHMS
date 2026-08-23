@@ -326,7 +326,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                 <tr className="bg-background border-b border-border text-text-muted font-bold">
                                     <th className="p-3 text-start w-12">#</th>
                                     <th className="p-3 text-start">{lang === "ar" ? "المستند والمعرفات" : "Document & Identifiers"}</th>
-                                    <th className="p-3 text-start">{lang === "ar" ? "الفترة الإلزامية" : "Period"}</th>
+                                    <th className="p-3 text-start">{lang === "ar" ? "ملاحظات" : "Notes"}</th>
                                     <th className="p-3 text-start">{lang === "ar" ? "تاريخ الاستلام" : "Reception Date"}</th>
                                     <th className="p-3 text-start">{lang === "ar" ? "السائق" : "Driver"}</th>
                                     <th className="p-3 text-center">{lang === "ar" ? "إجمالي الوارد" : "Total Input"}</th>
@@ -344,6 +344,8 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                 ) : (
                                     receptions.data.map((reception, idx) => {
                                         const rowNum = ((receptions.current_page - 1) * receptions.per_page) + idx + 1;
+                                        const notesStr = reception.notes || "";
+                                        const truncatedNotes = notesStr.length > 50 ? `${notesStr.substring(0, 50)}...` : notesStr;
                                         return (
                                             <tr key={reception.id} className="hover:bg-hover transition-colors">
                                                 <td className="p-3 text-text-muted font-mono">{rowNum}</td>
@@ -377,7 +379,18 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                     </div>
                                                 </td>
                                                 <td className="p-3 text-text-muted">
-                                                    {lang === "ar" ? "الفترة" : "Period"} {reception.period?.period_number}
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="font-semibold text-text text-xs">
+                                                            {lang === "ar" ? "الفترة" : "Period"} {reception.period?.period_number || 1}
+                                                        </span>
+                                                        {truncatedNotes ? (
+                                                            <span className="text-[11px] text-text-muted font-normal max-w-[220px] truncate" title={notesStr}>
+                                                                {truncatedNotes}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] text-text-muted/60">—</span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="p-3 text-text-muted font-mono">
                                                     {reception.reception_date ? new Date(reception.reception_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}

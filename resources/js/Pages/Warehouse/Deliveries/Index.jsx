@@ -299,7 +299,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                 <tr className="bg-background border-b border-border text-text-muted font-bold">
                                     <th className="p-3 text-start w-12">#</th>
                                     <th className="p-3 text-start">{lang === "ar" ? "المستند والمعرفات" : "Document & Identifiers"}</th>
-                                    <th className="p-3 text-start">{lang === "ar" ? "المرجع/الإذن" : "Reference / Permit"}</th>
+                                    <th className="p-3 text-start">{lang === "ar" ? "المرجع / ملاحظات" : "Reference / Notes"}</th>
                                     <th className="p-3 text-start">{lang === "ar" ? "تاريخ التسليم" : "Delivery Date"}</th>
                                     <th className="p-3 text-center">{lang === "ar" ? "إجمالي المنصرف" : "Total Output"}</th>
                                     <th className="p-3 text-center">{lang === "ar" ? "الحالة" : "Status"}</th>
@@ -316,6 +316,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                 ) : (
                                     deliveries.data.map((item, idx) => {
                                         const rowNum = ((deliveries.current_page - 1) * deliveries.per_page) + idx + 1;
+                                        const notesStr = item.notes || "";
+                                        const truncatedNotes = notesStr.length > 50 ? `${notesStr.substring(0, 50)}...` : notesStr;
                                         return (
                                             <tr key={item.id} className="hover:bg-hover transition-colors">
                                                 <td className="p-3 text-text-muted font-mono">{rowNum}</td>
@@ -349,9 +351,18 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                     </div>
                                                 </td>
                                                 <td className="p-3 text-text">
-                                                    {item.exit_authorization
-                                                        ? `${lang === "ar" ? "إذن" : "Permit"}: ${item.exit_authorization.serial_number}`
-                                                        : item.written_reference || "-"}
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="font-semibold text-xs">
+                                                            {item.exit_authorization
+                                                                ? `${lang === "ar" ? "إذن" : "Permit"}: ${item.exit_authorization.serial_number}`
+                                                                : item.written_reference || "—"}
+                                                        </span>
+                                                        {truncatedNotes && (
+                                                            <span className="text-[11px] text-text-muted font-normal max-w-[200px] truncate" title={notesStr}>
+                                                                {truncatedNotes}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="p-3 text-text-muted font-mono">
                                                     {item.delivery_date ? new Date(item.delivery_date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : "-"}

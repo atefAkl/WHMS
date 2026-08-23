@@ -225,6 +225,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                 <tr className="bg-background border-b border-border text-text-muted font-bold">
                                     <th className="p-3 text-start w-12">#</th>
                                     <th className="p-3 text-start">{lang === "ar" ? "المستند والمعرفات" : "Document & Identifiers"}</th>
+                                    <th className="p-3 text-start">{lang === "ar" ? "ملاحظات" : "Notes"}</th>
                                     <th className="p-3 text-start">{lang === "ar" ? "تاريخ الإنشاء" : "Created At"}</th>
                                     <th className="p-3 text-center">{lang === "ar" ? "إجمالي المرخص" : "Total Authorized"}</th>
                                     <th className="p-3 text-center">{lang === "ar" ? "الحالة" : "Status"}</th>
@@ -234,13 +235,15 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                             <tbody className="divide-y divide-border">
                                 {authorizations.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="p-8 text-center text-text-muted">
+                                        <td colSpan="7" className="p-8 text-center text-text-muted">
                                             {lang === "ar" ? "لا توجد أذونات خروج مطابقة للبحث." : "No exit authorizations found."}
                                         </td>
                                     </tr>
                                 ) : (
                                     authorizations.data.map((item, idx) => {
                                         const rowNum = ((authorizations.current_page - 1) * authorizations.per_page) + idx + 1;
+                                        const notesStr = item.notes || "";
+                                        const truncatedNotes = notesStr.length > 50 ? `${notesStr.substring(0, 50)}...` : notesStr;
                                         return (
                                             <tr key={item.id} className="hover:bg-hover transition-colors">
                                                 <td className="p-3 text-text-muted font-mono">{rowNum}</td>
@@ -272,6 +275,15 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                                             )}
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="p-3 text-text-muted">
+                                                    {truncatedNotes ? (
+                                                        <span className="text-[11px] text-text-muted font-normal max-w-[200px] truncate block" title={notesStr}>
+                                                            {truncatedNotes}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-text-muted/60">—</span>
+                                                    )}
                                                 </td>
                                                 <td className="p-3 text-text-muted font-mono">{new Date(item.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}</td>
                                                 <td className="p-3 text-center font-bold text-text">

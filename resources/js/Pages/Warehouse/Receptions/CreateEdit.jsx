@@ -208,6 +208,21 @@ export default function CreateEdit({
             window.removeEventListener("keydown", handleGlobalShortcuts);
     }, [data, reception]);
 
+    const allContracts = useMemo(() => {
+        const list = [];
+        customers.forEach((cust) => {
+            (cust.contracts || []).forEach((cnt) => {
+                list.push({
+                    ...cnt,
+                    customer: cust,
+                    customer_name: cust.name,
+                    customer_id: cust.id,
+                });
+            });
+        });
+        return list;
+    }, [customers]);
+
     // Populate initial customer autocomplete search field if editing
     useEffect(() => {
         if (data.customer_id) {
@@ -220,6 +235,45 @@ export default function CreateEdit({
             }
         }
     }, [data.customer_id, customers]);
+
+    const handleContractSelect = (contractId) => {
+        if (!contractId) {
+            setData((d) => ({
+                ...d,
+                contract_id: "",
+                period_id: "",
+                representative_id: "",
+            }));
+            setAvailablePeriods([]);
+            setAvailableRepresentatives([]);
+            return;
+        }
+
+        const selectedContract = allContracts.find(
+            (c) => c.id === parseInt(contractId)
+        );
+
+        if (selectedContract) {
+            const cust = customers.find((c) => c.id === selectedContract.customer_id) || selectedContract.customer;
+            const activePeriods = (selectedContract.periods || []).filter(
+                (p) => p.status === "active"
+            );
+            const activePeriod = activePeriods[0] || (selectedContract.periods || [])[0];
+
+            setCustomerSearch(cust?.name || "");
+            setAvailableContracts(cust?.contracts || [selectedContract]);
+            setAvailablePeriods(activePeriods.length > 0 ? activePeriods : (selectedContract.periods || []));
+            setAvailableRepresentatives(selectedContract.contract_agents || []);
+
+            setData((d) => ({
+                ...d,
+                customer_id: selectedContract.customer_id,
+                contract_id: selectedContract.id,
+                period_id: activePeriod?.id || "",
+                representative_id: selectedContract.contract_agents?.[0]?.id || "",
+            }));
+        }
+    };
 
     // Handle customer contracts change
     useEffect(() => {
@@ -235,12 +289,17 @@ export default function CreateEdit({
                         (c) => c.id === parseInt(data.contract_id),
                     )
                 ) {
-                    setData((d) => ({
-                        ...d,
-                        contract_id: "",
-                        period_id: "",
-                        representative_id: "",
-                    }));
+                    const firstContract = customer.contracts?.[0];
+                    if (firstContract) {
+                        handleContractSelect(firstContract.id);
+                    } else {
+                        setData((d) => ({
+                            ...d,
+                            contract_id: "",
+                            period_id: "",
+                            representative_id: "",
+                        }));
+                    }
                 }
             }
         } else {
@@ -249,34 +308,6 @@ export default function CreateEdit({
             setAvailableRepresentatives([]);
         }
     }, [data.customer_id]);
-
-    // Handle contract dependencies
-    useEffect(() => {
-        if (data.contract_id) {
-            const contract = availableContracts.find(
-                (c) => c.id === parseInt(data.contract_id),
-            );
-            if (contract) {
-                const activePeriods = (contract.periods || []).filter(
-                    (period) => period.status === "active",
-                );
-                setAvailablePeriods(activePeriods);
-                setAvailableRepresentatives(contract.contract_agents || []);
-
-                if (!isEdit) {
-                    setData((d) => ({
-                        ...d,
-                        period_id: activePeriods?.[0]?.id || "",
-                        representative_id:
-                            contract.contract_agents?.[0]?.id || "",
-                    }));
-                }
-            }
-        } else {
-            setAvailablePeriods([]);
-            setAvailableRepresentatives([]);
-        }
-    }, [data.contract_id, availableContracts]);
 
     // Fetch contract occupancy stats
     useEffect(() => {
@@ -838,33 +869,23 @@ export default function CreateEdit({
                                                 }
                                             />
                                             <select
-                                                className="mt-1 block w-full border-border bg-surface text-text text-sm focus:border-primary focus:ring-primary rounded-none h-[42px] px-3"
+                                                className="mt-1 block w-full border-border bg-surface text-text text-sm focus:border-primary focus:ring-primary rounded-none h-[42px] px-3 font-semibold"
                                                 value={data.contract_id}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "contract_id",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                disabled={
-                                                    reception?.status ===
-                                                        "approved" ||
-                                                    !data.customer_id
-                                                }
+                                                onChange={(e) => handleContractSelect(e.target.value)}
+                                                disabled={reception?.status === "approved"}
                                                 required
                                             >
                                                 <option value="">
                                                     {lang === "ar"
-                                                        ? "-- اختر العقد --"
-                                                        : "-- Select Contract --"}
+                                                        ? "-- ابحث / اختر رقم العقد --"
+                                                        : "-- Select / Search Contract --"}
                                                 </option>
-                                                {availableContracts.map((c) => (
+                                                {(data.customer_id ? availableContracts : allContracts).map((c) => (
                                                     <option
                                                         key={c.id}
                                                         value={c.id}
                                                     >
-                                                        {c.contract_number} (حتى{" "}
-                                                        {c.end_date})
+                                                        {c.contract_number} {c.customer_name ? `(${c.customer_name})` : ""}
                                                     </option>
                                                 ))}
                                             </select>

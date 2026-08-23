@@ -8,19 +8,26 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
         window.print();
     };
 
+    const totalIn = items.reduce((sum, item) => sum + parseFloat(item.total_in || item.quantity_in || 0), 0);
+    const totalOut = items.reduce((sum, item) => sum + parseFloat(item.total_out || item.quantity_out || 0), 0);
+    const totalBalance = items.reduce((sum, item) => sum + parseFloat(item.balance ?? ((item.total_in || 0) - (item.total_out || 0))), 0);
+
     return (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:bg-white print:p-0">
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:bg-white print:p-0 items-print-modal-root">
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 10mm 12mm 10mm 12mm;
+                        margin: 8mm 10mm 8mm 10mm;
                     }
                     html, body {
                         background: white !important;
                         color: black !important;
                         margin: 0 !important;
                         padding: 0 !important;
+                    }
+                    .contract-print-area, .print-page-wrapper, main, header, nav, sidebar {
+                        display: none !important;
                     }
                     .items-print-container {
                         position: static !important;
@@ -58,9 +65,9 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
                     <button
                         type="button"
                         onClick={handlePrint}
-                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-md shadow transition-all"
+                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-md shadow transition-all flex items-center gap-1.5"
                     >
-                        {lang === "ar" ? "طباعة التقرير" : "Print Report"}
+                        <span>{lang === "ar" ? "طباعة التقرير" : "Print Report"}</span>
                     </button>
                     <button
                         type="button"
@@ -74,92 +81,146 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
 
             {/* Printable Report Canvas */}
             <div className="max-w-4xl mx-auto bg-white text-black p-8 shadow-2xl my-6 rounded-sm items-print-container" dir={lang === "ar" ? "rtl" : "ltr"}>
-                {/* Header */}
-                <div className="border-b-2 border-black pb-4 mb-6 flex justify-between items-start">
+                {/* Clean Modern Header */}
+                <div className="border-b border-slate-200 pb-4 mb-5 flex justify-between items-start">
                     <div className="space-y-1 text-start">
-                        <h1 className="text-xl font-black text-gray-900">
-                            {lang === "ar" ? "تقرير الأصناف المخزنة وحركتها على العقد" : "Stored Items & Movement Report"}
+                        <h1 className="text-xl font-black text-slate-900">
+                            {lang === "ar" ? "تقرير ملخص الأصناف المخزنة بالعقد" : "Stored Items Summary Report"}
                         </h1>
-                        <p className="text-xs text-gray-600 font-semibold">
+                        <p className="text-xs text-slate-500 font-semibold">
                             {lang === "ar" ? "نظام إدارة المستودعات والخدمات اللوجستية" : "Warehouse & Logistics Management System"}
                         </p>
                     </div>
                     <div className="text-end space-y-1 text-xs">
-                        <p className="font-bold">
+                        <p className="font-bold text-slate-800">
                             {lang === "ar" ? "رقم العقد: " : "Contract No: "}
-                            <span className="font-mono text-sm">{contract?.contract_number}</span>
+                            <span className="font-mono text-sm font-extrabold">{contract?.contract_number}</span>
                         </p>
-                        <p className="text-gray-600">
-                            {lang === "ar" ? "تاريخ العقد: " : "Date: "}
+                        <p className="text-slate-500">
+                            {lang === "ar" ? "تاريخ التحرير: " : "Date Written: "}
                             <span className="font-mono">{contract?.write_date || "—"}</span>
                         </p>
                     </div>
                 </div>
 
-                {/* Single Row Clean Info Bar - Customer Name & Contract info */}
-                <div className="flex justify-between items-center py-2.5 px-3 mb-6 border-y-2 border-black text-xs font-bold bg-gray-50">
-                    <div>
-                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "العميل:" : "Customer:"}</span>
-                        <span className="font-black text-sm text-gray-900">{contract?.customer?.name || "—"}</span>
+                {/* Top Info Bar (Customer & Cold Storage Info) */}
+                <div className="flex justify-between items-center py-3 px-4 mb-5 border border-slate-200 rounded-md text-xs bg-slate-50 font-bold">
+                    <div className="flex items-center gap-2">
+                        <span className="text-slate-500">{lang === "ar" ? "العميل:" : "Customer:"}</span>
+                        <span className="font-black text-sm text-slate-900">{contract?.customer?.name || "—"}</span>
                     </div>
-                    <div>
-                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "رقم العقد:" : "Contract No:"}</span>
-                        <span className="font-mono text-sm font-black text-gray-900">{contract?.contract_number}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-slate-500">{lang === "ar" ? "الثلاجة / المستودع:" : "Warehouse / Cold Storage:"}</span>
+                        <span className="font-bold text-slate-800">{contract?.warehouse_name || "ثلاجة حفظ التمور والخدمات اللوجستية"}</span>
                     </div>
-                    <div>
-                        <span className="text-gray-600 me-1.5">{lang === "ar" ? "تاريخ العقد:" : "Date:"}</span>
-                        <span className="font-mono text-gray-900">{contract?.write_date || "—"}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-slate-500">{lang === "ar" ? "رقم العقد:" : "Contract No:"}</span>
+                        <span className="font-mono text-sm font-extrabold text-slate-900">{contract?.contract_number}</span>
                     </div>
                 </div>
 
-                {/* Table */}
-                <table className="w-full text-xs text-start border-collapse border border-black">
+                {/* Top Item Count Indicator */}
+                <div className="flex justify-between items-center mb-3 px-1 text-xs font-bold text-slate-700">
+                    <div className="flex items-center gap-1.5">
+                        <span>{lang === "ar" ? "عدد السلع المستودعية:" : "Storage Items Count:"}</span>
+                        <span className="font-mono font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{items.length}</span>
+                    </div>
+                </div>
+
+                {/* Table with Thin Borders */}
+                <table className="w-full text-xs text-start border-collapse border border-slate-200">
                     <thead>
-                        <tr className="bg-gray-100 border-b border-black font-bold uppercase">
-                            <th className="border border-black px-2 py-2 text-center w-8">#</th>
-                            <th className="border border-black px-3 py-2 text-start">{lang === "ar" ? "اسم الصنف" : "Item Name"}</th>
-                            <th className="border border-black px-3 py-2 text-center">{lang === "ar" ? "حجم الكرتون / العبوة" : "Package Size"}</th>
-                            <th className="border border-black px-3 py-2 text-center">{lang === "ar" ? "الدرجة / الجودة" : "Quality / Grade"}</th>
-                            <th className="border border-black px-3 py-2 text-center w-20">{lang === "ar" ? "المدخلات" : "In"}</th>
-                            <th className="border border-black px-3 py-2 text-center w-20">{lang === "ar" ? "المخرجات" : "Out"}</th>
-                            <th className="border border-black px-3 py-2 text-center w-24">{lang === "ar" ? "الرصيد" : "Balance"}</th>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase">
+                            <th className="border border-slate-200 px-2 py-2.5 text-center w-10">#</th>
+                            <th className="border border-slate-200 px-3 py-2.5 text-start">{lang === "ar" ? "الصنف" : "Item Name"}</th>
+                            <th className="border border-slate-200 px-3 py-2.5 text-center">{lang === "ar" ? "الجودة / الحجم" : "Quality / Variant"}</th>
+                            <th className="border border-slate-200 px-3 py-2.5 text-center w-24">{lang === "ar" ? "مدخلات" : "In"}</th>
+                            <th className="border border-slate-200 px-3 py-2.5 text-center w-24">{lang === "ar" ? "مخرجات" : "Out"}</th>
+                            <th className="border border-slate-200 px-3 py-2.5 text-center w-28">{lang === "ar" ? "الرصيد" : "Balance"}</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-200">
                         {items.length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="text-center py-6 text-gray-500">
+                                <td colSpan="6" className="text-center py-6 text-slate-500">
                                     {lang === "ar" ? "لا توجد أصناف مخزنة مسجلة على هذا العقد" : "No stored items found for this contract"}
                                 </td>
                             </tr>
                         ) : (
-                            items.map((item, idx) => (
-                                <tr key={item.id || idx} className="border-b border-black">
-                                    <td className="border border-black px-2 py-2 text-center font-mono font-bold">{idx + 1}</td>
-                                    <td className="border border-black px-3 py-2 font-bold text-start text-gray-900">
-                                        {item.item_name || item.name_ar || item.name || "—"}
-                                    </td>
-                                    <td className="border border-black px-3 py-2 text-center text-gray-700">
-                                        {item.variant_name || item.variant?.name || "افتراضي"}
-                                    </td>
-                                    <td className="border border-black px-3 py-2 text-center text-gray-700">
-                                        {item.quality || item.variant?.quality || "—"}
-                                    </td>
-                                    <td className="border border-black px-3 py-2 text-center font-mono">{item.total_in || item.quantity_in || 0}</td>
-                                    <td className="border border-black px-3 py-2 text-center font-mono text-red-600">{item.total_out || item.quantity_out || 0}</td>
-                                    <td className="border border-black px-3 py-2 text-center font-mono font-extrabold text-blue-700">
-                                        {item.balance ?? (item.total_in - item.total_out) ?? 0}
-                                    </td>
-                                </tr>
-                            ))
+                            items.map((item, idx) => {
+                                const variantInfo = [item.variant_name || item.variant?.name, item.quality || item.variant?.quality].filter(Boolean).join(" | ");
+                                return (
+                                    <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
+                                        <td className="border border-slate-200 px-2 py-2 text-center font-mono font-bold text-slate-600">{idx + 1}</td>
+                                        <td className="border border-slate-200 px-3 py-2 font-bold text-start text-slate-900">
+                                            {item.item_name || item.name_ar || item.name || "—"}
+                                        </td>
+                                        <td className="border border-slate-200 px-3 py-2 text-center text-slate-700 font-medium">
+                                            {variantInfo || "افتراضي"}
+                                        </td>
+                                        <td className="border border-slate-200 px-3 py-2 text-center font-mono font-semibold text-emerald-700">
+                                            {parseFloat(item.total_in || item.quantity_in || 0).toLocaleString()}
+                                        </td>
+                                        <td className="border border-slate-200 px-3 py-2 text-center font-mono font-semibold text-rose-600">
+                                            {parseFloat(item.total_out || item.quantity_out || 0).toLocaleString()}
+                                        </td>
+                                        <td className="border border-slate-200 px-3 py-2 text-center font-mono font-extrabold text-blue-700">
+                                            {parseFloat(item.balance ?? ((item.total_in || 0) - (item.total_out || 0))).toLocaleString()}
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>
 
+                {/* Bottom Summary Section (Matching Attachment 1) */}
+                <div className="mt-6 p-4 border border-slate-200 bg-slate-50/50 rounded-md">
+                    <div className="flex justify-between items-end mb-3">
+                        <div>
+                            <h3 className="text-xs font-black text-slate-900">
+                                {lang === "ar" ? "إجمالي كراتين الأصناف حسب الحركة" : "Total Item Cartons by Movement"}
+                            </h3>
+                            <p className="text-[11px] text-slate-500 font-medium">
+                                {lang === "ar" ? "إجمالي المدخلات والمخرجات وصافي رصيد الأصناف بالعقد" : "Total inputs, outputs, and net balance under the contract"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-emerald-50 border border-emerald-200 p-3 rounded text-center">
+                            <span className="text-[11px] font-bold text-emerald-700 block mb-1">
+                                {lang === "ar" ? "مدخلات (وارد)" : "Total Inputs (In)"}
+                            </span>
+                            <span className="text-base font-black font-mono text-emerald-800">
+                                {totalIn.toLocaleString()}
+                            </span>
+                        </div>
+
+                        <div className="bg-amber-50 border border-amber-200 p-3 rounded text-center">
+                            <span className="text-[11px] font-bold text-amber-700 block mb-1">
+                                {lang === "ar" ? "مخرجات (صادر)" : "Total Outputs (Out)"}
+                            </span>
+                            <span className="text-base font-black font-mono text-amber-800">
+                                {totalOut.toLocaleString()}
+                            </span>
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-200 p-3 rounded text-center">
+                            <span className="text-[11px] font-bold text-blue-700 block mb-1">
+                                {lang === "ar" ? "الرصيد المتبقي" : "Remaining Balance"}
+                            </span>
+                            <span className="text-base font-black font-mono text-blue-800">
+                                {totalBalance.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Footer Metadata */}
-                <div className="mt-8 pt-3 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-500 font-mono">
+                <div className="mt-6 pt-3 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-400 font-mono">
                     <span>{lang === "ar" ? "تاريخ التقرير: " : "Report Date: "}{new Date().toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US")}</span>
-                    <span>{lang === "ar" ? "إجمالي الأنواع/البدائل: " : "Total Items/Variants: "}{items.length}</span>
+                    <span>{lang === "ar" ? "نظام إدارة المستودعات والخدمات اللوجستية WHMS" : "WHMS Warehouse System"}</span>
                 </div>
             </div>
         </div>

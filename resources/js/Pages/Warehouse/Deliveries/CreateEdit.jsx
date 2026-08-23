@@ -314,40 +314,59 @@ export default function CreateEdit({
             });
     };
 
-    // Handle contract change dependencies
-    useEffect(() => {
-        if (data.contract_id) {
-            const contract = availableContracts.find(
-                (c) => c.id === parseInt(data.contract_id),
-            );
-            if (contract) {
-                const activePeriods = (contract.periods || []).filter(
-                    (period) => period.status === "active",
-                );
-                setAvailablePeriods(activePeriods);
-                setAvailableRepresentatives(contract.contract_agents || []);
+    const allContracts = useMemo(() => {
+        const list = [];
+        customers.forEach((cust) => {
+            (cust.contracts || []).forEach((cnt) => {
+                list.push({
+                    ...cnt,
+                    customer: cust,
+                    customer_name: cust.name,
+                    customer_id: cust.id,
+                });
+            });
+        });
+        return list;
+    }, [customers]);
 
-                if (!isEdit && !data.period_id) {
-                    setData((d) => ({
-                        ...d,
-                        period_id: activePeriods?.[0]?.id || "",
-                        representative_id:
-                            contract.contract_agents?.[0]?.id || "",
-                    }));
-                }
-            }
-        } else {
+    const handleContractSelect = (contractId) => {
+        if (!contractId) {
+            setData((d) => ({
+                ...d,
+                contract_id: "",
+                period_id: "",
+                representative_id: "",
+            }));
             setAvailablePeriods([]);
             setAvailableRepresentatives([]);
+            return;
         }
-        setPosPalletId("");
-        setPalletSearch("");
-        setPosItemId("");
-        setPosVariantId("");
-        setPosMaxBalance(0);
-        setPosQuantity("");
-        setPosRowError("");
-    }, [data.contract_id, availableContracts]);
+
+        const selectedContract = allContracts.find(
+            (c) => c.id === parseInt(contractId)
+        );
+
+        if (selectedContract) {
+            const cust = customers.find((c) => c.id === selectedContract.customer_id) || selectedContract.customer;
+            const activePeriods = (selectedContract.periods || []).filter(
+                (p) => p.status === "active"
+            );
+            const activePeriod = activePeriods[0] || (selectedContract.periods || [])[0];
+
+            setCustomerSearch(cust?.name || "");
+            setAvailableContracts(cust?.contracts || [selectedContract]);
+            setAvailablePeriods(activePeriods.length > 0 ? activePeriods : (selectedContract.periods || []));
+            setAvailableRepresentatives(selectedContract.contract_agents || []);
+
+            setData((d) => ({
+                ...d,
+                customer_id: selectedContract.customer_id,
+                contract_id: selectedContract.id,
+                period_id: activePeriod?.id || "",
+                representative_id: selectedContract.contract_agents?.[0]?.id || "",
+            }));
+        }
+    };
 
     // Fetch contract occupancy stats & pallets
     useEffect(() => {
@@ -1215,32 +1234,23 @@ export default function CreateEdit({
                                                 }
                                             />
                                             <select
-                                                className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2.5"
+                                                className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2.5 font-semibold"
                                                 value={data.contract_id}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "contract_id",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                disabled={
-                                                    !data.customer_id ||
-                                                    !!data.exit_authorization_id
-                                                }
+                                                onChange={(e) => handleContractSelect(e.target.value)}
+                                                disabled={!!data.exit_authorization_id}
                                                 required
                                             >
                                                 <option value="">
                                                     {lang === "ar"
-                                                        ? "-- اختر العقد --"
-                                                        : "-- Select Contract --"}
+                                                        ? "-- ابحث / اختر رقم العقد --"
+                                                        : "-- Select / Search Contract --"}
                                                 </option>
-                                                {availableContracts.map((c) => (
+                                                {(data.customer_id ? availableContracts : allContracts).map((c) => (
                                                     <option
                                                         key={c.id}
                                                         value={c.id}
                                                     >
-                                                        {c.contract_number} (
-                                                        {c.status})
+                                                        {c.contract_number} {c.customer_name ? `(${c.customer_name})` : ""}
                                                     </option>
                                                 ))}
                                             </select>
