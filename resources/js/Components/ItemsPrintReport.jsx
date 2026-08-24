@@ -17,7 +17,7 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                     @page {
-                        size: A4 portrait;
+                        size: A4 auto;
                         margin: 10mm 10mm 10mm 10mm;
                     }
                     html, body, #app, main {
@@ -71,7 +71,7 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
             <div className="print:hidden sticky top-0 bg-slate-900 text-white p-4 shadow-xl border-b border-slate-700 flex justify-between items-center max-w-5xl mx-auto my-4 rounded-lg">
                 <div className="text-start">
                     <h2 className="text-sm font-extrabold">
-                        {lang === "ar" ? "معاينة طباعة تقرير الأصناف (A4 رأسي)" : "Stored Items Print Preview (A4 Portrait)"}
+                        {lang === "ar" ? "معاينة طباعة تقرير الأصناف" : "Stored Items Print Preview"}
                     </h2>
                     <p className="text-xs text-slate-400">
                         {lang === "ar" ? `العقد رقم: ${contract?.contract_number}` : `Contract No: ${contract?.contract_number}`}

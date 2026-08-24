@@ -76,7 +76,7 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                     @page {
-                        size: A4 landscape;
+                        size: A4 auto;
                         margin: 10mm 10mm 10mm 10mm;
                     }
                     html, body, #app, main {
@@ -130,7 +130,7 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
             <div className="print:hidden sticky top-0 bg-slate-900 text-white p-4 shadow-xl border-b border-slate-700 flex justify-between items-center max-w-7xl mx-auto my-4 rounded-lg">
                 <div className="text-start">
                     <h2 className="text-sm font-extrabold">
-                        {lang === "ar" ? "معاينة طباعة ملخص الطبالي (A4 أفقي)" : "Pallets Summary Print Preview (A4 Landscape)"}
+                        {lang === "ar" ? "معاينة طباعة ملخص الطبالي" : "Pallets Summary Print Preview"}
                     </h2>
                     <p className="text-xs text-slate-400">
                         {lang === "ar" ? `العقد رقم: ${contract?.contract_number}` : `Contract No: ${contract?.contract_number}`}
