@@ -15,6 +15,14 @@ Route::middleware([
     Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
 ])->group(function () {
 
+    // Tenant Root Route (subdomain.domain.ext/)
+    Route::get('/', function () {
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
+        return redirect()->route('login');
+    });
+
     // Auth Routes (Login, Password Reset, etc.)
     require __DIR__ . '/auth.php';
 

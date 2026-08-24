@@ -27,7 +27,7 @@ class EnsureSeasonIsSelected
 
             // Prevent redirect loop if already on select-season route
             if (!$request->routeIs('season.select') && !$request->routeIs('season.store')) {
-                return redirect()->route('season.select');
+                return redirect()->guest(route('season.select'));
             }
         }
 

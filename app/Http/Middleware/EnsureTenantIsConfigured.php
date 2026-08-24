@@ -22,7 +22,7 @@ class EnsureTenantIsConfigured
         if (empty(trim($companyName))) {
             // Prevent redirect loop if already on tenant-setup route
             if (!$request->routeIs('tenant.setup') && !$request->routeIs('tenant.store')) {
-                return redirect()->route('tenant.setup');
+                return redirect()->guest(route('tenant.setup'));
             }
         }
 
