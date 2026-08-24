@@ -72,21 +72,36 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
     });
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:bg-white print:p-0 pallets-print-modal-root">
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:bg-white print:p-0 print:m-0 print:h-auto pallets-print-modal-root">
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                     @page {
                         size: A4 landscape;
-                        margin: 8mm 10mm 8mm 10mm;
+                        margin: 10mm 10mm 10mm 10mm;
                     }
-                    html, body {
+                    html, body, #app, main {
                         background: white !important;
                         color: black !important;
                         margin: 0 !important;
                         padding: 0 !important;
+                        height: auto !important;
+                        min-height: auto !important;
+                        overflow: visible !important;
+                        display: block !important;
+                        position: static !important;
                     }
-                    .contract-print-area, .print-page-wrapper, main, header, nav, sidebar {
+                    header, nav, sidebar, footer, .print\\:hidden, .contract-print-area, .contract-view-wrapper {
                         display: none !important;
+                    }
+                    .pallets-print-modal-root {
+                        position: static !important;
+                        display: block !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: transparent !important;
+                        overflow: visible !important;
                     }
                     .pallets-print-container {
                         position: static !important;
@@ -98,6 +113,7 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                         box-shadow: none !important;
                         border: none !important;
                         background: white !important;
+                        page-break-after: avoid !important;
                     }
                     .pallets-print-container table {
                         width: 100% !important;

@@ -13,21 +13,36 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
     const totalBalance = items.reduce((sum, item) => sum + parseFloat(item.balance ?? ((item.total_in || 0) - (item.total_out || 0))), 0);
 
     return (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:bg-white print:p-0 items-print-modal-root">
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm overflow-y-auto print:static print:bg-white print:p-0 print:m-0 print:h-auto items-print-modal-root">
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 8mm 10mm 8mm 10mm;
+                        margin: 10mm 10mm 10mm 10mm;
                     }
-                    html, body {
+                    html, body, #app, main {
                         background: white !important;
                         color: black !important;
                         margin: 0 !important;
                         padding: 0 !important;
+                        height: auto !important;
+                        min-height: auto !important;
+                        overflow: visible !important;
+                        display: block !important;
+                        position: static !important;
                     }
-                    .contract-print-area, .print-page-wrapper, main, header, nav, sidebar {
+                    header, nav, sidebar, footer, .print\\:hidden, .contract-print-area, .contract-view-wrapper {
                         display: none !important;
+                    }
+                    .items-print-modal-root {
+                        position: static !important;
+                        display: block !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: transparent !important;
+                        overflow: visible !important;
                     }
                     .items-print-container {
                         position: static !important;
@@ -39,6 +54,7 @@ export default function ItemsPrintReport({ contract, items = [], onClose }) {
                         box-shadow: none !important;
                         border: none !important;
                         background: white !important;
+                        page-break-after: avoid !important;
                     }
                     .items-print-container table {
                         width: 100% !important;

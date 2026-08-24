@@ -7624,7 +7624,7 @@ export default function Show({
                             body:not(.report-modal-open) .contract-print-area, body:not(.report-modal-open) .contract-print-area * {
                                 visibility: visible !important;
                             }
-                            body.report-modal-open .contract-print-area {
+                            body.report-modal-open .contract-print-area, body.report-modal-open .contract-view-wrapper {
                                 display: none !important;
                                 visibility: hidden !important;
                             }
