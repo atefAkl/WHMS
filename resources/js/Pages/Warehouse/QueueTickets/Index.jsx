@@ -5,6 +5,7 @@ import { useLang } from "@/Contexts/LanguageContext";
 import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
 import Modal from "@/Components/Modal";
+import SearchableSelect from "@/Components/SearchableSelect";
 import axios from "axios";
 import { 
     Ticket, 
@@ -24,6 +25,29 @@ import {
 export default function Index({ tickets, customers, drivers }) {
     const { lang } = useLang();
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const allContracts = customers.flatMap((c) =>
+        (c.contracts || []).map((contract) => ({
+            ...contract,
+            customer_name: c.name,
+            customer_id: c.id,
+        }))
+    );
+
+    const handleContractSelect = (contractId) => {
+        if (!contractId) {
+            setData((d) => ({ ...d, contract_id: "", customer_id: "" }));
+            return;
+        }
+        const foundContract = allContracts.find((c) => c.id === parseInt(contractId));
+        if (foundContract) {
+            setData((d) => ({
+                ...d,
+                customer_id: foundContract.customer_id,
+                contract_id: foundContract.id,
+            }));
+        }
+    };
 
     // Form state
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
@@ -218,54 +242,38 @@ export default function Index({ tickets, customers, drivers }) {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         
-                        {/* 1. Customer Selection */}
-                        <div>
-                            <label className="block text-xs font-bold text-text-muted mb-1">
-                                {lang === "ar" ? "اختيار العميل *" : "Select Customer *"}
-                            </label>
-                            <select
-                                className="w-full text-sm bg-white border border-border rounded-xl py-2 px-3 focus:ring-primary font-bold"
-                                value={data.customer_id}
-                                onChange={(e) => setData("customer_id", e.target.value)}
-                                required
-                            >
-                                <option value="">{lang === "ar" ? "-- اختر العميل من القائمة --" : "-- Select Customer --"}</option>
-                                {customers.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.name} {c.phone_number ? `(${c.phone_number})` : ""}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.customer_id && <p className="text-xs text-rose-600 mt-1">{errors.customer_id}</p>}
+                        {/* 1. Contract Selection (Search by contract number or customer name) */}
+                        <div className="relative">
+                            <SearchableSelect
+                                label={lang === "ar" ? "العقد المرتبط *" : "Linked Contract *"}
+                                items={allContracts}
+                                value={data.contract_id}
+                                onChange={(selected) => handleContractSelect(selected ? selected.id : "")}
+                                placeholder={lang === "ar" ? "ابحث برقم العقد أو اسم العميل..." : "Type contract number or customer..."}
+                                searchKeys={["contract_number", "customer_name"]}
+                                displayFormat={(c) => `${c.contract_number} ${c.customer_name ? `(${c.customer_name})` : ""}`}
+                                valueKey="id"
+                                error={errors.contract_id}
+                            />
                         </div>
 
-                        {/* 2. Contract Selection */}
-                        {data.customer_id && (
-                            <div>
-                                <label className="block text-xs font-bold text-text-muted mb-1">
-                                    {lang === "ar" ? "اختيار العقد التابع للعميل *" : "Select Contract *"}
-                                </label>
-                                <select
-                                    className="w-full text-sm bg-white border border-border rounded-xl py-2 px-3 focus:ring-primary font-mono font-bold"
-                                    value={data.contract_id}
-                                    onChange={(e) => setData("contract_id", e.target.value)}
-                                    disabled={loadingContracts}
-                                    required
-                                >
-                                    <option value="">
-                                        {loadingContracts 
-                                            ? (lang === "ar" ? "جاري تحميل عقود العميل..." : "Loading contracts...")
-                                            : (lang === "ar" ? "-- اختر العقد --" : "-- Select Contract --")}
-                                    </option>
-                                    {customerContracts.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {lang === "ar" ? "عقد رقم: " : "Contract No: "}{c.contract_number}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errors.contract_id && <p className="text-xs text-rose-600 mt-1">{errors.contract_id}</p>}
-                            </div>
-                        )}
+                        {/* 2. Customer Selection */}
+                        <div className="relative">
+                            <SearchableSelect
+                                label={lang === "ar" ? "العميل *" : "Customer *"}
+                                items={customers}
+                                value={data.customer_id}
+                                onChange={(selected) => {
+                                    const custId = selected ? selected.id : "";
+                                    setData((d) => ({ ...d, customer_id: custId, contract_id: "" }));
+                                }}
+                                placeholder={lang === "ar" ? "ابحث عن اسم العميل..." : "Type customer name..."}
+                                searchKeys={["name"]}
+                                displayFormat={(c) => c.name}
+                                valueKey="id"
+                                error={errors.customer_id}
+                            />
+                        </div>
 
                         {/* 3. Real-time Status Banner */}
                         {loadingInfo && (

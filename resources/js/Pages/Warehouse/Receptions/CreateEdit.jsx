@@ -825,7 +825,47 @@ export default function CreateEdit({
                                             />
                                         </div>
 
-                                        {/* Customer Autocomplete Field */}
+                                        {/* 2. Contract SearchableSelect Field (Immediately after Serial Number) */}
+                                        <div className="relative">
+                                            <SearchableSelect
+                                                label={
+                                                    lang === "ar"
+                                                        ? "العقد المرتبط *"
+                                                        : "Linked Contract *"
+                                                }
+                                                items={allContracts}
+                                                value={data.contract_id}
+                                                onChange={(selected) =>
+                                                    handleContractSelect(
+                                                        selected ? selected.id : "",
+                                                    )
+                                                }
+                                                placeholder={
+                                                    lang === "ar"
+                                                        ? "ابحث برقم العقد أو اسم العميل..."
+                                                        : "Type contract number or customer..."
+                                                }
+                                                searchKeys={[
+                                                    "contract_number",
+                                                    "customer_name",
+                                                ]}
+                                                displayFormat={(c) =>
+                                                    `${c.contract_number} ${
+                                                        c.customer_name
+                                                            ? `(${c.customer_name})`
+                                                            : ""
+                                                    }`
+                                                }
+                                                valueKey="id"
+                                                error={errors.contract_id}
+                                                disabled={
+                                                    reception?.status ===
+                                                    "approved"
+                                                }
+                                            />
+                                        </div>
+
+                                        {/* 3. Customer Autocomplete Field */}
                                         <div className="relative">
                                             <SearchableSelect
                                                 label={
@@ -836,12 +876,13 @@ export default function CreateEdit({
                                                 items={customers}
                                                 value={data.customer_id}
                                                 onChange={(selected) => {
-                                                    setData(
-                                                        "customer_id",
-                                                        selected
-                                                            ? selected.id
-                                                            : "",
-                                                    );
+                                                    const custId = selected
+                                                        ? selected.id
+                                                        : "";
+                                                    setData("customer_id", custId);
+                                                    if (!selected) {
+                                                        handleContractSelect("");
+                                                    }
                                                 }}
                                                 placeholder={
                                                     lang === "ar"
@@ -856,42 +897,6 @@ export default function CreateEdit({
                                                     reception?.status ===
                                                     "approved"
                                                 }
-                                            />
-                                        </div>
-
-                                        {/* Contract Select */}
-                                        <div>
-                                            <InputLabel
-                                                value={
-                                                    lang === "ar"
-                                                        ? "العقد المرتبط *"
-                                                        : "Linked Contract *"
-                                                }
-                                            />
-                                            <select
-                                                className="mt-1 block w-full border-border bg-surface text-text text-sm focus:border-primary focus:ring-primary rounded-none h-[42px] px-3 font-semibold"
-                                                value={data.contract_id}
-                                                onChange={(e) => handleContractSelect(e.target.value)}
-                                                disabled={reception?.status === "approved"}
-                                                required
-                                            >
-                                                <option value="">
-                                                    {lang === "ar"
-                                                        ? "-- ابحث / اختر رقم العقد --"
-                                                        : "-- Select / Search Contract --"}
-                                                </option>
-                                                {(data.customer_id ? availableContracts : allContracts).map((c) => (
-                                                    <option
-                                                        key={c.id}
-                                                        value={c.id}
-                                                    >
-                                                        {c.contract_number} {c.customer_name ? `(${c.customer_name})` : ""}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <InputError
-                                                message={errors.contract_id}
-                                                className="mt-1"
                                             />
                                         </div>
 

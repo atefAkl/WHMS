@@ -30,6 +30,7 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import SecondaryButton from "@/Components/SecondaryButton";
 import PageHeader from "@/Components/PageHeader";
 import Tooltip from "@/Components/Tooltip";
+import SearchableSelect from "@/Components/SearchableSelect";
 import Modal from "@/Components/Modal";
 import axios from "axios";
 
@@ -633,170 +634,96 @@ export default function CreateEdit({
                                 </h3>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {/* Customer Autocomplete */}
-                                    <div className="relative">
-                                        <InputLabel
-                                            value={
-                                                lang === "ar"
-                                                    ? "العميل المستورد *"
-                                                    : "Customer *"
-                                            }
-                                        />
-                                        <TextInput
-                                            type="text"
-                                            className="mt-1 w-full text-xs rounded-none border-border h-[38px] px-2.5 bg-surface text-text"
-                                            placeholder={
-                                                lang === "ar"
-                                                    ? "ابحث بالاسم للعميل..."
-                                                    : "Type customer name..."
-                                            }
-                                            value={customerSearch}
-                                            onChange={(e) => {
-                                                setCustomerSearch(
-                                                    e.target.value,
-                                                );
-                                                setShowCustomerDropdown(true);
-                                            }}
-                                            onFocus={() =>
-                                                setShowCustomerDropdown(true)
-                                            }
-                                            onBlur={() =>
-                                                setTimeout(
-                                                    () =>
-                                                        setShowCustomerDropdown(
-                                                            false,
-                                                        ),
-                                                    200,
-                                                )
-                                            }
-                                            onKeyDown={(e) => {
-                                                if (
-                                                    !showCustomerDropdown ||
-                                                    filteredCustomers.length ===
-                                                        0
-                                                )
-                                                    return;
-                                                if (e.key === "ArrowDown") {
-                                                    e.preventDefault();
-                                                    setCustomerActiveIndex(
-                                                        (prev) =>
-                                                            prev <
-                                                            filteredCustomers.length -
-                                                                1
-                                                                ? prev + 1
-                                                                : 0,
-                                                    );
-                                                } else if (
-                                                    e.key === "ArrowUp"
-                                                ) {
-                                                    e.preventDefault();
-                                                    setCustomerActiveIndex(
-                                                        (prev) =>
-                                                            prev > 0
-                                                                ? prev - 1
-                                                                : filteredCustomers.length -
-                                                                  1,
-                                                    );
-                                                } else if (e.key === "Enter") {
-                                                    if (
-                                                        customerActiveIndex >=
-                                                            0 &&
-                                                        customerActiveIndex <
-                                                            filteredCustomers.length
-                                                    ) {
-                                                        e.preventDefault();
-                                                        const selected =
-                                                            filteredCustomers[
-                                                                customerActiveIndex
-                                                            ];
-                                                        setData(
-                                                            "customer_id",
-                                                            selected.id,
-                                                        );
-                                                        setCustomerSearch(
-                                                            selected.name,
-                                                        );
-                                                        setShowCustomerDropdown(
-                                                            false,
-                                                        );
-                                                    }
-                                                }
-                                            }}
-                                            disabled={isEdit}
-                                            required
-                                        />
-                                        {showCustomerDropdown &&
-                                            customerSearch &&
-                                            filteredCustomers.length > 0 && (
-                                                <div className="absolute z-10 w-full bg-surface border border-border shadow-md max-h-48 overflow-y-auto mt-1 divide-y divide-border">
-                                                    {filteredCustomers.map(
-                                                        (c, idx) => (
-                                                            <div
-                                                                key={c.id}
-                                                                className={`p-2.5 text-xs font-semibold cursor-pointer text-text transition-colors ${
-                                                                    idx ===
-                                                                    customerActiveIndex
-                                                                        ? "bg-primary/10 text-primary font-bold"
-                                                                        : "hover:bg-surface-muted"
-                                                                }`}
-                                                                onMouseDown={() => {
-                                                                    setData(
-                                                                        "customer_id",
-                                                                        c.id,
-                                                                    );
-                                                                    setCustomerSearch(
-                                                                        c.name,
-                                                                    );
-                                                                    setShowCustomerDropdown(
-                                                                        false,
-                                                                    );
-                                                                }}
-                                                            >
-                                                                {c.name}
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            )}
-                                        {errors.customer_id && (
-                                            <span className="text-xs text-danger mt-1 block">
-                                                {errors.customer_id}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Contract Select */}
+                                    {/* 1. Serial Number */}
                                     <div>
                                         <InputLabel
                                             value={
                                                 lang === "ar"
+                                                    ? "رقم الإذن"
+                                                    : "Permit Number"
+                                            }
+                                        />
+                                        <TextInput
+                                            type="text"
+                                            className="mt-1 w-full text-xs rounded-none border-border bg-slate-50 text-slate-500 font-mono font-bold"
+                                            value={
+                                                authorization?.serial_number ||
+                                                (lang === "ar"
+                                                    ? "سيتم توليده تلقائياً"
+                                                    : "Auto-generated")
+                                            }
+                                            disabled
+                                            readOnly
+                                        />
+                                    </div>
+
+                                    {/* 2. Contract SearchableSelect Field (Immediately after Serial Number) */}
+                                    <div className="relative">
+                                        <SearchableSelect
+                                            label={
+                                                lang === "ar"
                                                     ? "العقد المعتمد *"
                                                     : "Approved Contract *"
                                             }
-                                        />
-                                        <select
-                                            className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[38px] px-2.5 font-semibold"
+                                            items={allContracts}
                                             value={data.contract_id}
-                                            onChange={(e) => handleContractSelect(e.target.value)}
-                                            required
+                                            onChange={(selected) =>
+                                                handleContractSelect(
+                                                    selected ? selected.id : "",
+                                                )
+                                            }
+                                            placeholder={
+                                                lang === "ar"
+                                                    ? "ابحث برقم العقد أو اسم العميل..."
+                                                    : "Type contract number or customer..."
+                                            }
+                                            searchKeys={[
+                                                "contract_number",
+                                                "customer_name",
+                                            ]}
+                                            displayFormat={(c) =>
+                                                `${c.contract_number} ${
+                                                    c.customer_name
+                                                        ? `(${c.customer_name})`
+                                                        : ""
+                                                }`
+                                            }
+                                            valueKey="id"
+                                            error={errors.contract_id}
                                             disabled={isEdit}
-                                        >
-                                            <option value="">
-                                                {lang === "ar"
-                                                    ? "-- ابحث / اختر رقم العقد --"
-                                                    : "-- Select / Search Contract --"}
-                                            </option>
-                                            {(data.customer_id ? filteredContracts : allContracts).map((c) => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.contract_number} {c.customer_name ? `(${c.customer_name})` : ""}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {errors.contract_id && (
-                                            <span className="text-xs text-danger mt-1 block">
-                                                {errors.contract_id}
-                                            </span>
-                                        )}
+                                        />
+                                    </div>
+
+                                    {/* 3. Customer SearchableSelect Field */}
+                                    <div className="relative">
+                                        <SearchableSelect
+                                            label={
+                                                lang === "ar"
+                                                    ? "العميل *"
+                                                    : "Customer *"
+                                            }
+                                            items={customers}
+                                            value={data.customer_id}
+                                            onChange={(selected) => {
+                                                const custId = selected
+                                                    ? selected.id
+                                                    : "";
+                                                setData("customer_id", custId);
+                                                if (!selected) {
+                                                    handleContractSelect("");
+                                                }
+                                            }}
+                                            placeholder={
+                                                lang === "ar"
+                                                    ? "ابحث عن اسم العميل..."
+                                                    : "Type customer name..."
+                                            }
+                                            searchKeys={["name"]}
+                                            displayFormat={(c) => c.name}
+                                            valueKey="id"
+                                            error={errors.customer_id}
+                                            disabled={isEdit}
+                                        />
                                     </div>
 
                                     {/* Storage Period */}

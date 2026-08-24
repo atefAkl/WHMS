@@ -6,6 +6,7 @@ import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Plus, Trash2,
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
+import SearchableSelect from '@/Components/SearchableSelect';
 import axios from 'axios';
 
 export default function CreateEdit({ customers = [], inventoryItems = [], pallets = [], isEdit = false, adjustment = null }) {
@@ -14,6 +15,41 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
     const [availablePeriods, setAvailablePeriods] = useState([]);
     const [contractAgents, setContractAgents] = useState([]);
     const [loadingPallets, setLoadingPallets] = useState(false);
+
+    const allContracts = customers.flatMap((c) =>
+        (c.contracts || []).map((contract) => ({
+            ...contract,
+            customer_name: c.name,
+            customer_id: c.id,
+        }))
+    );
+
+    const handleContractSelect = (contractId) => {
+        if (!contractId) {
+            setData((d) => ({
+                ...d,
+                contract_id: '',
+                period_id: '',
+                representative_id: '',
+                items: [],
+            }));
+            return;
+        }
+
+        const foundContract = allContracts.find((c) => c.id === parseInt(contractId));
+        if (foundContract) {
+            const activePeriods = (foundContract.periods || []).filter((p) => p.status === 'active');
+            const activePeriod = activePeriods.length > 0 ? activePeriods[0] : null;
+
+            setData((d) => ({
+                ...d,
+                customer_id: foundContract.customer_id,
+                contract_id: foundContract.id,
+                period_id: activePeriod ? activePeriod.id : (foundContract.periods?.[0]?.id || ''),
+                items: [],
+            }));
+        }
+    };
 
     const { data, setData, post, processing, errors } = useForm({
         customer_id: adjustment?.customer_id || '',
@@ -191,46 +227,59 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
                         </h3>
 
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-                            {/* Customer */}
+                            {/* 1. Serial Number */}
                             <div>
-                                <InputLabel value={lang === "ar" ? "العميل المتعاقد *" : "Customer *"} />
-                                <select
-                                    className="mt-1 block w-full border-border bg-surface text-text text-xs font-bold rounded-none h-[38px] px-2"
+                                <InputLabel value={lang === "ar" ? "رقم السند" : "Serial Number"} />
+                                <TextInput
+                                    type="text"
+                                    className="mt-1 w-full text-xs rounded-none border-border bg-slate-50 text-slate-500 font-mono font-bold"
+                                    value={
+                                        adjustment?.serial_number ||
+                                        (lang === "ar" ? "سيتم توليده تلقائياً" : "Auto-generated")
+                                    }
+                                    disabled
+                                    readOnly
+                                />
+                            </div>
+
+                            {/* 2. Contract SearchableSelect (Immediately after Serial Number) */}
+                            <div className="relative">
+                                <SearchableSelect
+                                    label={lang === "ar" ? "العقد المعتمد *" : "Approved Contract *"}
+                                    items={allContracts}
+                                    value={data.contract_id}
+                                    onChange={(selected) => handleContractSelect(selected ? selected.id : "")}
+                                    placeholder={lang === "ar" ? "ابحث برقم العقد أو اسم العميل..." : "Type contract number or customer..."}
+                                    searchKeys={["contract_number", "customer_name"]}
+                                    displayFormat={(c) => `${c.contract_number} ${c.customer_name ? `(${c.customer_name})` : ""}`}
+                                    valueKey="id"
+                                    error={errors.contract_id}
+                                />
+                            </div>
+
+                            {/* 3. Customer SearchableSelect */}
+                            <div className="relative">
+                                <SearchableSelect
+                                    label={lang === "ar" ? "العميل المتعاقد *" : "Customer *"}
+                                    items={customers}
                                     value={data.customer_id}
-                                    onChange={(e) => {
+                                    onChange={(selected) => {
+                                        const custId = selected ? selected.id : "";
                                         setData((d) => ({
                                             ...d,
-                                            customer_id: e.target.value,
+                                            customer_id: custId,
                                             contract_id: '',
                                             period_id: '',
                                             representative_id: '',
                                             items: [],
                                         }));
                                     }}
-                                    required
-                                >
-                                    <option value="">{lang === "ar" ? "-- اختر العميل --" : "-- Select Customer --"}</option>
-                                    {customers.map((c) => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Contract */}
-                            <div>
-                                <InputLabel value={lang === "ar" ? "العقد المعتمد *" : "Contract *"} />
-                                <select
-                                    className="mt-1 block w-full border-border bg-surface text-text text-xs font-bold rounded-none h-[38px] px-2"
-                                    value={data.contract_id}
-                                    onChange={(e) => setData('contract_id', e.target.value)}
-                                    disabled={!data.customer_id}
-                                    required
-                                >
-                                    <option value="">{lang === "ar" ? "-- اختر العقد --" : "-- Select Contract --"}</option>
-                                    {filteredContracts.map((c) => (
-                                        <option key={c.id} value={c.id}>{c.contract_number}</option>
-                                    ))}
-                                </select>
+                                    placeholder={lang === "ar" ? "ابحث عن اسم العميل..." : "Type customer name..."}
+                                    searchKeys={["name"]}
+                                    displayFormat={(c) => c.name}
+                                    valueKey="id"
+                                    error={errors.customer_id}
+                                />
                             </div>
 
                             {/* Operating Period */}
