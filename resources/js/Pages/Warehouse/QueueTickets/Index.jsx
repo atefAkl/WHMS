@@ -37,6 +37,7 @@ export default function Index({ tickets, customers, drivers }) {
     const handleContractSelect = (contractId) => {
         if (!contractId) {
             setData((d) => ({ ...d, contract_id: "", customer_id: "" }));
+            setQueueInfo(null);
             return;
         }
         const foundContract = allContracts.find((c) => c.id === parseInt(contractId));
@@ -49,6 +50,23 @@ export default function Index({ tickets, customers, drivers }) {
         }
     };
 
+    const handleCustomerSelect = (customerId) => {
+        if (!customerId) {
+            setData((d) => ({ ...d, customer_id: "", contract_id: "" }));
+            setQueueInfo(null);
+            return;
+        }
+        const foundCustomer = customers.find((c) => c.id === parseInt(customerId));
+        const custContracts = foundCustomer?.contracts || [];
+        const activeContract = custContracts.find((c) => c.status === 'active') || custContracts[0];
+
+        setData((d) => ({
+            ...d,
+            customer_id: foundCustomer ? foundCustomer.id : "",
+            contract_id: activeContract ? activeContract.id : "",
+        }));
+    };
+
     // Form state
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         customer_id: "",
@@ -59,35 +77,9 @@ export default function Index({ tickets, customers, drivers }) {
         notes: "",
     });
 
-    // Contract contracts list & status checks
-    const [customerContracts, setCustomerContracts] = useState([]);
-    const [loadingContracts, setLoadingContracts] = useState(false);
+    // Status checks
     const [queueInfo, setQueueInfo] = useState(null);
     const [loadingInfo, setLoadingInfo] = useState(false);
-
-    // Fetch contracts when customer is selected
-    useEffect(() => {
-        if (data.customer_id) {
-            setLoadingContracts(true);
-            setQueueInfo(null);
-            setData("contract_id", "");
-            
-            axios.get(`/api/customers/${data.customer_id}/contracts`)
-                .catch(() => axios.get(`/api/queue-tickets/customer-contracts/${data.customer_id}`))
-                .then(res => {
-                    const contractsList = Array.isArray(res.data) ? res.data : [];
-                    setCustomerContracts(contractsList);
-                })
-                .catch(err => {
-                    console.error(err);
-                    setCustomerContracts([]);
-                })
-                .finally(() => setLoadingContracts(false));
-        } else {
-            setCustomerContracts([]);
-            setQueueInfo(null);
-        }
-    }, [data.customer_id]);
 
     // Fetch contract queue info when contract is selected
     useEffect(() => {
@@ -263,10 +255,7 @@ export default function Index({ tickets, customers, drivers }) {
                                 label={lang === "ar" ? "العميل *" : "Customer *"}
                                 items={customers}
                                 value={data.customer_id}
-                                onChange={(selected) => {
-                                    const custId = selected ? selected.id : "";
-                                    setData((d) => ({ ...d, customer_id: custId, contract_id: "" }));
-                                }}
+                                onChange={(selected) => handleCustomerSelect(selected ? selected.id : "")}
                                 placeholder={lang === "ar" ? "ابحث عن اسم العميل..." : "Type customer name..."}
                                 searchKeys={["name"]}
                                 displayFormat={(c) => c.name}
