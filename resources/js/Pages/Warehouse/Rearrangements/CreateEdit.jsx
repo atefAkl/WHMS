@@ -24,8 +24,11 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
 
     const handleContractSelect = (contractId) => {
         if (!contractId) {
+            setFilteredContracts([]);
+            setAvailablePeriods([]);
             setData((d) => ({
                 ...d,
+                customer_id: '',
                 contract_id: '',
                 period_id: '',
                 items: [],
@@ -35,14 +38,21 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
 
         const foundContract = allContracts.find((c) => c.id === parseInt(contractId));
         if (foundContract) {
+            const customer = customers.find((c) => c.id === foundContract.customer_id);
+            if (customer) {
+                setFilteredContracts(customer.contracts || []);
+            }
+
             const activePeriods = (foundContract.periods || []).filter((p) => p.status === 'active');
-            const activePeriod = activePeriods.length > 0 ? activePeriods[0] : null;
+            const activePeriod = activePeriods.length > 0 ? activePeriods[0] : (foundContract.periods?.[0] || null);
+
+            setAvailablePeriods(activePeriods.length > 0 ? activePeriods : (foundContract.periods || []));
 
             setData((d) => ({
                 ...d,
                 customer_id: foundContract.customer_id,
                 contract_id: foundContract.id,
-                period_id: activePeriod ? activePeriod.id : (foundContract.periods?.[0]?.id || ''),
+                period_id: activePeriod ? activePeriod.id : '',
                 items: [],
             }));
         }
@@ -80,12 +90,12 @@ export default function CreateEdit({ customers = [], isEdit = false, rearrangeme
     useEffect(() => {
         if (data.contract_id) {
             const contractId = parseInt(data.contract_id);
-            const contract = filteredContracts.find((c) => c.id === contractId);
+            const contract = allContracts.find((c) => c.id === contractId);
             if (contract) {
                 const activePeriods = (contract.periods || []).filter((p) => p.status === 'active');
-                setAvailablePeriods(activePeriods);
+                setAvailablePeriods(activePeriods.length > 0 ? activePeriods : (contract.periods || []));
                 if (!data.period_id) {
-                    setData('period_id', activePeriods?.[0]?.id || '');
+                    setData('period_id', activePeriods?.[0]?.id || contract.periods?.[0]?.id || '');
                 }
             }
 

@@ -27,7 +27,15 @@ class QueueTicketController extends Controller
             ->orderBy('daily_sequence', 'desc')
             ->paginate(15);
 
-        $customers = Customer::select('id', 'name', 'phone_number')->orderBy('name')->get();
+        $customers = Customer::where('status', 'active')
+            ->orWhereHas('contracts', function ($q) {
+                $q->where('status', 'active');
+            })
+            ->with(['contracts' => function ($q) {
+                $q->where('status', 'active')->with(['periods', 'contractAgents']);
+            }])
+            ->orderBy('name')
+            ->get();
         $drivers = Driver::select('id', 'name', 'phone_number', 'vehicle_plate')->orderBy('name')->get();
 
         return Inertia::render('Warehouse/QueueTickets/Index', [

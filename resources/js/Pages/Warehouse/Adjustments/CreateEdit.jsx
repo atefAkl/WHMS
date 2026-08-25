@@ -26,8 +26,12 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
 
     const handleContractSelect = (contractId) => {
         if (!contractId) {
+            setFilteredContracts([]);
+            setAvailablePeriods([]);
+            setContractAgents([]);
             setData((d) => ({
                 ...d,
+                customer_id: '',
                 contract_id: '',
                 period_id: '',
                 representative_id: '',
@@ -38,14 +42,23 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
 
         const foundContract = allContracts.find((c) => c.id === parseInt(contractId));
         if (foundContract) {
+            const customer = customers.find((c) => c.id === foundContract.customer_id);
+            if (customer) {
+                setFilteredContracts(customer.contracts || []);
+            }
+
             const activePeriods = (foundContract.periods || []).filter((p) => p.status === 'active');
-            const activePeriod = activePeriods.length > 0 ? activePeriods[0] : null;
+            const activePeriod = activePeriods.length > 0 ? activePeriods[0] : (foundContract.periods?.[0] || null);
+
+            setAvailablePeriods(activePeriods.length > 0 ? activePeriods : (foundContract.periods || []));
+            setContractAgents(foundContract.contract_agents || []);
 
             setData((d) => ({
                 ...d,
                 customer_id: foundContract.customer_id,
                 contract_id: foundContract.id,
-                period_id: activePeriod ? activePeriod.id : (foundContract.periods?.[0]?.id || ''),
+                period_id: activePeriod ? activePeriod.id : '',
+                representative_id: foundContract.contract_agents?.[0]?.id || '',
                 items: [],
             }));
         }
@@ -84,10 +97,10 @@ export default function CreateEdit({ customers = [], inventoryItems = [], pallet
             const contractId = parseInt(data.contract_id);
             if (!contractId) return;
 
-            const contract = filteredContracts.find((c) => c.id === contractId);
+            const contract = allContracts.find((c) => c.id === contractId);
             if (contract) {
                 const activePeriods = (contract.periods || []).filter((p) => p.status === 'active');
-                setAvailablePeriods(activePeriods);
+                setAvailablePeriods(activePeriods.length > 0 ? activePeriods : (contract.periods || []));
                 setContractAgents(contract.contract_agents || []);
             }
 
