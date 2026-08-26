@@ -42,6 +42,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
     const [selectedStatus, setSelectedStatus] = useState(filters.status || "");
     const [dateFrom, setDateFrom] = useState(filters.date_from || "");
     const [dateTo, setDateTo] = useState(filters.date_to || "");
+    const [qtyOperator, setQtyOperator] = useState(filters.qty_operator || "gte");
+    const [qtyValue, setQtyValue] = useState(filters.qty_value || "");
     
     // Action security credentials modal (approve/reopen)
     const [actionTarget, setActionTarget] = useState(null); // { type: 'approve'|'reopen', item }
@@ -72,6 +74,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                 status: selectedStatus,
                 date_from: dateFrom,
                 date_to: dateTo,
+                qty_operator: qtyOperator,
+                qty_value: qtyValue,
             },
             { preserveState: true }
         );
@@ -84,6 +88,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
         setSelectedStatus("");
         setDateFrom("");
         setDateTo("");
+        setQtyOperator("gte");
+        setQtyValue("");
         router.get(route("deliveries.index"));
     };
 
@@ -220,7 +226,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                         </div>
 
                         {/* Row 2: Common Filters */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                             <div>
                                 <InputLabel value={lang === "ar" ? "العميل" : "Customer"} />
                                 <select
@@ -264,6 +270,30 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                     <option value="draft">{lang === "ar" ? "مسودة" : "Draft"}</option>
                                     <option value="approved">{lang === "ar" ? "معتمد" : "Approved"}</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <InputLabel value={lang === "ar" ? "فلتر الكمية (العبوات)" : "Qty Filter (Packs)"} />
+                                <div className="flex gap-1 mt-1">
+                                    <select
+                                        className="w-1/2 border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-1 font-bold"
+                                        value={qtyOperator}
+                                        onChange={(e) => setQtyOperator(e.target.value)}
+                                    >
+                                        <option value="gte">≥</option>
+                                        <option value="gt">&gt;</option>
+                                        <option value="lte">≤</option>
+                                        <option value="lt">&lt;</option>
+                                        <option value="eq">=</option>
+                                    </select>
+                                    <TextInput
+                                        className="w-1/2 text-xs rounded-none border-border h-[30px] px-2 font-mono"
+                                        placeholder={lang === "ar" ? "الكمية..." : "Qty..."}
+                                        type="number"
+                                        value={qtyValue}
+                                        onChange={(e) => setQtyValue(e.target.value)}
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-1.5 h-[30px]">

@@ -1441,6 +1441,25 @@ class ContractController extends Controller
             $pallet->stay_duration_days = max(1, $totalStayDays);
             $pallet->stay_duration_months = max(1, $totalStayMonths);
 
+            // Filter by quantity
+            if ($request->filled('qty_value') && is_numeric($request->qty_value)) {
+                $qtyVal = (float) $request->qty_value;
+                $op = $request->input('qty_operator', 'gte');
+                $palletQty = (float) $pallet->total_packages;
+
+                $matchesQty = match($op) {
+                    'gt', '>' => $palletQty > $qtyVal,
+                    'lt', '<' => $palletQty < $qtyVal,
+                    'eq', '=' => $palletQty == $qtyVal,
+                    'lte', '<=' => $palletQty <= $qtyVal,
+                    default => $palletQty >= $qtyVal,
+                };
+
+                if (!$matchesQty) {
+                    continue;
+                }
+            }
+
             // If filter item_id is specified, verify if it is in contents
             if ($request->filled('item_id')) {
                 $itemId = (int) $request->input('item_id');

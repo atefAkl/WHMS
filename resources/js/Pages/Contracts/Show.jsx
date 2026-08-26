@@ -132,6 +132,8 @@ export default function Show({
     const [filterPalletSearch, setFilterPalletSearch] = useState("");
     const [filterPalletSize, setFilterPalletSize] = useState("");
     const [filterPalletItemId, setFilterPalletItemId] = useState("");
+    const [filterPalletQtyOperator, setFilterPalletQtyOperator] = useState("gte");
+    const [filterPalletQtyValue, setFilterPalletQtyValue] = useState("");
     const [palletViewMode, setPalletViewMode] = useState("grid");
     const [palletsSummary, setPalletsSummary] = useState(null);
 
@@ -166,6 +168,8 @@ export default function Show({
                     search: filterPalletSearch,
                     size: filterPalletSize,
                     item_id: filterPalletItemId,
+                    qty_operator: filterPalletQtyOperator,
+                    qty_value: filterPalletQtyValue,
                 },
             })
             .then((response) => {
@@ -258,12 +262,14 @@ export default function Show({
         filterPalletSearch,
         filterPalletSize,
         filterPalletItemId,
+        filterPalletQtyOperator,
+        filterPalletQtyValue,
     ]);
 
     // Reset Pallets page on filter change
     useEffect(() => {
         setPalletsPage(1);
-    }, [filterPalletSearch, filterPalletSize, filterPalletItemId]);
+    }, [filterPalletSearch, filterPalletSize, filterPalletItemId, filterPalletQtyOperator, filterPalletQtyValue]);
 
     // Trigger Stored Items fetch
     useEffect(() => {
@@ -5375,7 +5381,7 @@ export default function Show({
                                     icon={Layers}
                                 >
                                     {/* Filters */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-4 bg-surface-muted/10 p-3 rounded-xl border border-border">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mb-4 bg-surface-muted/10 p-3 rounded-xl border border-border">
                                         <div>
                                             <label className="text-[10px] font-bold text-text-muted mb-1 block">
                                                 {lang === "ar"
@@ -5456,6 +5462,46 @@ export default function Show({
                                                     </option>
                                                 ))}
                                             </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                                {lang === "ar"
+                                                    ? "فلتر الكمية المتبقية"
+                                                    : "Remaining Qty Filter"}
+                                            </label>
+                                            <div className="flex gap-1">
+                                                <select
+                                                    value={filterPalletQtyOperator}
+                                                    onChange={(e) =>
+                                                        setFilterPalletQtyOperator(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="w-1/2 text-xs h-[30px] px-1 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-bold"
+                                                >
+                                                    <option value="gte">≥</option>
+                                                    <option value="gt">&gt;</option>
+                                                    <option value="lte">≤</option>
+                                                    <option value="lt">&lt;</option>
+                                                    <option value="eq">=</option>
+                                                </select>
+                                                <input
+                                                    type="number"
+                                                    value={filterPalletQtyValue}
+                                                    onChange={(e) =>
+                                                        setFilterPalletQtyValue(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder={
+                                                        lang === "ar"
+                                                            ? "الكمية..."
+                                                            : "Qty..."
+                                                    }
+                                                    className="w-1/2 text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono"
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="flex items-end gap-1.5 font-bold">

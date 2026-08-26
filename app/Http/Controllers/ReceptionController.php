@@ -51,6 +51,18 @@ class ReceptionController extends Controller
             });
         }
 
+        if ($request->filled('qty_value') && is_numeric($request->qty_value)) {
+            $val = (float) $request->qty_value;
+            $op = match($request->input('qty_operator')) {
+                'gt', '>' => '>',
+                'lt', '<' => '<',
+                'eq', '=' => '=',
+                'lte', '<=' => '<=',
+                default => '>=',
+            };
+            $query->having('total_quantity', $op, $val);
+        }
+
         $receptions = $query->latest()->paginate(15)->withQueryString();
 
         $customers = Customer::orderBy('name')->get();
@@ -60,7 +72,7 @@ class ReceptionController extends Controller
             'receptions' => $receptions,
             'customers' => $customers,
             'contracts' => $contracts,
-            'filters' => $request->only(['customer_id', 'contract_id', 'status', 'search', 'date_from', 'date_to'])
+            'filters' => $request->only(['customer_id', 'contract_id', 'status', 'search', 'date_from', 'date_to', 'qty_operator', 'qty_value'])
         ]);
     }
 
