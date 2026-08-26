@@ -54,13 +54,15 @@ export default function Show({ rearrangement }) {
                     }
                     actions={
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => window.print()}
+                            <a
+                                href={route('pallet-rearrangements.print', rearrangement.id)}
+                                target="_blank"
+                                rel="noreferrer"
                                 className="bg-surface border border-border hover:bg-surface-muted text-text text-xs font-bold px-3.5 py-2 flex items-center gap-1.5 shadow-2xs"
                             >
                                 <Printer className="h-4 w-4" />
                                 <span>{lang === "ar" ? "طباعة السند" : "Print Voucher"}</span>
-                            </button>
+                            </a>
 
                             {rearrangement.status === 'draft' ? (
                                 <>

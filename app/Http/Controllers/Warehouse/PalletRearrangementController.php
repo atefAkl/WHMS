@@ -165,6 +165,24 @@ class PalletRearrangementController extends Controller
         ]);
     }
 
+    public function print(PalletRearrangement $palletRearrangement)
+    {
+        $palletRearrangement->load([
+            'customer',
+            'contract',
+            'period',
+            'createdByUser',
+            'approvedByUser',
+            'items.inventoryItem',
+            'items.variant',
+            'items.pallet'
+        ]);
+
+        return Inertia::render('Warehouse/Rearrangements/Print', [
+            'rearrangement' => $palletRearrangement,
+        ]);
+    }
+
     public function edit(PalletRearrangement $palletRearrangement)
     {
         if ($palletRearrangement->status === 'approved') {

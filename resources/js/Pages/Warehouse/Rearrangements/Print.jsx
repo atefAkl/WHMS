@@ -3,7 +3,7 @@ import { Head, usePage, Link } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
 import { Printer, FileText, FileCheck, List } from "lucide-react";
 
-export default function Print({ delivery, companySettings = {} }) {
+export default function Print({ rearrangement, companySettings = {} }) {
     const { lang } = useLang();
     const user = usePage().props.auth.user;
 
@@ -33,18 +33,16 @@ export default function Print({ delivery, companySettings = {} }) {
     };
 
     // Calculate totals
-    const totalQty = delivery.inventory_entries?.reduce((sum, entry) => sum + parseFloat(entry.quantity_out || 0), 0) || 0;
-    const totalPallets = delivery.inventory_entries?.length || 0;
+    const totalQty = rearrangement.items?.reduce((sum, item) => sum + parseFloat(item.quantity || item.quantity_in || item.quantity_out || 0), 0) || 0;
+    const totalPallets = rearrangement.items?.length || 0;
 
-    // Helper: Format item name, extract capacity/weight, and append to package box column
-    const formatItemAndPackage = (entry) => {
-        let rawItemName = displayBilingual(entry.inventoryItem?.name || entry.inventory_item?.name) || "";
-        let rawVarName = displayBilingual(entry.variant?.name) || "";
-        let boxType = entry.variant?.unit || entry.variant?.package_type || "كرتون";
+    // Helper: Format item name, extract capacity/weight, and format package column
+    const formatItemAndPackage = (item) => {
+        let rawItemName = displayBilingual(item.inventoryItem?.name || item.inventory_item?.name) || "";
+        let rawVarName = displayBilingual(item.variant?.name) || "";
+        let boxType = item.variant?.unit || item.variant?.package_type || "كرتون";
 
         let extraCap = "";
-
-        // Pattern to catch 'ك موز', '3ك', '3 ك', '3كجم', etc.
         const capacityRegex = /(\d+(?:\.\d+)?\s*(?:كجم|ك|kg|k)\s*\w*|ك\s+\w+)/gi;
 
         const mVar = rawVarName.match(capacityRegex);
@@ -59,7 +57,6 @@ export default function Print({ delivery, companySettings = {} }) {
             rawItemName = rawItemName.replace(capacityRegex, "").trim();
         }
 
-        // If variant name equals boxType, don't duplicate
         if (rawVarName.toLowerCase() === boxType.toLowerCase()) {
             rawVarName = "";
         }
@@ -75,13 +72,13 @@ export default function Print({ delivery, companySettings = {} }) {
         return { cleanItemName: rawItemName, cleanVarName: rawVarName, finalBoxDisplay };
     };
 
-    const getGradeDisplay = (entry) => {
-        return entry.variant?.size || entry.variant?.quality || entry.pallet?.size || "—";
+    const getGradeDisplay = (item) => {
+        return item.variant?.size || item.variant?.quality || item.pallet?.size || "—";
     };
 
-    const getPalletFormatted = (entry) => {
-        const palletNum = entry.pallet?.pallet_number || entry.pallet_number || "—";
-        const palletSize = entry.pallet?.size || entry.variant?.size;
+    const getPalletFormatted = (item) => {
+        const palletNum = item.pallet?.pallet_number || item.pallet?.code || item.pallet_id || "—";
+        const palletSize = item.pallet?.size || item.variant?.size;
         if (palletNum !== "—" && palletSize) {
             return `${palletNum} / ${palletSize}`;
         }
@@ -104,29 +101,29 @@ export default function Print({ delivery, companySettings = {} }) {
             dir={lang === "ar" ? "rtl" : "ltr"}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
-            <Head title={lang === "ar" ? `طباعة سند تسليم وخروج: ${delivery.serial_number}` : `Print Delivery: ${delivery.serial_number}`} />
+            <Head title={lang === "ar" ? `طباعة سند ترتيب ونقل طبالي: ${rearrangement.serial_number}` : `Print Rearrangement: ${rearrangement.serial_number}`} />
 
             {/* Print Control Bar - Hidden when printing */}
             <div className="print:hidden mb-6 flex flex-wrap justify-between items-center bg-gray-50 p-3 border border-gray-200 rounded-xl gap-3">
                 <div className="flex items-center gap-3">
                     <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                         <FileText className="h-4 w-4 text-primary" />
-                        {lang === "ar" ? "معاينة طباعة سند تسليم وخروج البضائع" : "Goods Delivery Voucher Print Preview"}
+                        {lang === "ar" ? "معاينة طباعة سند نقل وترتيب الطبالي" : "Pallet Rearrangement Voucher Print Preview"}
                     </span>
 
                     {/* Navigation Links */}
                     <div className="flex items-center gap-2 border-s border-gray-300 ps-3 ms-1">
                         <Link
-                            href={route("deliveries.index")}
+                            href={route("pallet-rearrangements.index")}
                             className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-all"
                         >
                             <List className="h-3.5 w-3.5" />
-                            <span>{lang === "ar" ? "العودة إلى السندات" : "Back to Deliveries"}</span>
+                            <span>{lang === "ar" ? "العودة إلى السندات" : "Back to Rearrangements"}</span>
                         </Link>
 
-                        {delivery.contract_id && (
+                        {rearrangement.contract_id && (
                             <Link
-                                href={`/contracts/${delivery.contract_id}`}
+                                href={`/contracts/${rearrangement.contract_id}`}
                                 className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-all"
                             >
                                 <FileCheck className="h-3.5 w-3.5 text-blue-600" />
@@ -183,13 +180,13 @@ export default function Print({ delivery, companySettings = {} }) {
                             </div>
                         </div>
 
-                        {/* Right: Goods Delivery Title & Serial Number */}
+                        {/* Right: Pallet Rearrangement Title & Serial Number */}
                         <div className="text-end space-y-0.5">
                             <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
-                                {lang === "ar" ? "سند تسليم وخروج بضائع" : "Goods Delivery Note"}
+                                {lang === "ar" ? "سند نقل وترتيب طبالي" : "Pallet Rearrangement Note"}
                             </h1>
                             <div className="text-xs font-black font-mono text-gray-900">
-                                No: {delivery.serial_number}
+                                No: {rearrangement.serial_number}
                             </div>
                         </div>
                     </div>
@@ -200,49 +197,43 @@ export default function Print({ delivery, companySettings = {} }) {
                         <div className="space-y-1">
                             <div className="flex gap-2">
                                 <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العميل:" : "Client:"}</span>
-                                <span className="font-bold text-black">{delivery.customer?.name}</span>
+                                <span className="font-bold text-black">{rearrangement.customer?.name}</span>
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex gap-2 flex-1">
                                     <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العقد:" : "Contract:"}</span>
-                                    <span className="font-mono font-bold text-black">{delivery.contract?.contract_number}</span>
+                                    <span className="font-mono font-bold text-black">{rearrangement.contract?.contract_number}</span>
                                 </div>
                                 <div className="flex gap-1 shrink-0">
                                     <span className="font-bold text-gray-600">{lang === "ar" ? "الفترة:" : "P.No:"}</span>
-                                    <span className="font-mono font-bold text-black">{delivery.period?.period_number ? String(delivery.period.period_number).padStart(2, '0') : '01'}</span>
+                                    <span className="font-mono font-bold text-black">{rearrangement.period?.period_number ? String(rearrangement.period.period_number).padStart(2, '0') : '01'}</span>
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المستلم / المندوب:" : "Recipient:"}</span>
-                                <span className="font-medium text-gray-900">{delivery.representative?.name || delivery.driver?.name || delivery.recipient_name || "—"}</span>
+                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "نوع العملية:" : "Operation:"}</span>
+                                <span className="font-medium text-gray-900">{lang === "ar" ? "نقل وترتيب داخلي بين الطبالي" : "Internal Pallet Transfer"}</span>
                             </div>
-                            {delivery.exit_authorization && (
-                                <div className="flex gap-2">
-                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "إذن الخروج:" : "Exit Permit:"}</span>
-                                    <span className="font-mono font-bold text-blue-800">{delivery.exit_authorization.serial_number}</span>
-                                </div>
-                            )}
                         </div>
 
                         {/* Right Column */}
                         <div className="space-y-1">
                             <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المشرف / المسلم:" : "Issuer:"}</span>
-                                <span className="font-bold text-black">{delivery.created_by_user?.name || user?.name || "أمين المستودع"}</span>
+                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "منشئ السند:" : "Issuer:"}</span>
+                                <span className="font-bold text-black">{rearrangement.created_by_user?.name || user?.name || "أمين المستودع"}</span>
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex gap-2 flex-1">
-                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "تاريخ الخروج:" : "Date:"}</span>
-                                    <span className="font-mono font-bold text-black">{delivery.delivery_date ? new Date(delivery.delivery_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}</span>
+                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "تاريخ الترتيب:" : "Date:"}</span>
+                                    <span className="font-mono font-bold text-black">{rearrangement.rearrangement_date ? new Date(rearrangement.rearrangement_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}</span>
                                 </div>
                                 <div className="flex gap-1 shrink-0">
                                     <span className="font-bold text-gray-600">{lang === "ar" ? "الوردية:" : "Shift:"}</span>
-                                    <span className="font-mono font-bold text-black">{delivery.shift || "م / M"}</span>
+                                    <span className="font-mono font-bold text-black">{rearrangement.shift || "م / M"}</span>
                                 </div>
                             </div>
                             <div className="flex gap-2">
                                 <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "ملاحظات:" : "Note:"}</span>
-                                <span className="text-[10px] text-gray-800 leading-tight">{delivery.notes || "—"}</span>
+                                <span className="text-[10px] text-gray-800 leading-tight">{rearrangement.notes || "—"}</span>
                             </div>
                         </div>
                     </div>
@@ -254,20 +245,24 @@ export default function Print({ delivery, companySettings = {} }) {
                                 <tr className="border-b border-black text-black font-bold">
                                     <th className="py-1.5 text-start w-10">#</th>
                                     <th className="py-1.5 text-start">{lang === "ar" ? "الصنف (Items)" : "Items"}</th>
-                                    <th className="py-1.5 w-32">{lang === "ar" ? "الدرجة (Grade)" : "Grade"}</th>
-                                    <th className="py-1.5 w-36">{lang === "ar" ? "الطبلية (Table)" : "Table"}</th>
-                                    <th className="py-1.5 w-32">{lang === "ar" ? "العبوة (Box)" : "Box"}</th>
-                                    <th className="py-1.5 w-24">{lang === "ar" ? "الكمية المخرجة (Total)" : "Total"}</th>
+                                    <th className="py-1.5 w-28">{lang === "ar" ? "الدرجة (Grade)" : "Grade"}</th>
+                                    <th className="py-1.5 w-32">{lang === "ar" ? "الطبلية (Pallet)" : "Pallet"}</th>
+                                    <th className="py-1.5 w-28">{lang === "ar" ? "نوع الحركة (Type)" : "Type"}</th>
+                                    <th className="py-1.5 w-28">{lang === "ar" ? "الكمية المنقولة (Qty)" : "Qty"}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {delivery.inventory_entries?.map((entry, idx) => {
-                                    const { cleanItemName, cleanVarName, finalBoxDisplay } = formatItemAndPackage(entry);
-                                    const gradeDisplay = getGradeDisplay(entry);
-                                    const palletFormatted = getPalletFormatted(entry);
+                                {rearrangement.items?.map((item, idx) => {
+                                    const { cleanItemName, cleanVarName } = formatItemAndPackage(item);
+                                    const gradeDisplay = getGradeDisplay(item);
+                                    const palletFormatted = getPalletFormatted(item);
+                                    const qtyIn = parseFloat(item.quantity_in || 0);
+                                    const qtyOut = parseFloat(item.quantity_out || 0);
+                                    const isAdd = qtyIn > 0;
+                                    const val = isAdd ? qtyIn : (qtyOut > 0 ? qtyOut : parseFloat(item.quantity || 0));
 
                                     return (
-                                        <tr key={entry.id || idx} className="text-gray-900">
+                                        <tr key={item.id || idx} className="text-gray-900">
                                             <td className="py-1.5 text-start font-mono">{String(idx + 1).padStart(2, '0')}</td>
                                             <td className="py-1.5 text-start font-bold">
                                                 {cleanItemName}
@@ -280,10 +275,18 @@ export default function Print({ delivery, companySettings = {} }) {
                                                 {palletFormatted}
                                             </td>
                                             <td className="py-1.5 font-medium">
-                                                {finalBoxDisplay}
+                                                {isAdd ? (
+                                                    <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
+                                                        {lang === "ar" ? "+ إضافة للطبلية" : "+ Add to Pallet"}
+                                                    </span>
+                                                ) : (
+                                                    <span className="font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 text-[10px]">
+                                                        {lang === "ar" ? "- سحب من الطبلية" : "- Deduct from Pallet"}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="py-1.5 font-mono font-bold">
-                                                {Math.round(parseFloat(entry.quantity_out || 0))}
+                                                {Math.round(val)}
                                             </td>
                                         </tr>
                                     );
@@ -292,11 +295,11 @@ export default function Print({ delivery, companySettings = {} }) {
                                 {/* Summary Row Split into 2 Equal Halves */}
                                 <tr className="border-t-2 border-black font-extrabold text-black">
                                     <td colSpan="3" className="py-2 px-4 text-start font-bold">
-                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الطبالي / Total Tables:" : "Total Tables:"}</span>
+                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي بنود الحركة / Total Entries:" : "Total Entries:"}</span>
                                         <span className="font-mono text-sm font-black text-black">{totalPallets}</span>
                                     </td>
                                     <td colSpan="3" className="py-2 px-4 text-end font-bold">
-                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي العبوات المخرجة / Total Packs Out:" : "Total Packs Out:"}</span>
+                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الكمية المنقولة / Total Transferred:" : "Total Transferred:"}</span>
                                         <span className="font-mono text-sm font-black text-black">{Math.round(totalQty).toLocaleString()}</span>
                                     </td>
                                 </tr>
@@ -313,11 +316,11 @@ export default function Print({ delivery, companySettings = {} }) {
                     <div className="grid grid-cols-3 gap-8 text-center text-xs">
                         <div className="space-y-4">
                             <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
-                                Client/Represent
+                                Storekeeper
                             </p>
                             <div className="text-start text-[11px] space-y-0.5">
                                 <p className="text-gray-800 font-semibold truncate">
-                                    {lang === "ar" ? "الاسم: " : "Name: "}{delivery.representative?.name || delivery.driver?.name || delivery.recipient_name || delivery.customer?.name || "________________"}
+                                    {lang === "ar" ? "الاسم: " : "Name: "}{rearrangement.created_by_user?.name || user?.name || "________________"}
                                 </p>
                                 <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
                             </div>
@@ -338,7 +341,7 @@ export default function Print({ delivery, companySettings = {} }) {
                                 Stores Admin
                             </p>
                             <div className="text-start text-[11px] space-y-0.5">
-                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{delivery.created_by_user?.name || user?.name || "________________"}</p>
+                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{rearrangement.approved_by_user?.name || user?.name || "________________"}</p>
                                 <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
                             </div>
                         </div>

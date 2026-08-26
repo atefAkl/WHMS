@@ -2,7 +2,7 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { ArrowLeftRight, Plus, Eye, Search, Home, ChevronRight, Edit, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowLeftRight, Plus, Eye, Search, Home, ChevronRight, Edit, Trash2, RotateCcw, Printer } from 'lucide-react';
 import PageHeader from '@/Components/PageHeader';
 import Pagination from '@/Components/Pagination';
 
@@ -168,6 +168,16 @@ export default function Index({ rearrangements = { data: [] }, customers = [], c
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Link>
+
+                                                <a
+                                                    href={route('pallet-rearrangements.print', re.id)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="p-1 text-blue-600 hover:bg-blue-50 transition-all"
+                                                    title={lang === "ar" ? "طباعة السند" : "Print"}
+                                                >
+                                                    <Printer className="h-4 w-4" />
+                                                </a>
 
                                                 {re.status === 'draft' ? (
                                                     <>

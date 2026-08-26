@@ -168,6 +168,7 @@ Route::middleware([
 
                 // Pallet Rearrangements Vouchers (15 Code)
                 Route::resource('pallet-rearrangements', \App\Http\Controllers\Warehouse\PalletRearrangementController::class);
+                Route::get('pallet-rearrangements/{palletRearrangement}/print', [\App\Http\Controllers\Warehouse\PalletRearrangementController::class, 'print'])->name('pallet-rearrangements.print');
                 Route::post('pallet-rearrangements/{palletRearrangement}/approve', [\App\Http\Controllers\Warehouse\PalletRearrangementController::class, 'approve'])->name('pallet-rearrangements.approve');
                 Route::post('pallet-rearrangements/{palletRearrangement}/reopen', [\App\Http\Controllers\Warehouse\PalletRearrangementController::class, 'reopen'])->name('pallet-rearrangements.reopen');
                 Route::get('api/contracts/{contract}/rearrangement-options', [\App\Http\Controllers\Warehouse\PalletRearrangementController::class, 'getContractRearrangementOptions'])->name('api.contracts.rearrangement-options');
