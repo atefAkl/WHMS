@@ -265,11 +265,54 @@ class PalletController extends Controller
         $code = trim($request->pallet_number);
         $pallet = Pallet::findOrCreateFromCode($code);
 
+        // Fetch inventory entries for this pallet with items, variants, and contract
+        $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
+            ->with(['inventoryItem', 'variant', 'voucher.contract.customer'])
+            ->get();
+
+        $grouped = $entries->groupBy(function ($entry) {
+            return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
+        });
+
+        $contents = [];
+        foreach ($grouped as $group) {
+            $first = $group->first();
+            $qtyIn = (float) $group->sum('quantity_in');
+            $qtyOut = (float) $group->sum('quantity_out');
+            $balance = max(0, $qtyIn - $qtyOut);
+
+            if ($balance > 0) {
+                $contents[] = [
+                    'item_id' => $first->inventory_item_id,
+                    'item_name' => $first->inventoryItem ? $first->inventoryItem->name : 'صنف غير محدد',
+                    'variant_id' => $first->inventory_item_variant_id,
+                    'variant_name' => $first->variant ? $first->variant->variant_name : null,
+                    'quality' => $first->variant ? $first->variant->quality : null,
+                    'quantity' => $balance,
+                    'total_in' => $qtyIn,
+                    'total_out' => $qtyOut,
+                ];
+            }
+        }
+
+        // Get latest associated contract
+        $latestVoucher = $entries->sortByDesc('created_at')->pluck('voucher')->filter()->first();
+        $contract = $latestVoucher?->contract;
+        $customer = $contract?->customer;
+
         return response()->json([
             'id' => $pallet->id,
             'pallet_number' => $pallet->pallet_number,
             'pallet_code' => $pallet->pallet_code,
             'size' => $pallet->size,
+            'contract' => $contract ? [
+                'id' => $contract->id,
+                'contract_number' => $contract->contract_number,
+                'customer_id' => $contract->customer_id,
+                'customer_name' => $customer ? $customer->name : null,
+            ] : null,
+            'contents' => $contents,
+            'total_packages' => array_sum(array_column($contents, 'quantity')),
         ]);
     }
 }

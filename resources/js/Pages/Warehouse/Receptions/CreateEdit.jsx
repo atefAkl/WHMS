@@ -21,6 +21,9 @@ import {
     ChevronDown,
     Printer,
     Unlock,
+    Box,
+    Search,
+    RefreshCw,
 } from "lucide-react";
 import Modal from "@/Components/Modal";
 import ConfirmationModal from "@/Components/ConfirmationModal";
@@ -89,6 +92,7 @@ export default function CreateEdit({
     const [posQuantity, setPosQuantity] = useState("");
     const [posRowError, setPosRowError] = useState("");
     const [loadingPallet, setLoadingPallet] = useState(false);
+    const [palletLookupData, setPalletLookupData] = useState(null);
     const [editingRowIndex, setEditingRowIndex] = useState(null);
 
     // Active autocomplete indexes for ArrowUp/ArrowDown selection
@@ -364,7 +368,10 @@ export default function CreateEdit({
     // Handle Pallet blur to lookup details
     const handlePalletBlur = () => {
         const number = posPalletNumber.trim();
-        if (!number) return;
+        if (!number) {
+            setPalletLookupData(null);
+            return;
+        }
 
         setLoadingPallet(true);
         setPosRowError("");
@@ -375,10 +382,17 @@ export default function CreateEdit({
                 setLoadingPallet(false);
                 if (res.data) {
                     setPosPalletSize(res.data.size);
+                    setPalletLookupData(res.data);
+
+                    // Auto select contract if contract exists on pallet and contract not selected yet
+                    if (res.data.contract && !data.contract_id) {
+                        handleContractSelect(res.data.contract.id);
+                    }
                 }
             })
             .catch((err) => {
                 setLoadingPallet(false);
+                setPalletLookupData(null);
                 console.error(err);
                 setPosRowError(
                     lang === "ar"
@@ -1445,6 +1459,81 @@ export default function CreateEdit({
                                 <div className="bg-danger/10 border border-danger/20 text-danger p-2 text-xs font-bold rounded-none flex items-center gap-1.5">
                                     <AlertCircle className="h-4 w-4" />
                                     <span>{posRowError}</span>
+                                </div>
+                            )}
+
+                            {/* Helper hint sentence below POS Bar input fields */}
+                            <div className="flex flex-wrap items-center justify-between text-[11px] text-text-muted border-t border-border/60 pt-2.5">
+                                <div className="flex items-center gap-1.5 font-bold text-primary">
+                                    <Search className="h-3.5 w-3.5" />
+                                    <span>{lang === "ar" ? "أدخل رقم الطبلية للبحث" : "Enter pallet number for search"}</span>
+                                    <span className="text-text-muted font-normal">
+                                        {lang === "ar"
+                                            ? "(عند الخروج من الحقل (Blur) يتم جلب بيانات الطبلية وحمولتها والأصناف والعقد المرتبط تلقائياً)"
+                                            : "(On field blur, pallet capacity, contents, qualities and contract are fetched automatically)"}
+                                    </span>
+                                </div>
+                                {loadingPallet && (
+                                    <span className="flex items-center gap-1 text-primary font-bold animate-pulse">
+                                        <RefreshCw className="h-3 w-3 animate-spin" />
+                                        {lang === "ar" ? "جاري جلب بيانات الطبلية..." : "Fetching pallet data..."}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Fetched Pallet Data Card */}
+                            {palletLookupData && (
+                                <div className="bg-primary/5 border border-primary/20 p-3 rounded-none text-xs space-y-2 font-sans">
+                                    <div className="flex flex-wrap justify-between items-center border-b border-primary/10 pb-2 gap-2">
+                                        <div className="flex items-center gap-2 font-bold text-text">
+                                            <Box className="h-4 w-4 text-primary" />
+                                            <span>
+                                                {lang === "ar" ? `طبلية رقم: ${palletLookupData.pallet_number}` : `Pallet No: ${palletLookupData.pallet_number}`}
+                                            </span>
+                                            <span className="font-mono text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                                {palletLookupData.pallet_code}
+                                            </span>
+                                            <span className="text-text-muted">
+                                                • {lang === "ar" ? `الحمولة / الحجم: ${palletLookupData.size}` : `Capacity / Size: ${palletLookupData.size}`}
+                                            </span>
+                                        </div>
+                                        {palletLookupData.contract && (
+                                            <div className="text-[11px] font-bold text-text-muted">
+                                                {lang === "ar" ? "العقد المرتبط: " : "Contract: "}
+                                                <span className="text-primary font-mono">{palletLookupData.contract.contract_number}</span>
+                                                {palletLookupData.contract.customer_name && (
+                                                    <span> ({palletLookupData.contract.customer_name})</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Contents & Qualities */}
+                                    <div>
+                                        <span className="font-bold text-[11px] text-text-muted block mb-1">
+                                            {lang === "ar" ? "المحتويات والأصناف المسجلة حالياً على الطبلية:" : "Current Stored Contents on Pallet:"}
+                                        </span>
+                                        {palletLookupData.contents && palletLookupData.contents.length > 0 ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {palletLookupData.contents.map((c, idx) => (
+                                                    <div key={idx} className="bg-surface border border-border px-2.5 py-1 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs">
+                                                        <span className="text-text">{c.item_name}</span>
+                                                        {c.variant_name && <span className="text-text-muted">({c.variant_name})</span>}
+                                                        {c.quality && (
+                                                            <span className="bg-amber-100 text-amber-800 px-1 py-0.2 text-[10px] rounded">
+                                                                {c.quality}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-primary font-mono">{c.quantity} عبوة</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[11px] text-text-muted italic">
+                                                {lang === "ar" ? "طبلية فارغة / جديدة (لا تحتوي على بضائع مسجلة حالياً)." : "New / Empty pallet (no stored items currently)."}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
