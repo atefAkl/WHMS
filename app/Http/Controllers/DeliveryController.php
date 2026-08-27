@@ -33,6 +33,9 @@ class DeliveryController extends Controller
         if ($request->filled('contract_id')) {
             $query->where('contract_id', $request->contract_id);
         }
+        if ($request->filled('driver_id')) {
+            $query->where('driver_id', $request->driver_id);
+        }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -49,6 +52,9 @@ class DeliveryController extends Controller
                     ->orWhere('written_reference', 'like', "%{$search}%")
                     ->orWhereHas('customer', function ($c) use ($search) {
                         $c->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('driver', function ($d) use ($search) {
+                        $d->where('name', 'like', "%{$search}%");
                     });
             });
         }
@@ -72,12 +78,14 @@ class DeliveryController extends Controller
 
         $customers = Customer::orderBy('name')->get();
         $contracts = Contract::orderBy('contract_number')->get();
+        $drivers = \App\Models\Driver::orderBy('name')->get();
 
         return Inertia::render('Warehouse/Deliveries/Index', [
             'deliveries' => $deliveries,
             'customers' => $customers,
             'contracts' => $contracts,
-            'filters' => $request->only(['customer_id', 'contract_id', 'status', 'search', 'date_from', 'date_to', 'qty_operator', 'qty_value'])
+            'drivers' => $drivers,
+            'filters' => $request->only(['customer_id', 'contract_id', 'driver_id', 'status', 'search', 'date_from', 'date_to', 'qty_operator', 'qty_value'])
         ]);
     }
 

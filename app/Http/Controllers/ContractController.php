@@ -1039,6 +1039,13 @@ class ContractController extends Controller
             });
         }
 
+        // 7. Driver (السائق)
+        if ($request->filled('driver_id')) {
+            $driverId = $request->input('driver_id');
+            $receptionsQuery->where('driver_id', $driverId);
+            $deliveriesQuery->where('driver_id', $driverId);
+        }
+
         // Fetch
         $vouchers = collect();
 
@@ -1082,6 +1089,9 @@ class ContractController extends Controller
             });
         })->get(['id', 'name']);
 
+        // Drivers list for dropdown
+        $drivers = \App\Models\Driver::orderBy('name')->get(['id', 'name', 'vehicle_plate']);
+
         // Paginate
         $perPage = 24;
         $page = (int) $request->input('page', 1);
@@ -1099,6 +1109,7 @@ class ContractController extends Controller
             'current_page' => $page,
             'last_page' => ceil($total / $perPage),
             'goods_types' => $goodsTypes,
+            'drivers' => $drivers,
             'summary' => [
                 'total_in' => $totalIn,
                 'total_out' => $totalOut,

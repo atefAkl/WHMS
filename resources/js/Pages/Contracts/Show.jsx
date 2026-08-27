@@ -119,6 +119,7 @@ export default function Show({
     const [vouchersLastPage, setVouchersLastPage] = useState(1);
     const [vouchersLoading, setVouchersLoading] = useState(false);
     const [vouchersGoodsTypes, setVouchersGoodsTypes] = useState([]);
+    const [vouchersDrivers, setVouchersDrivers] = useState([]);
     const [vouchersSummary, setVouchersSummary] = useState(null);
 
     // Pallets Tab states
@@ -290,6 +291,7 @@ export default function Show({
     const [filterStatus, setFilterStatus] = useState("");
     const [filterType, setFilterType] = useState("");
     const [filterGoodsType, setFilterGoodsType] = useState("");
+    const [filterDriverId, setFilterDriverId] = useState("");
     const [filterStartDate, setFilterStartDate] = useState("");
     const [filterEndDate, setFilterEndDate] = useState("");
 
@@ -321,6 +323,7 @@ export default function Show({
                     status: filterStatus,
                     type: filterType,
                     goods_type: filterGoodsType,
+                    driver_id: filterDriverId,
                     start_date: filterStartDate,
                     end_date: filterEndDate,
                 },
@@ -330,6 +333,7 @@ export default function Show({
                 setVouchersTotal(response.data.total);
                 setVouchersLastPage(response.data.last_page);
                 setVouchersGoodsTypes(response.data.goods_types || []);
+                setVouchersDrivers(response.data.drivers || []);
                 setVouchersSummary(response.data.summary || null);
                 setVouchersLoading(false);
             })
@@ -353,6 +357,7 @@ export default function Show({
         filterStatus,
         filterType,
         filterGoodsType,
+        filterDriverId,
         filterStartDate,
         filterEndDate,
     ]);
@@ -367,6 +372,7 @@ export default function Show({
         filterStatus,
         filterType,
         filterGoodsType,
+        filterDriverId,
         filterStartDate,
         filterEndDate,
     ]);
@@ -3918,8 +3924,8 @@ export default function Show({
                                     title={t("show.vouchers_history")}
                                     icon={FileSpreadsheet}
                                 >
-                                    {/* Search & Filter Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-2 mb-4 bg-surface-muted/10 p-3 rounded-xl border border-border">
+                                     {/* Search & Filter Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-9 gap-2 mb-4 bg-surface-muted/10 p-3 rounded-xl border border-border">
                                         <div>
                                             <label className="text-[10px] font-bold text-text-muted mb-1 block">
                                                 {lang === "ar"
@@ -3996,6 +4002,39 @@ export default function Show({
                                                             : `Period ${p.period_number}`}
                                                     </option>
                                                 ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] font-bold text-text-muted mb-1 block">
+                                                {lang === "ar"
+                                                    ? "السائق"
+                                                    : "Driver"}
+                                            </label>
+                                            <select
+                                                value={filterDriverId}
+                                                onChange={(e) =>
+                                                    setFilterDriverId(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full text-xs h-[30px] px-2 py-0 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                            >
+                                                <option value="">
+                                                    {lang === "ar"
+                                                        ? "كل السائقين"
+                                                        : "All Drivers"}
+                                                </option>
+                                                {vouchersDrivers.map(
+                                                    (driver) => (
+                                                        <option
+                                                            key={driver.id}
+                                                            value={driver.id}
+                                                        >
+                                                            {driver.name} {driver.vehicle_plate ? `(${driver.vehicle_plate})` : ""}
+                                                        </option>
+                                                    ),
+                                                )}
                                             </select>
                                         </div>
 
@@ -4127,6 +4166,11 @@ export default function Show({
                                             <input
                                                 type="date"
                                                 value={filterEndDate}
+                                                onChange={(e) =>
+                                                    setFilterEndDate(
+                                                        e.target.value,
+                                                    )
+                                                }
                                                 className="w-full text-xs h-[30px] px-2 border border-border rounded-lg bg-surface text-text focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                                             />
                                         </div>
@@ -4222,6 +4266,7 @@ export default function Show({
                                                         setFilterStatus("");
                                                         setFilterType("");
                                                         setFilterGoodsType("");
+                                                        setFilterDriverId("");
                                                         setFilterStartDate("");
                                                         setFilterEndDate("");
                                                     }}

@@ -31,7 +31,7 @@ import PageHeader from "@/Components/PageHeader";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import { useSecureDelete } from "@/Hooks/useSecureDelete";
 
-export default function Index({ deliveries = { data: [] }, customers = [], contracts = [], filters = {} }) {
+export default function Index({ deliveries = { data: [] }, customers = [], contracts = [], drivers = [], filters = {} }) {
     const { lang } = useLang();
     const { auth } = usePage().props;
     const user = auth.user;
@@ -39,6 +39,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
     const [searchQuery, setSearchQuery] = useState(filters.search || "");
     const [selectedCustomer, setSelectedCustomer] = useState(filters.customer_id || "");
     const [selectedContract, setSelectedContract] = useState(filters.contract_id || "");
+    const [selectedDriver, setSelectedDriver] = useState(filters.driver_id || "");
     const [selectedStatus, setSelectedStatus] = useState(filters.status || "");
     const [dateFrom, setDateFrom] = useState(filters.date_from || "");
     const [dateTo, setDateTo] = useState(filters.date_to || "");
@@ -71,6 +72,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                 search: searchQuery,
                 customer_id: selectedCustomer,
                 contract_id: selectedContract,
+                driver_id: selectedDriver,
                 status: selectedStatus,
                 date_from: dateFrom,
                 date_to: dateTo,
@@ -85,6 +87,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
         setSearchQuery("");
         setSelectedCustomer("");
         setSelectedContract("");
+        setSelectedDriver("");
         setSelectedStatus("");
         setDateFrom("");
         setDateTo("");
@@ -226,7 +229,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                         </div>
 
                         {/* Row 2: Common Filters */}
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
                             <div>
                                 <InputLabel value={lang === "ar" ? "العميل" : "Customer"} />
                                 <select
@@ -254,6 +257,22 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                     {contracts.map((c) => (
                                         <option key={c.id} value={c.id}>
                                             {c.contract_number}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <InputLabel value={lang === "ar" ? "السائق" : "Driver"} />
+                                <select
+                                    className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
+                                    value={selectedDriver}
+                                    onChange={(e) => setSelectedDriver(e.target.value)}
+                                >
+                                    <option value="">{lang === "ar" ? "كل السائقين" : "All Drivers"}</option>
+                                    {drivers.map((d) => (
+                                        <option key={d.id} value={d.id}>
+                                            {d.name} {d.vehicle_plate ? `(${d.vehicle_plate})` : ""}
                                         </option>
                                     ))}
                                 </select>
