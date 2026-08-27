@@ -60,7 +60,10 @@ class ReceptionController extends Controller
                 'lte', '<=' => '<=',
                 default => '>=',
             };
-            $query->having('total_quantity', $op, $val);
+            $query->whereRaw(
+                '(SELECT COALESCE(SUM(inventory_entries.quantity_in), 0) FROM inventory_entries WHERE inventory_entries.voucher_id = receptions.id AND inventory_entries.voucher_type = ? AND inventory_entries.deleted_at IS NULL) ' . $op . ' ?',
+                [\App\Models\Reception::class, $val]
+            );
         }
 
         $receptions = $query->latest()->paginate(15)->withQueryString();

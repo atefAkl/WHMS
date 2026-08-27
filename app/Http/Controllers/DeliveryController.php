@@ -62,7 +62,10 @@ class DeliveryController extends Controller
                 'lte', '<=' => '<=',
                 default => '>=',
             };
-            $query->having('total_quantity', $op, $val);
+            $query->whereRaw(
+                '(SELECT COALESCE(SUM(inventory_entries.quantity_out), 0) FROM inventory_entries WHERE inventory_entries.voucher_id = deliveries.id AND inventory_entries.voucher_type = ? AND inventory_entries.deleted_at IS NULL) ' . $op . ' ?',
+                [\App\Models\Delivery::class, $val]
+            );
         }
 
         $deliveries = $query->latest()->paginate(15)->withQueryString();
