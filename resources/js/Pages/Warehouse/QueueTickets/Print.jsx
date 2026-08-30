@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
-import { Printer, ArrowRight, Zap } from "lucide-react";
+import { Printer, ArrowRight, Zap, Plus, X } from "lucide-react";
 import { printZplDirectly } from "@/Services/qzPrintService";
 
 /**
@@ -124,15 +124,34 @@ export function WaitingTicketDocument({
 }
 
 export default function Print({ ticket = {}, companySettings = {} }) {
+  const [hasReferrer, setHasReferrer] = useState(false);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       window.print();
     }, 500);
+
+    if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+      setHasReferrer(true);
+    }
+
     return () => clearTimeout(timer);
   }, []);
 
   const handlePrint = () => window.print();
-  const handleClose = () => window.close();
+
+  const handleCloseOrBack = () => {
+    if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+      window.location.href = document.referrer;
+    } else {
+      window.close();
+      setTimeout(() => {
+        if (!window.closed) {
+          window.history.back();
+        }
+      }, 300);
+    }
+  };
 
   // Data Extraction & Western Digits normalization
   const toWesternDigits = (str) => {
@@ -182,29 +201,46 @@ export default function Print({ ticket = {}, companySettings = {} }) {
           <div className="flex items-center gap-2">
             <Link
               href={route("queue-tickets.index")}
-              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
             >
-              <ArrowRight className="h-4 w-4" />
-              <span>العودة</span>
+              <Plus className="h-4 w-4" />
+              <span>إصدار رقم جديد</span>
             </Link>
 
             {/* Direct USB ZPL Print Button */}
             <button
               onClick={handleZebraDirectPrint}
               disabled={printingZpl}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-50"
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-50"
               title="طباعة صامتة فورية لطابعة Zebra USB عبر QZ Tray"
             >
               <Zap className="h-4 w-4 text-yellow-300 animate-pulse" />
-              <span>{printingZpl ? "جاري الطباعة..." : "طباعة Zebra صامتة"}</span>
+              <span>{printingZpl ? "جاري الطباعة..." : "Zebra صامتة"}</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
+              className="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
             >
               <Printer className="h-4 w-4" />
-              <span>طباعة العادية</span>
+              <span>طباعة</span>
+            </button>
+
+            <button
+              onClick={handleCloseOrBack}
+              className="px-3.5 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5"
+            >
+              {hasReferrer ? (
+                <>
+                  <ArrowRight className="h-4 w-4" />
+                  <span>العودة للخلف</span>
+                </>
+              ) : (
+                <>
+                  <X className="h-4 w-4" />
+                  <span>إغلاق النافذة</span>
+                </>
+              )}
             </button>
           </div>
         </div>

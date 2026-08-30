@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Head, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import { Printer, ArrowLeft, CheckSquare, Square, FileText } from "lucide-react";
+import { Printer, ArrowLeft, ArrowRight, X, CheckSquare, Square, FileText } from "lucide-react";
 
 export default function BulkPrint({ vouchers = [], contract, companySettings = {} }) {
     const { lang } = useLang();
@@ -105,15 +105,28 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
         setSelectedKeys({});
     };
 
+    const [hasReferrer, setHasReferrer] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+            setHasReferrer(true);
+        }
+    }, []);
+
     const handlePrint = () => {
         window.print();
     };
 
-    const handleBack = () => {
-        if (window.history.length > 1) {
-            window.history.back();
+    const handleCloseOrBack = () => {
+        if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+            window.location.href = document.referrer;
         } else {
             window.close();
+            setTimeout(() => {
+                if (!window.closed) {
+                    window.history.back();
+                }
+            }, 300);
         }
     };
 
@@ -357,10 +370,20 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                     <div className="flex items-center gap-3 text-start">
                         <button
                             type="button"
-                            onClick={handleBack}
-                            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+                            onClick={handleCloseOrBack}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors"
                         >
-                            <ArrowLeft className="h-4 w-4" />
+                            {hasReferrer ? (
+                                <>
+                                    <ArrowRight className={`h-4 w-4 ${lang === "ar" ? "rotate-0" : "rotate-180"}`} />
+                                    <span>{lang === "ar" ? "العودة للخلف" : "Go Back"}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <X className="h-4 w-4" />
+                                    <span>{lang === "ar" ? "إغلاق النافذة" : "Close Window"}</span>
+                                </>
+                            )}
                         </button>
                         <div>
                             <h2 className="text-sm font-extrabold">

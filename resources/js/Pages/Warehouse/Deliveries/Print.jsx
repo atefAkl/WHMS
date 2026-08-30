@@ -1,17 +1,24 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Head, usePage, Link } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import { Printer, FileText, FileCheck, List } from "lucide-react";
+import { Printer, FileText, FileCheck, List, Plus, ArrowRight, X } from "lucide-react";
 
 export default function Print({ delivery, companySettings = {} }) {
     const { lang } = useLang();
     const user = usePage().props.auth.user;
+
+    const [hasReferrer, setHasReferrer] = useState(false);
 
     useEffect(() => {
         // Trigger print dialog automatically after component mounts
         const timer = setTimeout(() => {
             window.print();
         }, 500);
+
+        if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+            setHasReferrer(true);
+        }
+
         return () => clearTimeout(timer);
     }, []);
 
@@ -19,8 +26,17 @@ export default function Print({ delivery, companySettings = {} }) {
         window.print();
     };
 
-    const handleClose = () => {
-        window.close();
+    const handleCloseOrBack = () => {
+        if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+            window.location.href = document.referrer;
+        } else {
+            window.close();
+            setTimeout(() => {
+                if (!window.closed) {
+                    window.history.back();
+                }
+            }, 300);
+        }
     };
 
     const displayBilingual = (rawText) => {
@@ -137,6 +153,13 @@ export default function Print({ delivery, companySettings = {} }) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <Link
+                        href={route("deliveries.create")}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span>{lang === "ar" ? "إضافة سند تسليم جديد" : "New Delivery"}</span>
+                    </Link>
                     <button
                         onClick={handlePrint}
                         className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
@@ -145,10 +168,20 @@ export default function Print({ delivery, companySettings = {} }) {
                         <span>{lang === "ar" ? "طباعة السند" : "Print Voucher"}</span>
                     </button>
                     <button
-                        onClick={handleClose}
-                        className="px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition-all"
+                        onClick={handleCloseOrBack}
+                        className="px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5"
                     >
-                        {lang === "ar" ? "إغلاق النافذة" : "Close Window"}
+                        {hasReferrer ? (
+                            <>
+                                <ArrowRight className={`h-4 w-4 ${lang === "ar" ? "rotate-0" : "rotate-180"}`} />
+                                <span>{lang === "ar" ? "العودة للخلف" : "Go Back"}</span>
+                            </>
+                        ) : (
+                            <>
+                                <X className="h-4 w-4" />
+                                <span>{lang === "ar" ? "إغلاق النافذة" : "Close Window"}</span>
+                            </>
+                        )}
                     </button>
                 </div>
             </div>
