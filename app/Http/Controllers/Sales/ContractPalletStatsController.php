@@ -10,6 +10,7 @@ use App\Models\Reception;
 use App\Models\Delivery;
 use App\Models\InventoryAdjustment;
 use App\Models\PalletRearrangement;
+use App\Models\InventoryEntry;
 use App\Models\ContractSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,9 +20,7 @@ class ContractPalletStatsController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Contract::with(['customer', 'periods' => function ($q) {
-            $q->where('status', 'active')->with(['items.storageItem']);
-        }, 'items.storageItem']);
+        $query = Contract::with(['customer', 'periods.items.storageItem', 'items.storageItem']);
 
         // Default: active and ended contracts only as requested
         if ($request->filled('status') && in_array($request->status, ['active', 'ended', 'draft'])) {
@@ -60,38 +59,34 @@ class ContractPalletStatsController extends Controller
         // Calculate detailed stats per contract
         $reportData = $contracts->map(function ($contract) use ($voucherMorphClasses, &$allSizesSet) {
             // Determine active period or contract items
-            $activePeriod = $contract->periods->first();
-            $periodItems = $activePeriod && $activePeriod->items->count() > 0 
+            $activePeriod = $contract->periods->where('status', 'active')->first()
+                ?? $contract->periods->sortByDesc('start_date')->first();
+
+            $periodItems = ($activePeriod && $activePeriod->items->count() > 0)
                 ? $activePeriod->items 
                 : $contract->items;
 
-            // Fetch pallets with active stock balances for this contract via polymorphic voucher relationship
-            $occupiedPallets = Pallet::whereHas('inventoryEntries', function ($q) use ($contract, $voucherMorphClasses) {
-                $q->whereHasMorph('voucher', $voucherMorphClasses, function ($vQuery) use ($contract) {
-                    $vQuery->where('contract_id', $contract->id);
-                });
+            // Fetch pallet IDs that have active stock balances for this contract
+            $occupiedPalletIds = InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($vQuery) use ($contract) {
+                $vQuery->where('contract_id', $contract->id);
             })
-            ->whereHas('inventoryEntries', function ($q) {
-                $q->select('pallet_id')
-                  ->groupBy('pallet_id')
-                  ->havingRaw('SUM(quantity_in - quantity_out) > 0');
-            })
-            ->select('size', DB::raw('count(*) as count'))
-            ->groupBy('size')
-            ->pluck('count', 'size')
-            ->all();
+            ->whereNotNull('pallet_id')
+            ->select('pallet_id')
+            ->groupBy('pallet_id')
+            ->havingRaw('SUM(quantity_in - quantity_out) > 0')
+            ->pluck('pallet_id');
 
-            $totalOccupiedPalletsCount = Pallet::whereHas('inventoryEntries', function ($q) use ($contract, $voucherMorphClasses) {
-                $q->whereHasMorph('voucher', $voucherMorphClasses, function ($vQuery) use ($contract) {
-                    $vQuery->where('contract_id', $contract->id);
-                });
-            })
-            ->whereHas('inventoryEntries', function ($q) {
-                $q->select('pallet_id')
-                  ->groupBy('pallet_id')
-                  ->havingRaw('SUM(quantity_in - quantity_out) > 0');
-            })
-            ->count();
+            $totalOccupiedPalletsCount = $occupiedPalletIds->count();
+
+            // Group occupied pallets by size
+            $occupiedPallets = [];
+            if ($totalOccupiedPalletsCount > 0) {
+                $occupiedPallets = Pallet::whereIn('id', $occupiedPalletIds)
+                    ->select('size', DB::raw('count(*) as count'))
+                    ->groupBy('size')
+                    ->pluck('count', 'size')
+                    ->all();
+            }
 
             $bookedBySize = [];
             $usedBySize = [];
@@ -101,11 +96,11 @@ class ContractPalletStatsController extends Controller
             $totalUsed = 0;
             $totalRemaining = 0;
 
-            foreach ($periodItems as $item) {
-                // Determine size label using short_name or extracted name
+            if ($periodItems->count() === 1) {
+                // Single item in contract: all occupied pallets belong to this item
+                $item = $periodItems->first();
                 $rawLabel = $item->short_name ?: ($item->storageItem->short_name ?? $item->storageItem->name_ar ?? 'طبلية');
                 
-                // Clean size label (e.g. "صغيرة", "كبيرة", "وسط")
                 $sizeKey = $rawLabel;
                 if (mb_strpos($rawLabel, 'صغير') !== false || mb_strpos($rawLabel, 'سمول') !== false) {
                     $sizeKey = 'صغيرة';
@@ -118,29 +113,74 @@ class ContractPalletStatsController extends Controller
                 $allSizesSet->push($sizeKey);
 
                 $booked = (int) ($item->unit_count ?? 0);
-
-                // Match occupied pallets by sizeKey
-                $used = $occupiedPallets[$sizeKey] ?? $occupiedPallets[$rawLabel] ?? 0;
-                if ($used === 0) {
-                    foreach ($occupiedPallets as $sz => $cnt) {
-                        if (str_contains($sizeKey, $sz) || str_contains($sz, $sizeKey) || str_contains($rawLabel, $sz)) {
-                            $used += $cnt;
-                        }
-                    }
-                }
-
+                $used = $totalOccupiedPalletsCount;
                 $remaining = max(0, $booked - $used);
 
-                $bookedBySize[$sizeKey] = ($bookedBySize[$sizeKey] ?? 0) + $booked;
-                $usedBySize[$sizeKey] = ($usedBySize[$sizeKey] ?? 0) + $used;
-                $remainingBySize[$sizeKey] = ($remainingBySize[$sizeKey] ?? 0) + $remaining;
+                $bookedBySize[$sizeKey] = $booked;
+                $usedBySize[$sizeKey] = $used;
+                $remainingBySize[$sizeKey] = $remaining;
 
-                $totalBooked += $booked;
-                $totalUsed += $used;
-                $totalRemaining += $remaining;
+                $totalBooked = $booked;
+                $totalUsed = $used;
+                $totalRemaining = $remaining;
+            } elseif ($periodItems->count() > 1) {
+                // Multiple items in contract: match per size category
+                $assignedUsedCount = 0;
+
+                foreach ($periodItems as $item) {
+                    $rawLabel = $item->short_name ?: ($item->storageItem->short_name ?? $item->storageItem->name_ar ?? 'طبلية');
+                    
+                    $sizeKey = $rawLabel;
+                    if (mb_strpos($rawLabel, 'صغير') !== false || mb_strpos($rawLabel, 'سمول') !== false) {
+                        $sizeKey = 'صغيرة';
+                    } elseif (mb_strpos($rawLabel, 'كبير') !== false || mb_strpos($rawLabel, 'لارج') !== false) {
+                        $sizeKey = 'كبيرة';
+                    } elseif (mb_strpos($rawLabel, 'وسط') !== false || mb_strpos($rawLabel, 'ميديوم') !== false) {
+                        $sizeKey = 'وسط';
+                    }
+
+                    $allSizesSet->push($sizeKey);
+
+                    $booked = (int) ($item->unit_count ?? 0);
+
+                    // Match occupied pallets by sizeKey or label or partial string
+                    $used = $occupiedPallets[$sizeKey] ?? $occupiedPallets[$rawLabel] ?? 0;
+                    if ($used === 0 && !empty($occupiedPallets)) {
+                        foreach ($occupiedPallets as $sz => $cnt) {
+                            if ($sz && (str_contains($sizeKey, $sz) || str_contains($sz, $sizeKey) || str_contains($rawLabel, $sz))) {
+                                $used += $cnt;
+                            }
+                        }
+                    }
+
+                    $remaining = max(0, $booked - $used);
+
+                    $bookedBySize[$sizeKey] = ($bookedBySize[$sizeKey] ?? 0) + $booked;
+                    $usedBySize[$sizeKey] = ($usedBySize[$sizeKey] ?? 0) + $used;
+                    $remainingBySize[$sizeKey] = ($remainingBySize[$sizeKey] ?? 0) + $remaining;
+
+                    $totalBooked += $booked;
+                    $totalUsed += $used;
+                    $totalRemaining += $remaining;
+
+                    $assignedUsedCount += $used;
+                }
+
+                // If items exist but size matching didn't catch all occupied pallets (e.g. size string mismatches)
+                if ($totalOccupiedPalletsCount > $assignedUsedCount && $totalUsed < $totalOccupiedPalletsCount) {
+                    $unassigned = $totalOccupiedPalletsCount - $assignedUsedCount;
+                    $totalUsed = $totalOccupiedPalletsCount;
+                    $totalRemaining = max(0, $totalBooked - $totalUsed);
+                    
+                    $firstKey = array_key_first($usedBySize);
+                    if ($firstKey) {
+                        $usedBySize[$firstKey] += $unassigned;
+                        $remainingBySize[$firstKey] = max(0, ($bookedBySize[$firstKey] ?? 0) - $usedBySize[$firstKey]);
+                    }
+                }
             }
 
-            // Fallback if no items configured but pallets exist
+            // Fallback if no items configured at all in contract/periods but occupied pallets exist
             if ($totalBooked === 0 && $totalOccupiedPalletsCount > 0) {
                 $sizeKey = 'عامة';
                 $allSizesSet->push($sizeKey);
@@ -171,7 +211,7 @@ class ContractPalletStatsController extends Controller
             ];
         });
 
-        // Ensure default sizes "صغيرة", "كبيرة" exist if set is empty or small
+        // Ensure default sizes "صغيرة", "كبيرة" exist if set is empty
         $allSizes = $allSizesSet->unique()->values()->all();
         if (empty($allSizes)) {
             $allSizes = ['صغيرة', 'كبيرة'];
