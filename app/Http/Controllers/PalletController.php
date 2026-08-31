@@ -260,11 +260,19 @@ class PalletController extends Controller
     {
         $request->validate([
             'pallet_number' => 'required|string|max:50',
-            'contract_id'   => 'nullable|integer',
+            'contract_id'   => 'nullable',
         ]);
 
         $code = trim($request->pallet_number);
-        $pallet = Pallet::findOrCreateFromCode($code);
+
+        // Find existing pallet record by number or code without forcing creation if non-existent
+        $cleanNumber = preg_replace('/[^0-9]/', '', $code);
+        $pallet = Pallet::where('pallet_code', $code)
+            ->orWhere('pallet_number', $code)
+            ->when($cleanNumber !== '', function($q) use ($cleanNumber) {
+                $q->orWhere('pallet_number', (string)(int)$cleanNumber);
+            })
+            ->first();
 
         $targetContract = null;
         if ($request->filled('contract_id')) {
@@ -278,81 +286,83 @@ class PalletController extends Controller
             \App\Models\PalletRearrangement::class,
         ];
 
-        // Fetch entries for the specific target contract if provided
-        $entries = collect();
-        if ($targetContract) {
-            $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
-                ->whereHasMorph('voucher', $voucherMorphClasses, function ($q) use ($targetContract) {
-                    $q->where('contract_id', $targetContract->id);
-                })
-                ->with(['inventoryItem', 'variant'])
-                ->get();
-        } else {
-            // If no contract_id specified, fetch all non-deleted entries across vouchers
-            $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
-                ->whereHasMorph('voucher', $voucherMorphClasses)
-                ->with(['inventoryItem', 'variant', 'voucher.contract.customer'])
-                ->get();
-        }
-
-        $grouped = $entries->groupBy(function ($entry) {
-            return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
-        });
-
         $contents = [];
-        foreach ($grouped as $group) {
-            $first = $group->first();
-            $qtyIn = (float) $group->sum('quantity_in');
-            $qtyOut = (float) $group->sum('quantity_out');
-            $balance = max(0, $qtyIn - $qtyOut);
-
-            if ($balance > 0) {
-                $contents[] = [
-                    'item_id' => $first->inventory_item_id,
-                    'item_name' => $first->inventoryItem ? $first->inventoryItem->name : 'صنف غير محدد',
-                    'variant_id' => $first->inventory_item_variant_id,
-                    'variant_name' => $first->variant ? $first->variant->variant_name : null,
-                    'quality' => $first->variant ? $first->variant->quality : null,
-                    'quantity' => $balance,
-                    'total_in' => $qtyIn,
-                    'total_out' => $qtyOut,
-                ];
-            }
-        }
-
-        // Check if occupied on any other contract
         $otherContractInfo = null;
         $isOccupiedElsewhere = false;
 
-        $allEntries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
-            ->whereHasMorph('voucher', $voucherMorphClasses)
-            ->with(['voucher.contract.customer'])
-            ->get();
+        if ($pallet) {
+            // Fetch entries for the specific target contract if provided
+            $entries = collect();
+            if ($targetContract) {
+                $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
+                    ->whereHasMorph('voucher', $voucherMorphClasses, function ($q) use ($targetContract) {
+                        $q->where('contract_id', $targetContract->id);
+                    })
+                    ->with(['inventoryItem', 'variant'])
+                    ->get();
+            } else {
+                // If no contract_id specified, fetch entries across vouchers
+                $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
+                    ->whereHasMorph('voucher', $voucherMorphClasses)
+                    ->with(['inventoryItem', 'variant', 'voucher.contract.customer'])
+                    ->get();
+            }
 
-        $activeByContract = $allEntries->groupBy(function ($entry) {
-            return $entry->voucher?->contract_id;
-        });
+            $grouped = $entries->groupBy(function ($entry) {
+                return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
+            });
 
-        foreach ($activeByContract as $cId => $cEntries) {
-            if (!$cId) continue;
-            if ($targetContract && $cId == $targetContract->id) continue;
+            foreach ($grouped as $group) {
+                $first = $group->first();
+                $qtyIn = (float) $group->sum('quantity_in');
+                $qtyOut = (float) $group->sum('quantity_out');
+                $balance = max(0, $qtyIn - $qtyOut);
 
-            $cIn = (float) $cEntries->sum('quantity_in');
-            $cOut = (float) $cEntries->sum('quantity_out');
-            if ($cIn - $cOut > 0) {
-                $isOccupiedElsewhere = true;
-                $otherVoucher = $cEntries->sortByDesc('created_at')->pluck('voucher')->filter()->first();
-                $otherContract = $otherVoucher?->contract;
-                if ($otherContract) {
-                    $otherContractInfo = [
-                        'id' => $otherContract->id,
-                        'contract_number' => $otherContract->contract_number,
-                        'customer_id' => $otherContract->customer_id,
-                        'customer_name' => $otherContract->customer?->name,
-                        'active_packages' => $cIn - $cOut,
+                if ($balance > 0) {
+                    $contents[] = [
+                        'item_id' => $first->inventory_item_id,
+                        'item_name' => $first->inventoryItem ? $first->inventoryItem->name : 'صنف غير محدد',
+                        'variant_id' => $first->inventory_item_variant_id,
+                        'variant_name' => $first->variant ? $first->variant->variant_name : null,
+                        'quality' => $first->variant ? $first->variant->quality : null,
+                        'quantity' => $balance,
+                        'total_in' => $qtyIn,
+                        'total_out' => $qtyOut,
                     ];
                 }
-                break;
+            }
+
+            // Check if occupied on any other contract
+            $allEntries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
+                ->whereHasMorph('voucher', $voucherMorphClasses)
+                ->with(['voucher.contract.customer'])
+                ->get();
+
+            $activeByContract = $allEntries->groupBy(function ($entry) {
+                return $entry->voucher?->contract_id;
+            });
+
+            foreach ($activeByContract as $cId => $cEntries) {
+                if (!$cId) continue;
+                if ($targetContract && $cId == $targetContract->id) continue;
+
+                $cIn = (float) $cEntries->sum('quantity_in');
+                $cOut = (float) $cEntries->sum('quantity_out');
+                if ($cIn - $cOut > 0) {
+                    $isOccupiedElsewhere = true;
+                    $otherVoucher = $cEntries->sortByDesc('created_at')->pluck('voucher')->filter()->first();
+                    $otherContract = $otherVoucher?->contract;
+                    if ($otherContract) {
+                        $otherContractInfo = [
+                            'id' => $otherContract->id,
+                            'contract_number' => $otherContract->contract_number,
+                            'customer_id' => $otherContract->customer_id,
+                            'customer_name' => $otherContract->customer?->name,
+                            'active_packages' => $cIn - $cOut,
+                        ];
+                    }
+                    break;
+                }
             }
         }
 
@@ -366,26 +376,15 @@ class PalletController extends Controller
                 'customer_name' => $targetContract->customer?->name,
             ];
         } elseif ($otherContractInfo) {
+            // Only return contract payload if active on another contract
             $contractPayload = $otherContractInfo;
-        } else {
-            // Fallback: latest active/historical contract only if no target contract passed and has entries
-            $latestVoucher = $allEntries->sortByDesc('created_at')->pluck('voucher')->filter()->first();
-            $latestContract = $latestVoucher?->contract;
-            if ($latestContract) {
-                $contractPayload = [
-                    'id' => $latestContract->id,
-                    'contract_number' => $latestContract->contract_number,
-                    'customer_id' => $latestContract->customer_id,
-                    'customer_name' => $latestContract->customer?->name,
-                ];
-            }
         }
 
         return response()->json([
-            'id' => $pallet->id,
-            'pallet_number' => $pallet->pallet_number,
-            'pallet_code' => $pallet->pallet_code,
-            'size' => $pallet->size,
+            'id' => $pallet?->id ?? null,
+            'pallet_number' => $pallet?->pallet_number ?? $code,
+            'pallet_code' => $pallet?->pallet_code ?? null,
+            'size' => $pallet?->size ?? 'وسط',
             'contract' => $contractPayload,
             'is_occupied_elsewhere' => $isOccupiedElsewhere,
             'other_contract' => $otherContractInfo,

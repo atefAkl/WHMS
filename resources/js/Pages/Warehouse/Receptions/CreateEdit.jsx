@@ -384,8 +384,8 @@ export default function CreateEdit({
                     setPosPalletSize(res.data.size);
                     setPalletLookupData(res.data);
 
-                    // Auto select contract if contract exists on pallet and contract not selected yet
-                    if (res.data.contract && !data.contract_id) {
+                    // Auto select contract if contract exists on pallet and contract not selected yet (only if active packages exist)
+                    if (res.data.contract && !data.contract_id && res.data.total_packages > 0) {
                         handleContractSelect(res.data.contract.id);
                     }
                 }
