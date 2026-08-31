@@ -52,15 +52,14 @@ export default function Print({ reception, companySettings = {} }) {
     const totalQty = reception.inventory_entries?.reduce((sum, entry) => sum + parseFloat(entry.quantity_in || 0), 0) || 0;
     const totalPallets = reception.inventory_entries?.length || 0;
 
-    // Helper: Format item name, extract capacity/weight (e.g. ك موز, 3ك), and append to package box column
+    // Helper: Format item name, extract capacity/weight, and append to package box column
     const formatItemAndPackage = (entry) => {
-        let rawItemName = displayBilingual(entry.inventory_item?.name) || "";
+        let rawItemName = displayBilingual(entry.inventoryItem?.name || entry.inventory_item?.name) || "";
         let rawVarName = displayBilingual(entry.variant?.name) || "";
         let boxType = entry.variant?.unit || entry.variant?.package_type || "كرتون";
 
         let extraCap = "";
 
-        // Pattern to catch 'ك موز', '3ك', '3 ك', '3كجم', etc.
         const capacityRegex = /(\d+(?:\.\d+)?\s*(?:كجم|ك|kg|k)\s*\w*|ك\s+\w+)/gi;
 
         const mVar = rawVarName.match(capacityRegex);
@@ -75,7 +74,6 @@ export default function Print({ reception, companySettings = {} }) {
             rawItemName = rawItemName.replace(capacityRegex, "").trim();
         }
 
-        // If variant name equals boxType, don't duplicate
         if (rawVarName.toLowerCase() === boxType.toLowerCase()) {
             rawVarName = "";
         }
@@ -96,7 +94,7 @@ export default function Print({ reception, companySettings = {} }) {
     };
 
     const getPalletFormatted = (entry) => {
-        const palletNum = entry.pallet?.pallet_number || "—";
+        const palletNum = entry.pallet?.pallet_number || entry.pallet_number || "—";
         const palletSize = entry.pallet?.size || entry.variant?.size;
         if (palletNum !== "—" && palletSize) {
             return `${palletNum} / ${palletSize}`;
@@ -111,12 +109,30 @@ export default function Print({ reception, companySettings = {} }) {
     const compPhone = companySettings.company_phone || "0568562615";
     const compEmail = companySettings.company_email || "sales@ag-stores.com";
     const compAddress = companySettings.company_address || "1131 - القصيم / ضراس - طريق الملك فهد";
-    const compWebsite = companySettings.company_website || "https:web.site";
+    const compWebsite = companySettings.company_website || "https://web.site";
     const compLogo = companySettings.company_logo || null;
+
+    // Multi-page Chunking (14 items per page for clean A4 printing)
+    const ITEMS_PER_PAGE = 14;
+    const entriesList = reception.inventory_entries || [];
+    const totalEntries = entriesList.length;
+    const totalPagesCount = Math.max(1, Math.ceil(totalEntries / ITEMS_PER_PAGE));
+
+    const pageChunks = [];
+    for (let p = 0; p < totalPagesCount; p++) {
+        const pageItems = entriesList.slice(p * ITEMS_PER_PAGE, (p + 1) * ITEMS_PER_PAGE);
+        pageChunks.push({
+            pageIndex: p + 1,
+            totalPages: totalPagesCount,
+            items: pageItems,
+            startIndex: p * ITEMS_PER_PAGE,
+            isLastPage: p === totalPagesCount - 1,
+        });
+    }
 
     return (
         <div 
-            className="min-h-screen bg-white text-black p-4 sm:p-6 font-sans text-xs print:p-0 print:m-0 print:h-full print:overflow-hidden flex flex-col justify-between" 
+            className="min-h-screen bg-white text-black p-4 sm:p-6 font-sans text-xs print:p-0 print:m-0" 
             dir={lang === "ar" ? "rtl" : "ltr"}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
@@ -130,7 +146,6 @@ export default function Print({ reception, companySettings = {} }) {
                         {lang === "ar" ? "معاينة طباعة سند استلام البضائع" : "Goods Reception Voucher Print Preview"}
                     </span>
 
-                    {/* Navigation Links */}
                     <div className="flex items-center gap-2 border-s border-gray-300 ps-3 ms-1">
                         <Link
                             href={route("receptions.index")}
@@ -186,222 +201,235 @@ export default function Print({ reception, companySettings = {} }) {
                 </div>
             </div>
 
-            {/* Document Container strictly fitting Single Page print without overflow */}
-            <div className="max-w-4xl mx-auto w-full flex flex-col justify-between flex-1 space-y-3 print:space-y-2 print:h-full print:box-border">
-                
-                {/* ═══ TOP & MAIN CONTENT ═════════════════════════════════ */}
-                <div className="space-y-3 print:space-y-2">
-                    
-                    {/* Header Section */}
-                    <div className="flex justify-between items-start border-b border-gray-400 pb-2">
-                        {/* Left: Company Logo & Info */}
-                        <div className="flex items-center gap-3">
-                            {compLogo ? (
-                                <img src={compLogo} alt="Logo" className="w-12 h-12 object-contain" />
+            {/* Document Pages Container */}
+            <div className="max-w-4xl mx-auto w-full space-y-6 print:space-y-0">
+                {pageChunks.map((chunk) => (
+                    <div
+                        key={chunk.pageIndex}
+                        className="print-page-break bg-white border border-gray-200 print:border-none p-6 print:p-0 min-h-[27cm] flex flex-col justify-between"
+                    >
+                        {/* Page Content Header & Table */}
+                        <div className="space-y-3 print:space-y-2">
+                            {/* Header Section */}
+                            <div className="flex justify-between items-start border-b border-gray-400 pb-2">
+                                <div className="flex items-center gap-3">
+                                    {compLogo ? (
+                                        <img src={compLogo} alt="Logo" className="w-12 h-12 object-contain" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-300">
+                                            <FileText className="h-5 w-5 text-gray-800" />
+                                        </div>
+                                    )}
+                                    <div className="space-y-0.5 text-start">
+                                        <h2 className="font-black text-xs text-black leading-snug">
+                                            {compName}
+                                        </h2>
+                                        <p className="text-[10px] text-gray-600 font-medium">
+                                            {compSlogan}
+                                        </p>
+                                        <p className="text-[9px] text-gray-700 font-mono">
+                                            CR: <span className="font-bold">{compCr}</span> &nbsp;|&nbsp; TEL: <span className="font-bold">{compPhone}</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="text-end space-y-0.5">
+                                    <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
+                                        {lang === "ar" ? "سند استلام وحفظ بضائع" : "Goods Reception Note"}
+                                    </h1>
+                                    <div className="text-xs font-black font-mono text-gray-900">
+                                        No: {reception.serial_number}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Metadata Grid */}
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-[11px] border-b border-gray-300 pb-2">
+                                <div className="space-y-1">
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العميل:" : "Client:"}</span>
+                                        <span className="font-bold text-black">{reception.customer?.name}</span>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex gap-2 flex-1">
+                                            <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العقد:" : "Contract:"}</span>
+                                            <span className="font-mono font-bold text-black">{reception.contract?.contract_number}</span>
+                                        </div>
+                                        <div className="flex gap-1 shrink-0">
+                                            <span className="font-bold text-gray-600">{lang === "ar" ? "الفترة:" : "P.No:"}</span>
+                                            <span className="font-mono font-bold text-black">{reception.period?.period_number ? String(reception.period.period_number).padStart(2, '0') : '01'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المزرعة / المصدر:" : "Source:"}</span>
+                                        <span className="font-medium text-gray-900">{reception.farm_source || "—"}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المشرف / المستلم:" : "Receiver:"}</span>
+                                        <span className="font-bold text-black">{reception.recipient_name || user?.name || "أمين المستودع"}</span>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex gap-2 flex-1">
+                                            <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "تاريخ الاستلام:" : "Date:"}</span>
+                                            <span className="font-mono font-bold text-black">{reception.reception_date ? new Date(reception.reception_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}</span>
+                                        </div>
+                                        <div className="flex gap-1 shrink-0">
+                                            <span className="font-bold text-gray-600">{lang === "ar" ? "الوردية:" : "Shift:"}</span>
+                                            <span className="font-mono font-bold text-black">{reception.shift || "م / M"}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "ملاحظات:" : "Note:"}</span>
+                                        <span className="text-[10px] text-gray-800 leading-tight">{reception.notes || "—"}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Chunk Items Table */}
+                            <div className="space-y-1">
+                                <table className="w-full text-xs text-center border-b border-gray-400">
+                                    <thead>
+                                        <tr className="border-b border-black text-black font-bold">
+                                            <th className="py-1.5 text-start w-10">#</th>
+                                            <th className="py-1.5 text-start">{lang === "ar" ? "الصنف (Items)" : "Items"}</th>
+                                            <th className="py-1.5 w-32">{lang === "ar" ? "الدرجة (Grade)" : "Grade"}</th>
+                                            <th className="py-1.5 w-36">{lang === "ar" ? "الطبلية (Table)" : "Table"}</th>
+                                            <th className="py-1.5 w-32">{lang === "ar" ? "العبوة (Box)" : "Box"}</th>
+                                            <th className="py-1.5 w-24">{lang === "ar" ? "الإجمالي (Total)" : "Total"}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {chunk.items.map((entry, idx) => {
+                                            const { cleanItemName, cleanVarName, finalBoxDisplay } = formatItemAndPackage(entry);
+                                            const gradeDisplay = getGradeDisplay(entry);
+                                            const palletFormatted = getPalletFormatted(entry);
+                                            const rowNum = chunk.startIndex + idx + 1;
+
+                                            return (
+                                                <tr key={entry.id || idx} className="text-gray-900">
+                                                    <td className="py-1.5 text-start font-mono">{String(rowNum).padStart(2, '0')}</td>
+                                                    <td className="py-1.5 text-start font-bold">
+                                                        {cleanItemName}
+                                                        {cleanVarName ? <span className="text-gray-500 text-[10px] font-normal block">{cleanVarName}</span> : null}
+                                                    </td>
+                                                    <td className="py-1.5 font-medium">
+                                                        {gradeDisplay}
+                                                    </td>
+                                                    <td className="py-1.5 font-mono font-bold">
+                                                        {palletFormatted}
+                                                    </td>
+                                                    <td className="py-1.5 font-medium">
+                                                        {finalBoxDisplay}
+                                                    </td>
+                                                    <td className="py-1.5 font-mono font-bold">
+                                                        {Math.round(parseFloat(entry.quantity_in || 0))}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+
+                                        {/* Total Summary Row (Rendered ONLY on Last Page) */}
+                                        {chunk.isLastPage && (
+                                            <tr className="border-t-2 border-black font-extrabold text-black">
+                                                <td colSpan="3" className="py-2 px-4 text-start font-bold">
+                                                    <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الطبالي / Total Tables:" : "Total Tables:"}</span>
+                                                    <span className="font-mono text-sm font-black text-black">{totalPallets}</span>
+                                                </td>
+                                                <td colSpan="3" className="py-2 px-4 text-end font-bold">
+                                                    <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي العبوات / Total Packs:" : "Total Packs:"}</span>
+                                                    <span className="font-mono text-sm font-black text-black">{Math.round(totalQty).toLocaleString()}</span>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Signatures & Footer Panel */}
+                        <div className="mt-auto pt-4 space-y-3">
+                            {/* Signatures Panel (Rendered ONLY on Last Page) */}
+                            {chunk.isLastPage ? (
+                                <div className="grid grid-cols-3 gap-8 text-center text-xs">
+                                    <div className="space-y-4">
+                                        <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                            Client/Represent
+                                        </p>
+                                        <div className="text-start text-[11px] space-y-0.5">
+                                            <p className="text-gray-800 font-semibold truncate">
+                                                {lang === "ar" ? "الاسم: " : "Name: "}{reception.representative?.name || reception.customer?.name || "________________"}
+                                            </p>
+                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                            Stores Manager
+                                        </p>
+                                        <div className="text-start text-[11px] space-y-0.5">
+                                            <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: ________________" : "Name: ________________"}</p>
+                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                            Stores Admin
+                                        </p>
+                                        <div className="text-start text-[11px] space-y-0.5">
+                                            <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{reception.recipient_name || user?.name || "________________"}</p>
+                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             ) : (
-                                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-300">
-                                    <FileText className="h-5 w-5 text-gray-800" />
+                                <div className="text-center text-[10px] text-gray-500 italic">
+                                    {lang === "ar" ? "يتبع السند بالتوقيعات والإجمالي في الصفحة التالية..." : "Continued on next page..."}
                                 </div>
                             )}
-                            <div className="space-y-0.5 text-start">
-                                <h2 className="font-black text-xs text-black leading-snug">
-                                    {compName}
-                                </h2>
-                                <p className="text-[10px] text-gray-600 font-medium">
-                                    {compSlogan}
-                                </p>
-                                <p className="text-[9px] text-gray-700 font-mono">
-                                    CR: <span className="font-bold">{compCr}</span> &nbsp;|&nbsp; TEL: <span className="font-bold">{compPhone}</span>
-                                </p>
-                            </div>
-                        </div>
 
-                        {/* Right: Goods Receipt Title & Serial Number */}
-                        <div className="text-end space-y-0.5">
-                            <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
-                                {lang === "ar" ? "سند استلام بضائع" : "Goods Receipt"}
-                            </h1>
-                            <div className="text-xs font-black font-mono text-gray-900">
-                                No: {reception.serial_number}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Metadata Grid */}
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-[11px] border-b border-gray-300 pb-2">
-                        {/* Left Column */}
-                        <div className="space-y-1">
-                            <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العميل:" : "Client:"}</span>
-                                <span className="font-bold text-black">{reception.customer?.name}</span>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="flex gap-2 flex-1">
-                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العقد:" : "Contract:"}</span>
-                                    <span className="font-mono font-bold text-black">{reception.contract?.contract_number}</span>
+                            {/* Page Footer Metadata */}
+                            <div className="border-t border-gray-300 pt-1.5 flex justify-between items-center text-[9px] text-gray-600">
+                                <div>
+                                    {compAddress} – Phone: <span className="font-mono font-bold">{compPhone}</span> | Email: <span className="font-mono">{compEmail}</span>
                                 </div>
-                                <div className="flex gap-1 shrink-0">
-                                    <span className="font-bold text-gray-600">{lang === "ar" ? "الفترة:" : "P.No:"}</span>
-                                    <span className="font-mono font-bold text-black">{reception.period?.period_number ? String(reception.period.period_number).padStart(2, '0') : '01'}</span>
+                                <div className="font-mono font-bold text-gray-700">
+                                    {lang === "ar" ? `صفحة ${chunk.pageIndex} من ${chunk.totalPages}` : `Page ${chunk.pageIndex} of ${chunk.totalPages}`}
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المندوب:" : "Represent:"}</span>
-                                <span className="font-medium text-gray-900">{reception.representative?.name || reception.driver?.name || "—"}</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المصدر:" : "Source:"}</span>
-                                <span className="font-medium text-gray-900">{reception.farm_source || reception.source_farm || "—"}</span>
-                            </div>
-                        </div>
-
-                        {/* Right Column */}
-                        <div className="space-y-1">
-                            <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "عناية / المستلم:" : "Att:"}</span>
-                                <span className="font-bold text-black">{reception.recipient_name || user?.name || "أمين المستودع"}</span>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="flex gap-2 flex-1">
-                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "تاريخ الاستلام:" : "Date:"}</span>
-                                    <span className="font-mono font-bold text-black">{reception.reception_date ? new Date(reception.reception_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}</span>
-                                </div>
-                                <div className="flex gap-1 shrink-0">
-                                    <span className="font-bold text-gray-600">{lang === "ar" ? "الوردية:" : "Shift:"}</span>
-                                    <span className="font-mono font-bold text-black">{reception.shift || "م / M"}</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "ملاحظات:" : "Note:"}</span>
-                                <span className="text-[10px] text-gray-800 leading-tight">{reception.notes || "—"}</span>
-                            </div>
                         </div>
                     </div>
-
-                    {/* Items Table */}
-                    <div className="space-y-1">
-                        <table className="w-full text-xs text-center border-b border-gray-400">
-                            <thead>
-                                <tr className="border-b border-black text-black font-bold">
-                                    <th className="py-1.5 text-start w-10">#</th>
-                                    <th className="py-1.5 text-start">{lang === "ar" ? "الصنف (Items)" : "Items"}</th>
-                                    <th className="py-1.5 w-32">{lang === "ar" ? "الدرجة (Grade)" : "Grade"}</th>
-                                    <th className="py-1.5 w-36">{lang === "ar" ? "الطبلية (Table)" : "Table"}</th>
-                                    <th className="py-1.5 w-32">{lang === "ar" ? "العبوة (Box)" : "Box"}</th>
-                                    <th className="py-1.5 w-24">{lang === "ar" ? "الإجمالي (Total)" : "Total"}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {reception.inventory_entries?.map((entry, idx) => {
-                                    const { cleanItemName, cleanVarName, finalBoxDisplay } = formatItemAndPackage(entry);
-                                    const gradeDisplay = getGradeDisplay(entry);
-                                    const palletFormatted = getPalletFormatted(entry);
-
-                                    return (
-                                        <tr key={entry.id || idx} className="text-gray-900">
-                                            <td className="py-1.5 text-start font-mono">{String(idx + 1).padStart(2, '0')}</td>
-                                            <td className="py-1.5 text-start font-bold">
-                                                {cleanItemName}
-                                                {cleanVarName ? <span className="text-gray-500 text-[10px] font-normal block">{cleanVarName}</span> : null}
-                                            </td>
-                                            <td className="py-1.5 font-medium">
-                                                {gradeDisplay}
-                                            </td>
-                                            <td className="py-1.5 font-mono font-bold">
-                                                {palletFormatted}
-                                            </td>
-                                            <td className="py-1.5 font-medium">
-                                                {finalBoxDisplay}
-                                            </td>
-                                            <td className="py-1.5 font-mono font-bold">
-                                                {Math.round(parseFloat(entry.quantity_in || 0))}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-
-                                {/* Summary Row Split into 2 Equal Halves */}
-                                <tr className="border-t-2 border-black font-extrabold text-black">
-                                    <td colSpan="3" className="py-2 px-4 text-start font-bold">
-                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الطبالي / Total Tables:" : "Total Tables:"}</span>
-                                        <span className="font-mono text-sm font-black text-black">{totalPallets}</span>
-                                    </td>
-                                    <td colSpan="3" className="py-2 px-4 text-end font-bold">
-                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي العبوات / Total Packs:" : "Total Packs:"}</span>
-                                        <span className="font-mono text-sm font-black text-black">{Math.round(totalQty).toLocaleString()}</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                </div>
-
-                {/* ═══ SIGNATURES & FOOTER PANEL (Strictly Pinned to Bottom Edge) ═════════ */}
-                <div className="mt-auto pt-3 print:pt-2 space-y-2 pb-0 print:pb-0">
-                    
-                    {/* Signatures */}
-                    <div className="grid grid-cols-3 gap-8 text-center text-xs">
-                        <div className="space-y-4">
-                            <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
-                                Client/Represent
-                            </p>
-                            <div className="text-start text-[11px] space-y-0.5">
-                                <p className="text-gray-800 font-semibold truncate">
-                                    {lang === "ar" ? "الاسم: " : "Name: "}{reception.representative?.name || reception.customer?.name || "________________"}
-                                </p>
-                                <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
-                                Stores Manager
-                            </p>
-                            <div className="text-start text-[11px] space-y-0.5">
-                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: ________________" : "Name: ________________"}</p>
-                                <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
-                                Stores Admin
-                            </p>
-                            <div className="text-start text-[11px] space-y-0.5">
-                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{reception.recipient_name || user?.name || "________________"}</p>
-                                <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Footer Metadata */}
-                    <div className="border-t border-gray-300 pt-1.5 text-center text-[9px] text-gray-600 space-y-0.5">
-                        <p className="font-medium">
-                            {compAddress} – Phone: <span className="font-mono font-bold">{compPhone}</span> Email: <span className="font-mono">{compEmail}</span> <span className="font-mono">{compWebsite}</span>
-                        </p>
-                    </div>
-
-                </div>
-
+                ))}
             </div>
 
-            {/* Print CSS Rules - Strictly 1 Page A4 No Extra Blank Page */}
+            {/* Print CSS Rules - Supports Multi-page Printing */}
             <style>{`
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 0.6cm;
+                        margin: 0.8cm;
                     }
                     html, body {
                         background: white !important;
                         margin: 0 !important;
                         padding: 0 !important;
-                        height: 100% !important;
-                        overflow: hidden !important;
+                        height: auto !important;
+                        overflow: visible !important;
                     }
                     .print\\:hidden {
                         display: none !important;
+                    }
+                    .print-page-break {
+                        page-break-after: always !important;
+                        break-after: page !important;
+                    }
+                    .print-page-break:last-child {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
                     }
                 }
             `}</style>
