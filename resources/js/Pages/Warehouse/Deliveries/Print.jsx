@@ -113,7 +113,7 @@ export default function Print({ delivery, companySettings = {} }) {
     const compLogo = companySettings.company_logo || null;
 
     // Multi-page Chunking (14 items per page for clean A4 printing)
-    const ITEMS_PER_PAGE = 14;
+    const ITEMS_PER_PAGE = 25;
     const entriesList = delivery.inventory_entries || [];
     const totalEntries = entriesList.length;
     const totalPagesCount = Math.max(1, Math.ceil(totalEntries / ITEMS_PER_PAGE));
@@ -131,8 +131,8 @@ export default function Print({ delivery, companySettings = {} }) {
     }
 
     return (
-        <div 
-            className="min-h-screen bg-white text-black p-4 sm:p-6 font-sans text-xs print:p-0 print:m-0" 
+        <div
+            className="min-h-screen bg-white text-black p-4 sm:p-6 font-sans text-xs print:p-0 print:m-0"
             dir={lang === "ar" ? "rtl" : "ltr"}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >

@@ -112,8 +112,8 @@ export default function Print({ reception, companySettings = {} }) {
     const compWebsite = companySettings.company_website || "https://web.site";
     const compLogo = companySettings.company_logo || null;
 
-    // Multi-page Chunking (14 items per page for clean A4 printing)
-    const ITEMS_PER_PAGE = 14;
+    // Multi-page Chunking (25 items per page for clean A4 printing)
+    const ITEMS_PER_PAGE = 25;
     const entriesList = reception.inventory_entries || [];
     const totalEntries = entriesList.length;
     const totalPagesCount = Math.max(1, Math.ceil(totalEntries / ITEMS_PER_PAGE));
