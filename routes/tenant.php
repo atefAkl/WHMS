@@ -211,6 +211,7 @@ Route::middleware([
                 Route::get('contracts/{contract}/vouchers/bulk-print', [\App\Http\Controllers\ContractController::class, 'bulkPrintVouchers'])->name('contracts.vouchers.bulk-print');
                 Route::get('contracts/{contract}/pallets', [\App\Http\Controllers\ContractController::class, 'getPallets'])->name('contracts.pallets');
                 Route::get('api/contracts/{contract}/pallets', [\App\Http\Controllers\ContractController::class, 'getPallets'])->name('api.contracts.pallets');
+                Route::get('api/contracts/{contract}/delivery-pallets', [\App\Http\Controllers\ContractController::class, 'getPalletsForDelivery'])->name('api.contracts.delivery-pallets');
 
                 Route::get('api/contracts/{contract}/pallets/{pallet}/items', function (\App\Models\Contract $contract, \App\Models\Pallet $pallet) {
                     $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)

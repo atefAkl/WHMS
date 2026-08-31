@@ -373,21 +373,27 @@ export default function CreateEdit({
             return;
         }
 
+        // Strict requirement: Must select contract first before looking up pallet details
+        if (!data.contract_id) {
+            setPalletLookupData(null);
+            setPosRowError(
+                lang === "ar"
+                    ? "يرجى اختيار العقد أولاً للبحث عن بيانات الطبلية."
+                    : "Please select a contract first before searching for pallet data."
+            );
+            return;
+        }
+
         setLoadingPallet(true);
         setPosRowError("");
 
         axios
-            .get(route("api.pallets.lookup", { pallet_number: number, contract_id: data.contract_id || "" }))
+            .get(route("api.pallets.lookup", { pallet_number: number, contract_id: data.contract_id }))
             .then((res) => {
                 setLoadingPallet(false);
                 if (res.data) {
                     setPosPalletSize(res.data.size);
                     setPalletLookupData(res.data);
-
-                    // Auto select contract if contract exists on pallet and contract not selected yet (only if active packages exist)
-                    if (res.data.contract && !data.contract_id && res.data.total_packages > 0) {
-                        handleContractSelect(res.data.contract.id);
-                    }
                 }
             })
             .catch((err) => {

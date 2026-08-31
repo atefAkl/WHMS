@@ -260,7 +260,7 @@ class PalletController extends Controller
     {
         $request->validate([
             'pallet_number' => 'required|string|max:50',
-            'contract_id'   => 'nullable',
+            'contract_id'   => 'required|integer|exists:contracts,id',
         ]);
 
         $code = trim($request->pallet_number);

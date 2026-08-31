@@ -287,7 +287,7 @@ export default function CreateEdit({
         if (!contractId) return;
         setLoadingPallets(true);
         axios
-            .get(route("api.contracts.pallets", contractId), { params: { only_active: 1 } })
+            .get(route("api.contracts.delivery-pallets", contractId))
             .then((res) => {
                 const palletsData = Array.isArray(res.data) ? res.data : (res.data?.pallets || []);
                 setPosPallets(palletsData);

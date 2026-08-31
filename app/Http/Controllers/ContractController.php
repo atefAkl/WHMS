@@ -2,23 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContractStoreRequest;
+use App\Traits\ValidatesSecureDeletion;
+use App\Services\ContractService;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Inertia\Inertia;
+
+use App\Models\PalletRearrangement;
+use App\Models\InventoryAdjustment;
+use App\Models\SalesInvoiceLine;
+use App\Models\ContractSetting;
+use App\Models\ContractPeriod;
+use App\Models\InventoryEntry;
+use App\Models\SalesInvoice;
+use App\Models\StorageItem;
+use App\Models\Reception;
 use App\Models\Contract;
 use App\Models\Customer;
-use App\Models\Term;
-use Carbon\Carbon;
-
-use App\Models\Season;
-use App\Models\StorageItem;
-use App\Models\ContractSetting;
+use App\Models\Delivery;
 use App\Models\Contact;
-use App\Models\ContractPeriod;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
-use App\Http\Requests\ContractStoreRequest;
-use App\Services\ContractService;
-use App\Traits\ValidatesSecureDeletion;
+use App\Models\Season;
+use App\Models\Pallet;
+use App\Models\User;
+use App\Models\Term;
 
 class ContractController extends Controller
 {
@@ -211,7 +223,7 @@ class ContractController extends Controller
             $contract = $this->contractService->storeContract($request->validated());
 
             try {
-                $users = \App\Models\User::all()->filter(fn($u) => $u->id !== auth()->id() && $u->wantsNotification('contract_created'));
+                $users = User::all()->filter(fn($u) => $u->id !== Auth::id() && $u->wantsNotification('contract_created'));
                 $customerName = $contract->customer ? $contract->customer->name : '';
                 foreach ($users as $user) {
                     $user->notify(new \App\Notifications\SystemNotification(
@@ -221,7 +233,7 @@ class ContractController extends Controller
                     ));
                 }
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error("Contract notification error: " . $e->getMessage());
+                Log::error("Contract notification error: " . $e->getMessage());
             }
 
             return redirect()->route('customers.show', $contract->customer_id)
@@ -639,7 +651,7 @@ class ContractController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        \DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $period = \App\Models\ContractPeriod::findOrFail($validated['period_id']);
             $date = $validated['date'] ?? now()->format('Y-m-d');
@@ -663,7 +675,7 @@ class ContractController extends Controller
             $taxRate = 15;
             $taxAmount = $subtotal * ($taxRate / 100);
 
-            $invoice = \App\Models\SalesInvoice::create([
+            $invoice = SalesInvoice::create([
                 'invoice_number' => $refNumber,
                 'customer_id' => $contract->customer_id,
                 'contract_id' => $contract->id,
@@ -674,10 +686,10 @@ class ContractController extends Controller
                 'tax_amount' => $taxAmount,
                 'total_amount' => $subtotal + $taxAmount,
                 'status' => 'draft',
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
-            \App\Models\SalesInvoiceLine::create([
+            SalesInvoiceLine::create([
                 'sales_invoice_id' => $invoice->id,
                 'description' => $validated['description'],
                 'account_id' => $validated['revenue_account_id'],
@@ -689,10 +701,10 @@ class ContractController extends Controller
                 'total' => $subtotal + $taxAmount,
             ]);
 
-            \DB::commit();
+            DB::commit();
             return redirect()->back()->with('success', 'تم إصدار الفاتورة بنجاح كمسودة');
         } catch (\Exception $e) {
-            \DB::rollBack();
+            DB::rollBack();
             return redirect()->back()->with('error', 'حدث خطأ أثناء إصدار الفاتورة: ' . $e->getMessage());
         }
     }
@@ -765,7 +777,7 @@ class ContractController extends Controller
                 'status' => 'draft',
                 'contract_id' => $contract->id,
                 'customer_id' => $contract->customer_id,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             if ($invoice || $period) {
@@ -1127,33 +1139,33 @@ class ContractController extends Controller
             'ids.*.type' => 'required|string|in:reception,delivery',
         ]);
 
-        $user = auth()->user();
+        $user = Auth::user();
         if (empty($user->secure_password)) {
             return response()->json(['error' => app()->getLocale() === 'ar' ? 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.' : 'Please set your secure password first in your profile.'], 403);
         }
 
-        if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->secure_password)) {
+        if (!Hash::check($request->password, $user->secure_password)) {
             return response()->json(['error' => app()->getLocale() === 'ar' ? 'كلمة المرور الآمنة غير صحيحة.' : 'Incorrect secure password.'], 403);
         }
 
         $approvedCount = 0;
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $contract, &$approvedCount) {
+        DB::transaction(function () use ($request, $contract, &$approvedCount) {
             foreach ($request->input('ids') as $item) {
                 if ($item['type'] === 'reception') {
-                    $reception = \App\Models\Reception::where('contract_id', $contract->id)->find($item['id']);
+                    $reception = Reception::where('contract_id', $contract->id)->find($item['id']);
                     if ($reception && $reception->status === 'draft') {
                         $reception->update([
                             'status' => 'approved',
-                            'updated_by' => auth()->id(),
+                            'updated_by' => Auth::id(),
                         ]);
                         $approvedCount++;
                     }
                 } elseif ($item['type'] === 'delivery') {
-                    $delivery = \App\Models\Delivery::where('contract_id', $contract->id)->find($item['id']);
+                    $delivery = Delivery::where('contract_id', $contract->id)->find($item['id']);
                     if ($delivery && $delivery->status === 'draft') {
                         $delivery->update([
                             'status' => 'approved',
-                            'updated_by' => auth()->id(),
+                            'updated_by' => Auth::id(),
                         ]);
                         $approvedCount++;
                     }
@@ -1179,47 +1191,47 @@ class ContractController extends Controller
             'ids.*.type' => 'required|string|in:reception,delivery',
         ]);
 
-        $user = auth()->user();
+        $user = Auth::user();
         if (empty($user->secure_password)) {
             return response()->json(['error' => app()->getLocale() === 'ar' ? 'يرجى تعيين كلمة مرور الحفظ/الحذف الآمنة أولاً في ملفك الشخصي.' : 'Please set your secure password first in your profile.'], 403);
         }
 
-        if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->secure_password)) {
+        if (!Hash::check($request->password, $user->secure_password)) {
             return response()->json(['error' => app()->getLocale() === 'ar' ? 'كلمة المرور الآمنة غير صحيحة.' : 'Incorrect secure password.'], 403);
         }
 
         $reopenedCount = 0;
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $contract, &$reopenedCount) {
+        DB::transaction(function () use ($request, $contract, &$reopenedCount) {
             foreach ($request->input('ids') as $item) {
                 if ($item['type'] === 'reception') {
-                    $reception = \App\Models\Reception::where('contract_id', $contract->id)->find($item['id']);
+                    $reception = Reception::where('contract_id', $contract->id)->find($item['id']);
                     if ($reception && $reception->status === 'approved') {
                         $history = $reception->history ?: [];
                         $history[] = [
                             'date' => now()->toDateTimeString(),
-                            'user' => auth()->user()->name,
+                            'user' => Auth::user()->name,
                             'reason' => 'إعادة الفتح بالتحديد المجمع: ' . $request->reason,
                         ];
                         $reception->update([
                             'status' => 'draft',
                             'history' => $history,
-                            'updated_by' => auth()->id(),
+                            'updated_by' => Auth::id(),
                         ]);
                         $reopenedCount++;
                     }
                 } elseif ($item['type'] === 'delivery') {
-                    $delivery = \App\Models\Delivery::where('contract_id', $contract->id)->find($item['id']);
+                    $delivery = Delivery::where('contract_id', $contract->id)->find($item['id']);
                     if ($delivery && $delivery->status === 'approved') {
                         $history = $delivery->history ?: [];
                         $history[] = [
                             'date' => now()->toDateTimeString(),
-                            'user' => auth()->user()->name,
+                            'user' => Auth::user()->name,
                             'reason' => 'إعادة الفتح بالتحديد المجمع: ' . $request->reason,
                         ];
                         $delivery->update([
                             'status' => 'draft',
                             'history' => $history,
-                            'updated_by' => auth()->id(),
+                            'updated_by' => Auth::id(),
                         ]);
                         $reopenedCount++;
                     }
@@ -1251,7 +1263,7 @@ class ContractController extends Controller
             $id = (int) $parts[1];
 
             if ($type === 'reception') {
-                $reception = \App\Models\Reception::where('contract_id', $contract->id)
+                $reception = Reception::where('contract_id', $contract->id)
                     ->with([
                         'customer',
                         'contract',
@@ -1267,7 +1279,7 @@ class ContractController extends Controller
                     $vouchers->push($reception);
                 }
             } elseif ($type === 'delivery') {
-                $delivery = \App\Models\Delivery::where('contract_id', $contract->id)
+                $delivery = Delivery::where('contract_id', $contract->id)
                     ->with([
                         'customer',
                         'contract',
@@ -1285,7 +1297,7 @@ class ContractController extends Controller
             }
         }
 
-        $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+        $companySettings = ContractSetting::pluck('value', 'key')->all();
 
         return Inertia::render('Warehouse/Vouchers/BulkPrint', [
             'vouchers' => $vouchers,
@@ -1297,21 +1309,21 @@ class ContractController extends Controller
     public function getPallets(Request $request, Contract $contract)
     {
         $voucherMorphClasses = [
-            \App\Models\Reception::class,
-            \App\Models\Delivery::class,
-            \App\Models\InventoryAdjustment::class,
-            \App\Models\PalletRearrangement::class,
+            Reception::class,
+            Delivery::class,
+            InventoryAdjustment::class,
+            PalletRearrangement::class,
         ];
 
         // Direct query starting from the contract's inventory entries to get all pallet IDs
-        $contractPalletIds = \App\Models\InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($query) use ($contract) {
+        $contractPalletIds = InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($query) use ($contract) {
             $query->where('contract_id', $contract->id);
         })
-        ->whereNotNull('pallet_id')
-        ->pluck('pallet_id')
-        ->unique();
+            ->whereNotNull('pallet_id')
+            ->pluck('pallet_id')
+            ->unique();
 
-        $query = \App\Models\Pallet::whereIn('id', $contractPalletIds);
+        $query = Pallet::whereIn('id', $contractPalletIds);
 
         // Filter: search by code or number
         if ($request->filled('search')) {
@@ -1473,7 +1485,7 @@ class ContractController extends Controller
                 $op = $request->input('qty_operator', 'gte');
                 $palletQty = (float) $pallet->total_packages;
 
-                $matchesQty = match($op) {
+                $matchesQty = match ($op) {
                     'gt', '>' => $palletQty > $qtyVal,
                     'lt', '<' => $palletQty < $qtyVal,
                     'eq', '=' => $palletQty == $qtyVal,
@@ -1540,6 +1552,100 @@ class ContractController extends Controller
                 'balance' => $totalIn - $totalOut,
             ],
         ]);
+    }
+
+    /**
+     * Dedicated API method to fetch active pallets available for delivery/withdrawal for a specific contract.
+     * Inputs: Contract $contract (contract_id).
+     * Logic:
+     * 1. Query inventory_entries for this contract_id.
+     * 2. Group by pallet_id.
+     * 3. Calculate quantity_in - quantity_out for each pallet.
+     * 4. Exclude pallets with total active package balance <= 0.
+     * 5. Return pallet options with numbers/codes from Pallet relationship for dropdown selection.
+     */
+    public function getPalletsForDelivery(Request $request, Contract $contract)
+    {
+        $voucherMorphClasses = [
+            \App\Models\Reception::class,
+            \App\Models\Delivery::class,
+            \App\Models\InventoryAdjustment::class,
+            \App\Models\PalletRearrangement::class,
+        ];
+
+        // 1. Query inventory entries associated with vouchers of this contract_id
+        $entries = \App\Models\InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($q) use ($contract) {
+            $q->where('contract_id', $contract->id);
+        })
+        ->whereNotNull('pallet_id')
+        ->with(['pallet', 'inventoryItem', 'variant'])
+        ->get();
+
+        // 2. Group entries by pallet_id
+        $groupedByPallet = $entries->groupBy('pallet_id');
+
+        $activePallets = collect();
+
+        foreach ($groupedByPallet as $palletId => $palletEntries) {
+            $palletModel = $palletEntries->first()?->pallet;
+            if (!$palletModel) continue;
+
+            // 3. Calculate net inputs and outputs for each pallet on this contract
+            $itemGrouped = $palletEntries->groupBy(function ($entry) {
+                return $entry->inventory_item_id . '_' . $entry->inventory_item_variant_id;
+            });
+
+            $contents = [];
+            $palletTotalIn = 0;
+            $palletTotalOut = 0;
+
+            foreach ($itemGrouped as $group) {
+                $first = $group->first();
+                $qtyIn = (float) $group->sum('quantity_in');
+                $qtyOut = (float) $group->sum('quantity_out');
+                $balance = $qtyIn - $qtyOut;
+
+                $palletTotalIn += $qtyIn;
+                $palletTotalOut += $qtyOut;
+
+                if ($balance > 0) {
+                    $contents[] = [
+                        'item_id' => $first->inventory_item_id,
+                        'item_name' => $first->inventoryItem?->name ?? 'صنف غير محدد',
+                        'variant_id' => $first->inventory_item_variant_id,
+                        'variant_name' => $first->variant?->name,
+                        'quality' => $first->variant?->quality,
+                        'quantity' => $balance,
+                        'total_in' => $qtyIn,
+                        'total_out' => $qtyOut,
+                    ];
+                }
+            }
+
+            $totalPackages = array_sum(array_column($contents, 'quantity'));
+
+            // 4. Exclude pallets with total active package balance <= 0
+            if ($totalPackages <= 0) {
+                continue;
+            }
+
+            // 5. Build option object with pallet numbers from relation
+            $activePallets->push([
+                'id' => $palletModel->id,
+                'pallet_number' => $palletModel->pallet_number,
+                'pallet_code' => $palletModel->pallet_code,
+                'size' => $palletModel->size,
+                'total_packages' => $totalPackages,
+                'total_in' => $palletTotalIn,
+                'total_out' => $palletTotalOut,
+                'contents' => $contents,
+            ]);
+        }
+
+        // Sort by pallet_number ascending
+        $sortedPallets = $activePallets->sortBy('pallet_number')->values();
+
+        return response()->json($sortedPallets);
     }
 
     public function getStoredItems(Request $request, Contract $contract)
