@@ -377,7 +377,7 @@ export default function CreateEdit({
         setPosRowError("");
 
         axios
-            .get(route("api.pallets.lookup", { pallet_number: number }))
+            .get(route("api.pallets.lookup", { pallet_number: number, contract_id: data.contract_id || "" }))
             .then((res) => {
                 setLoadingPallet(false);
                 if (res.data) {
@@ -1530,10 +1530,22 @@ export default function CreateEdit({
                                             </div>
                                         ) : (
                                             <p className="text-[11px] text-text-muted italic">
-                                                {lang === "ar" ? "طبلية فارغة / جديدة (لا تحتوي على بضائع مسجلة حالياً)." : "New / Empty pallet (no stored items currently)."}
+                                                {lang === "ar" ? "طبلية فارغة / جديدة (لا تحتوي على بضائع مسجلة حالياً على هذا العقد)." : "New / Empty pallet (no stored items currently on this contract)."}
                                             </p>
                                         )}
                                     </div>
+
+                                    {/* Warning if occupied on another contract */}
+                                    {palletLookupData.is_occupied_elsewhere && palletLookupData.other_contract && (
+                                        <div className="bg-amber-500/10 border border-amber-500/30 p-2 text-amber-700 text-[11px] font-bold flex items-center gap-1.5 mt-2">
+                                            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                                            <span>
+                                                {lang === "ar"
+                                                    ? `تنبيه: هذه الطبلية مشغولة حالياً على عقد آخر: ${palletLookupData.other_contract.contract_number} (${palletLookupData.other_contract.customer_name}) بحمولة ${palletLookupData.other_contract.active_packages} عبوة!`
+                                                    : `Warning: This pallet is currently occupied on another contract: ${palletLookupData.other_contract.contract_number} (${palletLookupData.other_contract.customer_name}) with ${palletLookupData.other_contract.active_packages} packs!`}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

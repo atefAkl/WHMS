@@ -1296,12 +1296,22 @@ class ContractController extends Controller
 
     public function getPallets(Request $request, Contract $contract)
     {
-        $query = \App\Models\Pallet::query()
-            ->whereHas('inventoryEntries', function ($q) use ($contract) {
-                $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
-                    $query->where('contract_id', $contract->id);
-                });
-            });
+        $voucherMorphClasses = [
+            \App\Models\Reception::class,
+            \App\Models\Delivery::class,
+            \App\Models\InventoryAdjustment::class,
+            \App\Models\PalletRearrangement::class,
+        ];
+
+        // Direct query starting from the contract's inventory entries to get all pallet IDs
+        $contractPalletIds = \App\Models\InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($query) use ($contract) {
+            $query->where('contract_id', $contract->id);
+        })
+        ->whereNotNull('pallet_id')
+        ->pluck('pallet_id')
+        ->unique();
+
+        $query = \App\Models\Pallet::whereIn('id', $contractPalletIds);
 
         // Filter: search by code or number
         if ($request->filled('search')) {
@@ -1451,6 +1461,11 @@ class ContractController extends Controller
 
             $pallet->stay_duration_days = max(1, $totalStayDays);
             $pallet->stay_duration_months = max(1, $totalStayMonths);
+
+            // Filter: only active pallets (has active stored package balance > 0 on this contract)
+            if ($request->boolean('only_active') && (float) $pallet->total_packages <= 0) {
+                continue;
+            }
 
             // Filter by quantity
             if ($request->filled('qty_value') && is_numeric($request->qty_value)) {
