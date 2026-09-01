@@ -261,6 +261,12 @@ export default function Print({ reception, companySettings = {} }) {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "مندوب / سائق:" : "Rep / Driver:"}</span>
+                                        <span className="font-bold text-black">
+                                            {`${reception.representative?.name?.trim() || "---"} / ${reception.driver?.name?.trim() || "---"}`}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2">
                                         <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المزرعة / المصدر:" : "Source:"}</span>
                                         <span className="font-medium text-gray-900">{reception.farm_source || "—"}</span>
                                     </div>

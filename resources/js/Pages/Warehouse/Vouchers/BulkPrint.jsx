@@ -203,15 +203,19 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                                     <span className="font-mono font-bold text-black">{voucher.period?.period_number ? String(voucher.period.period_number).padStart(2, '0') : '01'}</span>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-gray-600 w-24 shrink-0">{isReception ? (lang === "ar" ? "المندوب:" : "Represent:") : (lang === "ar" ? "المستلم/المندوب:" : "Recipient:")}</span>
-                                <span className="font-medium text-gray-900">{voucher.representative?.name || voucher.driver?.name || "—"}</span>
-                            </div>
                             {isReception ? (
-                                <div className="flex gap-2">
-                                    <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المصدر:" : "Source:"}</span>
-                                    <span className="font-medium text-gray-900">{voucher.farm_source || voucher.source_farm || "—"}</span>
-                                </div>
+                                <>
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "مندوب / سائق:" : "Rep / Driver:"}</span>
+                                        <span className="font-bold text-black">
+                                            {`${voucher.representative?.name?.trim() || "---"} / ${voucher.driver?.name?.trim() || "---"}`}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المصدر:" : "Source:"}</span>
+                                        <span className="font-medium text-gray-900">{voucher.farm_source || voucher.source_farm || "—"}</span>
+                                    </div>
+                                </>
                             ) : (
                                 <div className="flex gap-2">
                                     <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "السائق:" : "Driver:"}</span>
