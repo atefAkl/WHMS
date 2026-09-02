@@ -151,13 +151,13 @@ export default function CreateEdit({
         status: reception?.status || "draft",
         items: reception?.inventory_entries
             ? reception.inventory_entries.map((e) => ({
-                  id: e.id,
-                  inventory_item_id: e.inventory_item_id,
-                  inventory_item_variant_id: e.inventory_item_variant_id,
-                  pallet_number: e.pallet?.pallet_number || "",
-                  pallet_size: e.pallet?.size || "وسط",
-                  quantity_in: e.quantity_in,
-              }))
+                id: e.id,
+                inventory_item_id: e.inventory_item_id,
+                inventory_item_variant_id: e.inventory_item_variant_id,
+                pallet_number: e.pallet?.pallet_number || "",
+                pallet_size: e.pallet?.size || "وسط",
+                quantity_in: e.quantity_in,
+            }))
             : [],
         redirect_to_draft_id: "",
     });
@@ -628,8 +628,8 @@ export default function CreateEdit({
                         ? "تعديل سند"
                         : "Edit Voucher"
                     : lang === "ar"
-                      ? "إنشاء سند جديد"
-                      : "New Voucher"}
+                        ? "إنشاء سند جديد"
+                        : "New Voucher"}
             </span>
         </div>
     );
@@ -643,8 +643,8 @@ export default function CreateEdit({
                             ? "تعديل سند استلام"
                             : "Edit Reception Voucher"
                         : lang === "ar"
-                          ? "إنشاء سند استلام"
-                          : "New Reception Voucher"
+                            ? "إنشاء سند استلام"
+                            : "New Reception Voucher"
                 }
             />
 
@@ -661,8 +661,8 @@ export default function CreateEdit({
                                 ? `تعديل إيصال استلام: ${reception.serial_number}`
                                 : `Edit Receipt: ${reception.serial_number}`
                             : lang === "ar"
-                              ? "إنشاء إيصال استلام جديد"
-                              : "Create New Reception Receipt"
+                                ? "إنشاء إيصال استلام جديد"
+                                : "Create New Reception Receipt"
                     }
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
@@ -725,9 +725,9 @@ export default function CreateEdit({
                                     href={
                                         isEdit
                                             ? route(
-                                                  "receptions.show",
-                                                  reception.id,
-                                              )
+                                                "receptions.show",
+                                                reception.id,
+                                            )
                                             : route("receptions.index")
                                     }
                                     className="border border-border bg-surface text-text hover:bg-surface-muted rounded-none h-[30px] w-[30px] flex items-center justify-center transition-all"
@@ -757,8 +757,8 @@ export default function CreateEdit({
                                         ? `${draft.customer.name} (${draft.contract.contract_number})`
                                         : `${draft.customer.name} - ${lang === "ar" ? "لم يتم تعيين عقد" : "No contract assigned"}`
                                     : lang === "ar"
-                                      ? "لم يتم تعيين عقد"
-                                      : "Contract not assigned yet";
+                                        ? "لم يتم تعيين عقد"
+                                        : "Contract not assigned yet";
 
                                 return (
                                     <Tooltip
@@ -870,10 +870,9 @@ export default function CreateEdit({
                                                     "customer_name",
                                                 ]}
                                                 displayFormat={(c) =>
-                                                    `${c.contract_number} ${
-                                                        c.customer_name
-                                                            ? `(${c.customer_name})`
-                                                            : ""
+                                                    `${c.contract_number} ${c.customer_name
+                                                        ? `(${c.customer_name})`
+                                                        : ""
                                                     }`
                                                 }
                                                 valueKey="id"
@@ -1394,9 +1393,11 @@ export default function CreateEdit({
                                     <input
                                         ref={qtyInputRef}
                                         type="number"
-                                        step="0.01"
-                                        className="mt-1 block w-full text-xs rounded-none border-border h-[38px] px-2 bg-surface text-text font-mono"
-                                        placeholder="0.00"
+                                        step="1"
+                                        min="1"
+                                        max="1200"
+                                        className="mt-1 block w-16 text-xs rounded-none border-border h-[38px] px-2 bg-surface text-text font-mono"
+                                        placeholder="000"
                                         value={posQuantity}
                                         onChange={(e) =>
                                             setPosQuantity(e.target.value)
@@ -1423,11 +1424,10 @@ export default function CreateEdit({
                                         ref={addButtonRef}
                                         type="button"
                                         onClick={handleAddPOSRow}
-                                        className={`w-full text-white text-xs font-bold h-[38px] flex items-center justify-center rounded-none transition-all gap-1 ${
-                                            editingRowIndex !== null
-                                                ? "bg-amber-600 hover:bg-amber-700"
-                                                : "bg-primary hover:bg-primary/95"
-                                        }`}
+                                        className={`w-full text-white text-xs font-bold h-[38px] flex items-center justify-center rounded-none transition-all gap-1 ${editingRowIndex !== null
+                                            ? "bg-amber-600 hover:bg-amber-700"
+                                            : "bg-primary hover:bg-primary/95"
+                                            }`}
                                         onKeyDown={(e) =>
                                             handleKeyNavigation(
                                                 e,
@@ -1601,7 +1601,7 @@ export default function CreateEdit({
                                                     ? "الكمية المستلمة"
                                                     : "Qty Received"}
                                             </th>
-                                            <th className="px-3 py-2 text-center w-16">
+                                            <th className="px-3 py-2 text-center w-26">
                                                 {lang === "ar"
                                                     ? "إجراء"
                                                     : "Action"}
@@ -1638,11 +1638,10 @@ export default function CreateEdit({
                                                 return (
                                                     <tr
                                                         key={index}
-                                                        className={`transition-colors ${
-                                                            editingRowIndex === index
-                                                                ? "bg-amber-500/10 border-2 border-amber-400"
-                                                                : "hover:bg-slate-50"
-                                                        }`}
+                                                        className={`transition-colors ${editingRowIndex === index
+                                                            ? "bg-amber-500/10 border-2 border-amber-400"
+                                                            : "hover:bg-slate-50"
+                                                            }`}
                                                     >
                                                         <td className="px-3 py-2.5 font-mono text-text-muted">
                                                             {index + 1}
@@ -2070,8 +2069,8 @@ export default function CreateEdit({
                                                 ? "جاري الإضافة..."
                                                 : "Adding..."
                                             : lang === "ar"
-                                              ? "إضافة السائق"
-                                              : "Add Driver"}
+                                                ? "إضافة السائق"
+                                                : "Add Driver"}
                                     </span>
                                 )}
                             </button>

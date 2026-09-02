@@ -103,11 +103,11 @@ export default function Print({ delivery, companySettings = {} }) {
     };
 
     // Company info & metadata defaults
-    const compName = companySettings.company_name || "مخازن أيمن محمد عبد الله الغماس للتخزين";
+    const compName = companySettings.company_name || "مخازن سلطان العتبيبي الأشرم للتخزين";
     const compSlogan = companySettings.company_slogan || "تخزين - تبريد - تجميد - تعبئة وتغليف - بيع - تصدير";
-    const compCr = companySettings.company_cr || "1131305092";
-    const compPhone = companySettings.company_phone || "0568562615";
-    const compEmail = companySettings.company_email || "sales@ag-stores.com";
+    const compCr = companySettings.company_cr || "1301304587";
+    const compPhone = companySettings.company_phone || "0500000000";
+    const compEmail = companySettings.company_email || "account@web.site";
     const compAddress = companySettings.company_address || "1131 - القصيم / ضراس - طريق الملك فهد";
     const compWebsite = companySettings.company_website || "https://web.site";
     const compLogo = companySettings.company_logo || null;

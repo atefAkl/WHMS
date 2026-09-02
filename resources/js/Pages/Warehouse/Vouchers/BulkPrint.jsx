@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Head, usePage } from "@inertiajs/react";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import { Head, usePage, Link } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import { Printer, ArrowLeft, ArrowRight, X, CheckSquare, Square, FileText } from "lucide-react";
+import { Printer, ArrowRight, X, CheckSquare, Square, FileText, Filter, List, FileCheck } from "lucide-react";
 
 export default function BulkPrint({ vouchers = [], contract, companySettings = {} }) {
     const { lang } = useLang();
@@ -82,7 +83,7 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
     const compPhone = companySettings.company_phone || "0568562615";
     const compEmail = companySettings.company_email || "sales@ag-stores.com";
     const compAddress = companySettings.company_address || "1131 - القصيم / ضراس - طريق الملك فهد";
-    const compWebsite = companySettings.company_website || "https:web.site";
+    const compWebsite = companySettings.company_website || "https://web.site";
     const compLogo = companySettings.company_logo || null;
 
     const toggleVoucher = (key) => {
@@ -143,14 +144,17 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
         );
         const totalPallets = entries.length;
 
+        const repPart = voucher.representative?.name?.trim() || "---";
+        const driverPart = voucher.driver?.name?.trim() || "---";
+        const repDriverDisplay = `${repPart} / ${driverPart}`;
+
         return (
-            <div className="bulk-voucher-page max-w-4xl mx-auto w-full flex flex-col justify-between p-6 bg-white text-black font-sans text-xs print:p-0 print:m-0 print:box-border print:h-[287mm]">
+            <div className="bulk-voucher-page max-w-4xl mx-auto w-full flex flex-col justify-between p-6 bg-white text-black font-sans text-xs print:p-0 print:m-0 print:box-border print:min-h-[27cm] border border-gray-200 print:border-none shadow-sm print:shadow-none rounded-xl print:rounded-none">
                 {/* ═══ TOP & MAIN CONTENT ═════════════════════════════════ */}
                 <div className="space-y-3 print:space-y-2">
                     
                     {/* Header Section */}
                     <div className="flex justify-between items-start border-b border-gray-400 pb-2">
-                        {/* Left: Company Logo & Info */}
                         <div className="flex items-center gap-3">
                             {compLogo ? (
                                 <img src={compLogo} alt="Logo" className="w-12 h-12 object-contain" />
@@ -172,12 +176,12 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                             </div>
                         </div>
 
-                        {/* Right: Voucher Title & Serial Number */}
                         <div className="text-end space-y-0.5">
                             <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
                                 {isReception 
-                                    ? (lang === "ar" ? "سند استلام بضائع" : "Goods Receipt")
-                                    : (lang === "ar" ? "سند خروج وتسليم بضاعة" : "Goods Delivery Note")}
+                                    ? (lang === "ar" ? "سند استلام وحفظ بضائع" : "Goods Reception Note")
+                                    : (lang === "ar" ? "سند تسليم وخروج بضائع" : "Goods Delivery Note")
+                                }
                             </h1>
                             <div className="text-xs font-black font-mono text-gray-900">
                                 No: {voucher.serial_number}
@@ -186,8 +190,7 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                     </div>
 
                     {/* Metadata Grid */}
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-[11px] border-b border-gray-300 pb-2 text-start">
-                        {/* Left Column */}
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-[11px] border-b border-gray-300 pb-2">
                         <div className="space-y-1">
                             <div className="flex gap-2">
                                 <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العميل:" : "Client:"}</span>
@@ -207,9 +210,7 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                                 <>
                                     <div className="flex gap-2">
                                         <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "مندوب / سائق:" : "Rep / Driver:"}</span>
-                                        <span className="font-bold text-black">
-                                            {`${voucher.representative?.name?.trim() || "---"} / ${voucher.driver?.name?.trim() || "---"}`}
-                                        </span>
+                                        <span className="font-bold text-black">{repDriverDisplay}</span>
                                     </div>
                                     <div className="flex gap-2">
                                         <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المصدر:" : "Source:"}</span>
@@ -224,7 +225,6 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                             )}
                         </div>
 
-                        {/* Right Column */}
                         <div className="space-y-1">
                             <div className="flex gap-2">
                                 <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "عناية / المستلم:" : "Att:"}</span>
@@ -288,7 +288,7 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                                             <td className="py-1.5 font-medium">
                                                 {finalBoxDisplay}
                                             </td>
-                                            <td className={`py-1.5 font-mono font-bold ${!isReception ? 'text-red-700' : ''}`}>
+                                            <td className="py-1.5 font-mono font-bold">
                                                 {qty}
                                             </td>
                                         </tr>
@@ -298,20 +298,21 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                                 {/* Summary Row */}
                                 <tr className="border-t-2 border-black font-extrabold text-black">
                                     <td colSpan="3" className="py-2 px-4 text-start font-bold">
-                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الطبالي:" : "Total Tables:"}</span>
+                                        <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الطبالي / Total Tables:" : "Total Tables:"}</span>
                                         <span className="font-mono text-sm font-black text-black">{totalPallets}</span>
                                     </td>
                                     <td colSpan="3" className="py-2 px-4 text-end font-bold">
-                                        <span className="text-gray-700 me-2">{isReception ? (lang === "ar" ? "إجمالي العبوات:" : "Total Packs:") : (lang === "ar" ? "إجمالي العبوات المنصرفة:" : "Total Packs Out:")}</span>
-                                        <span className={`font-mono text-sm font-black ${!isReception ? 'text-red-700' : 'text-black'}`}>{Math.round(totalQty).toLocaleString()}</span>
+                                        <span className="text-gray-700 me-2">{isReception ? (lang === "ar" ? "إجمالي العبوات / Total Packs:" : "Total Packs:") : (lang === "ar" ? "إجمالي العبوات المخرجة / Total Packs Out:" : "Total Packs Out:")}</span>
+                                        <span className="font-mono text-sm font-black text-black">{Math.round(totalQty).toLocaleString()}</span>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
                 </div>
 
-                {/* ═══ SIGNATURES & FOOTER PANEL (Strictly Pinned to Bottom) ═════════ */}
+                {/* ═══ SIGNATURES & FOOTER PANEL ═════════════════════════ */}
                 <div className="mt-auto pt-3 print:pt-2 space-y-2 pb-0 print:pb-0">
                     
                     {/* Signatures */}
@@ -322,7 +323,7 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                             </p>
                             <div className="text-start text-[11px] space-y-0.5">
                                 <p className="text-gray-800 font-semibold truncate">
-                                    {lang === "ar" ? "الاسم: " : "Name: "}{voucher.representative?.name || voucher.customer?.name || "________________"}
+                                    {lang === "ar" ? "الاسم: " : "Name: "}{voucher.representative?.name || voucher.driver?.name || voucher.recipient_name || voucher.customer?.name || "________________"}
                                 </p>
                                 <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
                             </div>
@@ -343,7 +344,7 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                                 Stores Admin
                             </p>
                             <div className="text-start text-[11px] space-y-0.5">
-                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{voucher.recipient_name || user?.name || "________________"}</p>
+                                <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{voucher.created_by_user?.name || user?.name || "________________"}</p>
                                 <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
                             </div>
                         </div>
@@ -357,25 +358,45 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                     </div>
 
                 </div>
+
             </div>
         );
     };
 
     return (
-        <div 
-            className="min-h-screen bg-slate-100 text-black font-sans pb-16 print:p-0 print:m-0 print:bg-white print:pb-0" 
-            dir={lang === "ar" ? "rtl" : "ltr"}
-        >
-            <Head title={lang === "ar" ? "صفحة معاينة وطباعة السندات" : "Bulk Print Preview Vouchers"} />
+        <AuthenticatedLayout
+            header={
+                <div className="flex flex-wrap justify-between items-center w-full gap-3 print:hidden">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-lg font-bold leading-tight text-gray-800 flex items-center gap-2">
+                            <Printer className="h-5 w-5 text-primary" />
+                            {lang === "ar" ? "معاينة الطباعة المجمعة للسندات" : "Bulk Vouchers Print Preview"}
+                        </h2>
+                        {contract && (
+                            <span className="bg-blue-50 text-blue-800 border border-blue-200 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full">
+                                {lang === "ar" ? `العقد: ${contract.contract_number}` : `Contract: ${contract.contract_number}`}
+                            </span>
+                        )}
+                    </div>
 
-            {/* Standalone Control Toolbar - Hidden when printing */}
-            <div className="print:hidden sticky top-0 z-50 bg-slate-900 text-white p-4 shadow-xl border-b border-slate-700">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 text-start">
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handlePrint}
+                            disabled={visibleVouchers.length === 0}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                        >
+                            <Printer className="h-4 w-4" />
+                            <span>
+                                {lang === "ar"
+                                    ? `طباعة السندات المحددة (${visibleVouchers.length})`
+                                    : `Print Selected (${visibleVouchers.length})`}
+                            </span>
+                        </button>
                         <button
                             type="button"
                             onClick={handleCloseOrBack}
-                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                            className="px-3.5 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5"
                         >
                             {hasReferrer ? (
                                 <>
@@ -389,100 +410,105 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                                 </>
                             )}
                         </button>
-                        <div>
-                            <h2 className="text-sm font-extrabold">
-                                {lang === "ar" ? "معاينة الطباعة المجمعة للسندات" : "Bulk Print Preview Page"}
-                            </h2>
-                            <p className="text-[11px] text-slate-400">
-                                {lang === "ar"
-                                    ? `معروض (${visibleVouchers.length}) من إجمالي (${vouchers.length}) سند محدد`
-                                    : `Showing (${visibleVouchers.length}) of (${vouchers.length}) selected vouchers`}
-                            </p>
+                    </div>
+                </div>
+            }
+        >
+            <Head title={lang === "ar" ? "طباعة السندات المجمعة" : "Bulk Print Vouchers"} />
+
+            <div className="py-4 space-y-6 print:py-0 print:space-y-0" dir={lang === "ar" ? "rtl" : "ltr"}>
+                
+                {/* Selection Control Card (Hidden when printing) */}
+                <div className="print:hidden bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-3">
+                    <div className="flex flex-wrap justify-between items-center gap-3 border-b border-gray-100 pb-3">
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4 text-primary" />
+                            <span className="font-bold text-xs text-gray-800">
+                                {lang === "ar" ? "تحديد السندات المراد طباعتها من القائمة:" : "Select Vouchers to Include in Print:"}
+                            </span>
+                            <span className="bg-primary/10 text-primary font-mono font-bold text-xs px-2.5 py-0.5 rounded-full">
+                                {visibleVouchers.length} / {vouchers.length} {lang === "ar" ? "سند محدد" : "selected"}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs">
+                            <button
+                                type="button"
+                                onClick={selectAll}
+                                className="font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+                            >
+                                <CheckSquare className="h-3.5 w-3.5" />
+                                <span>{lang === "ar" ? "تحديد الكل" : "Select All"}</span>
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <button
+                                type="button"
+                                onClick={deselectAll}
+                                className="font-bold text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+                            >
+                                <Square className="h-3.5 w-3.5" />
+                                <span>{lang === "ar" ? "إلغاء الكل" : "Deselect All"}</span>
+                            </button>
                         </div>
                     </div>
 
-                    {/* Checkbox selections list */}
-                    <div className="flex items-center gap-3 overflow-x-auto max-w-full py-1">
-                        <button
-                            type="button"
-                            onClick={selectAll}
-                            className="text-[11px] font-bold text-emerald-400 hover:underline px-2 shrink-0"
-                        >
-                            {lang === "ar" ? "تحديد الكل" : "Select All"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={deselectAll}
-                            className="text-[11px] font-bold text-amber-400 hover:underline px-2 shrink-0"
-                        >
-                            {lang === "ar" ? "إلغاء الكل" : "Deselect All"}
-                        </button>
+                    {/* Checkbox Chips List */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                        {vouchers.map((voucher) => {
+                            const key = `${voucher.voucher_type || 'voucher'}-${voucher.id}`;
+                            const isSelected = !!selectedKeys[key];
+                            const isReception = voucher.voucher_type === 'reception';
+                            const serial = voucher.serial_number;
 
-                        <div className="h-4 w-px bg-slate-700 shrink-0"></div>
-
-                        {vouchers.map((v) => {
-                            const key = `${v.voucher_type || 'voucher'}-${v.id}`;
-                            const isChecked = !!selectedKeys[key];
                             return (
                                 <button
                                     key={key}
                                     type="button"
                                     onClick={() => toggleVoucher(key)}
-                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold shrink-0 transition-all ${
-                                        isChecked
-                                            ? "bg-primary text-white"
-                                            : "bg-slate-800 text-slate-400 hover:text-white"
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 border transition-all ${
+                                        isSelected
+                                            ? "bg-blue-50 border-blue-300 text-blue-800 shadow-sm"
+                                            : "bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100"
                                     }`}
                                 >
-                                    {isChecked ? (
-                                        <CheckSquare className="h-3.5 w-3.5" />
+                                    {isSelected ? (
+                                        <CheckSquare className="h-4 w-4 text-blue-600 shrink-0" />
                                     ) : (
-                                        <Square className="h-3.5 w-3.5" />
+                                        <Square className="h-4 w-4 text-gray-300 shrink-0" />
                                     )}
-                                    <span>{v.serial_number}</span>
+                                    <span className="font-mono">{serial}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-normal ${
+                                        isReception ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                                    }`}>
+                                        {isReception ? (lang === "ar" ? "استلام" : "Reception") : (lang === "ar" ? "تسليم" : "Delivery")}
+                                    </span>
                                 </button>
                             );
                         })}
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={handlePrint}
-                            disabled={visibleVouchers.length === 0}
-                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-extrabold flex items-center gap-2 shadow-lg transition-all shrink-0"
-                        >
-                            <Printer className="h-4 w-4" />
-                            <span>
-                                {lang === "ar"
-                                    ? `طباعة المحددة (${visibleVouchers.length})`
-                                    : `Print Selected (${visibleVouchers.length})`}
-                            </span>
-                        </button>
-                    </div>
                 </div>
+
+                {/* Printable Content Area */}
+                {vouchers.length === 0 ? (
+                    <div className="print:hidden text-center py-16 bg-white border border-gray-200 rounded-xl text-gray-500 font-bold">
+                        {lang === "ar" ? "لم يتم اختيار أي سندات للمعاينة والطباعة" : "No vouchers provided for preview"}
+                    </div>
+                ) : visibleVouchers.length === 0 ? (
+                    <div className="print:hidden text-center py-16 bg-white border border-gray-200 rounded-xl text-gray-500 font-bold">
+                        {lang === "ar" ? "يرجى تحديد سند واحد على الأقل للطباعة من قائمة الاختيارات أعلاه." : "Please select at least one voucher from the selection box above."}
+                    </div>
+                ) : (
+                    <div className="space-y-6 print:space-y-0">
+                        {visibleVouchers.map((voucher) => (
+                            <React.Fragment key={`${voucher.voucher_type}-${voucher.id}`}>
+                                {renderAuthenticVoucher(voucher)}
+                            </React.Fragment>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Document Container */}
-            {vouchers.length === 0 ? (
-                <div className="text-center py-20 text-slate-500 font-bold">
-                    {lang === "ar" ? "لم يتم اختيار أي سندات للمعاينة والطباعة" : "No vouchers provided for preview"}
-                </div>
-            ) : visibleVouchers.length === 0 ? (
-                <div className="text-center py-20 text-slate-500 font-bold">
-                    {lang === "ar" ? "برجاء تحديد سند واحد على الأقل للطباعة من الشريط العلوي" : "Please select at least one voucher from top toolbar"}
-                </div>
-            ) : (
-                <div className="space-y-6 pt-6 print:pt-0 print:space-y-0">
-                    {visibleVouchers.map((voucher) => (
-                        <React.Fragment key={`${voucher.voucher_type}-${voucher.id}`}>
-                            {renderAuthenticVoucher(voucher)}
-                        </React.Fragment>
-                    ))}
-                </div>
-            )}
-
-            {/* Print CSS Rules - Strictly 1 Page per Voucher without blank pages or duplicates */}
+            {/* Print CSS Rules - Supports Multi-page Printing per voucher */}
             <style>{`
                 @media print {
                     @page {
@@ -506,6 +532,8 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                         margin: 0 !important;
                         padding: 0 !important;
                         box-sizing: border-box !important;
+                        border: none !important;
+                        box-shadow: none !important;
                     }
                     .bulk-voucher-page:last-child {
                         page-break-after: auto !important;
@@ -513,6 +541,6 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                     }
                 }
             `}</style>
-        </div>
+        </AuthenticatedLayout>
     );
 }
