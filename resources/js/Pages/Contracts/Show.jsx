@@ -150,7 +150,35 @@ export default function Show({
 
     // Printable Summary Reports states
     const [showPalletsReport, setShowPalletsReport] = useState(false);
+    const [allPalletsForReport, setAllPalletsForReport] = useState([]);
+    const [loadingPalletsReport, setLoadingPalletsReport] = useState(false);
     const [showItemsReport, setShowItemsReport] = useState(false);
+
+    const handleOpenPalletsReport = () => {
+        setLoadingPalletsReport(true);
+        axios
+            .get(route("contracts.pallets", contract.id), {
+                params: {
+                    all: true,
+                    search: filterPalletSearch,
+                    size: filterPalletSize,
+                    item_id: filterPalletItemId,
+                    qty_operator: filterPalletQtyOperator,
+                    qty_value: filterPalletQtyValue,
+                },
+            })
+            .then((response) => {
+                setAllPalletsForReport(response.data.pallets || []);
+                setShowPalletsReport(true);
+                setLoadingPalletsReport(false);
+            })
+            .catch((err) => {
+                console.error("Error fetching all pallets for report:", err);
+                setAllPalletsForReport(pallets);
+                setShowPalletsReport(true);
+                setLoadingPalletsReport(false);
+            });
+    };
 
     // Movement Detail Modal states
     const [showMovementModal, setShowMovementModal] = useState(false);
@@ -5560,13 +5588,11 @@ export default function Show({
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        setFilterPalletSearch(
-                                                            "",
-                                                        );
+                                                        setFilterPalletSearch("");
                                                         setFilterPalletSize("");
-                                                        setFilterPalletItemId(
-                                                            "",
-                                                        );
+                                                        setFilterPalletItemId("");
+                                                        setFilterPalletQtyOperator("gte");
+                                                        setFilterPalletQtyValue("");
                                                     }}
                                                     className="flex items-center justify-center gap-1 h-[30px] px-2.5 text-xs font-bold bg-surface border border-border hover:bg-surface-muted rounded-lg hover:translate-y-[-2px] hover:shadow-sm transition-all duration-200 text-danger w-full sm:w-auto"
                                                 >
@@ -5584,20 +5610,37 @@ export default function Show({
                                     </div>
 
                                     {/* Summary & Actions */}
-                                    <div className="flex justify-between items-center mb-3">
+                                    <div className="flex flex-wrap justify-between items-center gap-3 mb-3">
                                         <span className="text-xs text-text-muted font-bold">
                                             {lang === "ar"
                                                 ? `إجمالي الطبالي: ${palletsTotal}`
                                                 : `Total pallets: ${palletsTotal}`}
                                         </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPalletsReport(true)}
-                                            className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
-                                        >
-                                            <Printer className="h-3.5 w-3.5" />
-                                            <span>{lang === "ar" ? "طباعة ملخص الطبالي" : "Print Pallets Report"}</span>
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <a
+                                                href={route("contracts.pallet-history", contract.id)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                                            >
+                                                <Clock className="h-3.5 w-3.5" />
+                                                <span>{lang === "ar" ? "تاريخ الطبالي" : "Pallet History"}</span>
+                                            </a>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenPalletsReport}
+                                                disabled={loadingPalletsReport}
+                                                className="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                                            >
+                                                {loadingPalletsReport ? (
+                                                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                                ) : (
+                                                    <Printer className="h-3.5 w-3.5" />
+                                                )}
+                                                <span>{lang === "ar" ? "طباعة ملخص الطبالي" : "Print Pallets Report"}</span>
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Table Content */}
@@ -7789,7 +7832,7 @@ export default function Show({
             {showPalletsReport && (
                 <PalletsPrintReport
                     contract={contract}
-                    pallets={pallets}
+                    pallets={allPalletsForReport.length > 0 ? allPalletsForReport : pallets}
                     onClose={() => setShowPalletsReport(false)}
                 />
             )}

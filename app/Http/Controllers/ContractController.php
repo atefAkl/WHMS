@@ -1480,17 +1480,17 @@ class ContractController extends Controller
             }
 
             // Filter by quantity
-            if ($request->filled('qty_value') && is_numeric($request->qty_value)) {
+            if ($request->has('qty_value') && $request->qty_value !== '' && $request->qty_value !== null && is_numeric($request->qty_value)) {
                 $qtyVal = (float) $request->qty_value;
-                $op = $request->input('qty_operator', 'gte');
+                $op = strtolower(trim($request->input('qty_operator', 'gte')));
                 $palletQty = (float) $pallet->total_packages;
 
                 $matchesQty = match ($op) {
-                    'gt', '>' => $palletQty > $qtyVal,
-                    'lt', '<' => $palletQty < $qtyVal,
-                    'eq', '=' => $palletQty == $qtyVal,
-                    'lte', '<=' => $palletQty <= $qtyVal,
-                    default => $palletQty >= $qtyVal,
+                    'gt', '>' => $palletQty > $qtyVal + 0.0001,
+                    'lt', '<' => $palletQty < $qtyVal - 0.0001,
+                    'eq', '=' => abs($palletQty - $qtyVal) < 0.001,
+                    'lte', '<=' => $palletQty <= $qtyVal + 0.0001,
+                    default => $palletQty >= $qtyVal - 0.0001,
                 };
 
                 if (!$matchesQty) {
@@ -1528,15 +1528,34 @@ class ContractController extends Controller
         }
         $allItems = \App\Models\InventoryItem::whereIn('id', array_unique($activeItemIds))->get(['id', 'name']);
 
-        // Paginate in PHP
-        $perPage = 24;
-        $page = (int) $request->input('page', 1);
         $total = $filteredPallets->count();
-        $paginatedPallets = $filteredPallets->slice(($page - 1) * $perPage, $perPage)->values();
 
         // Summary calculations
         $totalIn = (float) $filteredPallets->sum('total_in');
         $totalOut = (float) $filteredPallets->sum('total_out');
+
+        // Return ALL items if requested (for print reports)
+        if ($request->boolean('all')) {
+            return response()->json([
+                'pallets' => $filteredPallets->values(),
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => 1,
+                'sizes' => $allSizes,
+                'items' => $allItems,
+                'summary' => [
+                    'total_in' => $totalIn,
+                    'total_out' => $totalOut,
+                    'balance' => $totalIn - $totalOut,
+                ],
+            ]);
+        }
+
+        // Paginate in PHP
+        $perPage = 24;
+        $page = (int) $request->input('page', 1);
+        $paginatedPallets = $filteredPallets->slice(($page - 1) * $perPage, $perPage)->values();
 
         return response()->json([
             'pallets' => $paginatedPallets,
@@ -1848,6 +1867,93 @@ class ContractController extends Controller
             'total_in' => $totalIn,
             'total_out' => $totalOut,
             'balance' => $totalIn - $totalOut,
+        ]);
+    }
+
+    /**
+     * Display pallet history page for a contract.
+     */
+    public function palletHistory(Contract $contract)
+    {
+        $contract->load(['customer', 'periods']);
+
+        $entries = \App\Models\InventoryEntry::query()
+            ->where('contract_id', $contract->id)
+            ->with(['pallet', 'inventoryItem', 'variant', 'voucher.driver', 'voucher.representative'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $movements = [];
+        $palletIds = [];
+        $totalIn = 0;
+        $totalOut = 0;
+
+        foreach ($entries as $entry) {
+            $voucher = $entry->voucher;
+            $voucherType = 'reception';
+            if ($entry->voucher_type === 'App\\Models\\Delivery') {
+                $voucherType = 'delivery';
+            } elseif ($entry->voucher_type === 'App\\Models\\InventoryAdjustment') {
+                $voucherType = 'adjustment';
+            }
+
+            $qtyIn = (float) $entry->quantity_in;
+            $qtyOut = (float) $entry->quantity_out;
+            $totalIn += $qtyIn;
+            $totalOut += $qtyOut;
+
+            if ($entry->pallet_id) {
+                $palletIds[] = $entry->pallet_id;
+            }
+
+            $repName = $voucher?->representative?->name ?? null;
+            $driverName = $voucher?->driver?->name ?? null;
+            $repDriverDisplay = trim(($repName ? $repName : '---') . ' / ' . ($driverName ? $driverName : '---'));
+
+            $opDate = $entry->operation_date
+                ?? ($voucherType === 'reception' ? $voucher?->reception_date : $voucher?->delivery_date)
+                ?? $entry->created_at;
+
+            $movements[] = [
+                'id' => $entry->id,
+                'pallet_id' => $entry->pallet_id,
+                'pallet_number' => $entry->pallet?->pallet_number ?? ($entry->pallet?->code ?? '—'),
+                'pallet_size' => $entry->pallet?->size ?? '—',
+                'voucher_serial' => $voucher?->serial_number ?? '—',
+                'voucher_type' => $voucherType,
+                'operation_date' => $opDate ? \Carbon\Carbon::parse($opDate)->format('Y-m-d') : '—',
+                'item_name' => $entry->inventoryItem?->name ?? '—',
+                'variant_name' => $entry->variant?->name ?? ($entry->variant?->unit ?? '—'),
+                'quantity_in' => $qtyIn,
+                'quantity_out' => $qtyOut,
+                'rep_driver' => $repDriverDisplay,
+                'notes' => $entry->notes ?? ($voucher?->notes ?? '—'),
+            ];
+        }
+
+        $summary = [
+            'total_movements' => count($movements),
+            'total_pallets' => count(array_unique($palletIds)),
+            'total_in' => $totalIn,
+            'total_out' => $totalOut,
+            'balance' => $totalIn - $totalOut,
+        ];
+
+        $companySettings = [
+            'company_name' => \App\Models\TenantSetting::get('company_name', 'مخازن أيمن محمد عبد الله الغماس للتخزين'),
+            'company_slogan' => \App\Models\TenantSetting::get('company_slogan', 'تخزين - تبريد - تجميد - تعبئة وتغليف - بيع - تصدير'),
+            'company_cr' => \App\Models\TenantSetting::get('company_cr', '1131305092'),
+            'company_phone' => \App\Models\TenantSetting::get('company_phone', '0568562615'),
+            'company_email' => \App\Models\TenantSetting::get('company_email', 'sales@ag-stores.com'),
+            'company_address' => \App\Models\TenantSetting::get('company_address', '1131 - القصيم / ضراس - طريق الملك فهد'),
+            'company_logo' => \App\Models\TenantSetting::get('company_logo', null),
+        ];
+
+        return Inertia::render('Contracts/PalletHistory', [
+            'contract' => $contract,
+            'movements' => $movements,
+            'summary' => $summary,
+            'companySettings' => $companySettings,
         ]);
     }
 }

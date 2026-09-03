@@ -113,15 +113,21 @@ export default function PalletsPrintReport({ contract, pallets = [], onClose }) 
                         box-shadow: none !important;
                         border: none !important;
                         background: white !important;
-                        page-break-after: avoid !important;
+                        page-break-after: auto !important;
+                        break-after: auto !important;
                     }
                     .pallets-print-container table {
                         width: 100% !important;
                         border-collapse: collapse !important;
                         page-break-inside: auto !important;
+                        break-inside: auto !important;
+                    }
+                    .pallets-print-container thead {
+                        display: table-header-group !important;
                     }
                     .pallets-print-container tr {
                         page-break-inside: avoid !important;
+                        break-inside: avoid !important;
                     }
                 }
             ` }} />

@@ -269,6 +269,7 @@ Route::middleware([
                 Route::get('contracts/{contract}/stored-items', [\App\Http\Controllers\ContractController::class, 'getStoredItems'])->name('contracts.stored-items');
                 Route::get('contracts/{contract}/item-movements', [\App\Http\Controllers\ContractController::class, 'getItemMovements'])->name('contracts.item-movements');
                 Route::get('contracts/{contract}/pallet-movements', [\App\Http\Controllers\ContractController::class, 'getPalletMovements'])->name('contracts.pallet-movements');
+                Route::get('contracts/{contract}/pallet-history', [\App\Http\Controllers\ContractController::class, 'palletHistory'])->name('contracts.pallet-history');
 
                 // Agents
                 Route::get('agents', [\App\Http\Controllers\AgentController::class, 'index'])->name('agents.index');
