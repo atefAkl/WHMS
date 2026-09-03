@@ -61,6 +61,7 @@ foreach ($centralDomains as $domain) {
         Route::get('/deploy-migrations-90083', function () {
             try {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                \Illuminate\Support\Facades\Artisan::call('tenants:run', ['commandname' => 'migrate --force']);
                 return "Migrations Run Success:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
             } catch (\Exception $e) {
                 return "Error: " . $e->getMessage();
@@ -73,6 +74,80 @@ foreach ($centralDomains as $domain) {
                 return "Seeding Success:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
             } catch (\Exception $e) {
                 return "Error: " . $e->getMessage();
+            }
+        });
+
+        // 100% Guaranteed Tenant SQL Backup Dump Helper
+        Route::get('/dump-tenant-90083', function (\Illuminate\Http\Request $request) {
+            try {
+                $tenantId = $request->query('tenant');
+                $tenant = $tenantId ? \App\Models\Tenant::find($tenantId) : \App\Models\Tenant::first();
+
+                if (!$tenant) {
+                    return response('No tenant found', 404);
+                }
+
+                $tenantId = $tenant->id;
+                tenancy()->initialize($tenant);
+
+                $tables = [
+                    'customers',
+                    'contracts',
+                    'contract_periods',
+                    'contract_agents',
+                    'drivers',
+                    'inventory_categories',
+                    'inventory_items',
+                    'inventory_item_variants',
+                    'pallets',
+                    'receptions',
+                    'deliveries',
+                    'inventory_adjustments',
+                    'pallet_rearrangements',
+                    'inventory_entries',
+                    'users',
+                ];
+
+                $sql = "-- WHMS Tenant Backup for Tenant: {$tenantId}\n";
+                $sql .= "-- Generated at: " . date('Y-m-d H:i:s') . "\n\n";
+
+                foreach ($tables as $table) {
+                    if (!\Illuminate\Support\Facades\Schema::hasTable($table)) {
+                        continue;
+                    }
+
+                    $rows = \Illuminate\Support\Facades\DB::table($table)->get();
+                    if ($rows->isEmpty()) {
+                        continue;
+                    }
+
+                    $sql .= "-- Data for table {$table}\n";
+                    foreach ($rows as $row) {
+                        $array = (array) $row;
+                        $columns = array_keys($array);
+                        $escapedColumns = array_map(fn($col) => '"' . $col . '"', $columns);
+                        
+                        $values = array_map(function ($val) {
+                            if (is_null($val)) return 'NULL';
+                            if (is_bool($val)) return $val ? 'TRUE' : 'FALSE';
+                            if (is_numeric($val)) return $val;
+                            $escaped = str_replace("'", "''", (string) $val);
+                            return "'" . $escaped . "'";
+                        }, array_values($array));
+
+                        $sql .= 'INSERT INTO "' . $table . '" (' . implode(', ', $escapedColumns) . ') VALUES (' . implode(', ', $values) . ");\n";
+                    }
+                    $sql .= "\n";
+                }
+
+                tenancy()->end();
+
+                return response($sql, 200, [
+                    'Content-Type' => 'text/plain; charset=UTF-8',
+                    'Content-Disposition' => 'attachment; filename="tenant_' . $tenantId . '_dump.sql"',
+                ]);
+            } catch (\Exception $e) {
+                return response("Error generating dump: " . $e->getMessage(), 500);
             }
         });
 

@@ -655,6 +655,99 @@ export default function Tenants({
                                     </div>
                                 </div>
 
+                                {/* Tenant Database & ENV Connection Details */}
+                                <div className="bg-slate-900 text-white p-4 rounded-xl space-y-3 font-sans border border-slate-800 shadow-inner">
+                                    <div className="flex items-center justify-between border-b border-slate-700 pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Database className="w-4 h-4 text-emerald-400" />
+                                            <span className="text-xs font-bold text-slate-200">
+                                                {lang === "ar" ? "بيانات قاعدة بيانات المستأجر (Tenant DB / Schema Info)" : "Tenant DB Connection Info"}
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded">
+                                            {selectedTenant.db_driver || "PostgreSQL/MySQL"}
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                                        <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                                            <span className="text-[10px] text-slate-400 block font-sans font-semibold">
+                                                {lang === "ar" ? "قاعدة بيانات/سكيمة المستأجر:" : "Tenant DB / Schema Name:"}
+                                            </span>
+                                            <span className="font-bold text-emerald-400 select-all block mt-0.5 truncate">
+                                                {selectedTenant.db_name || `tenant_${selectedTenant.id}`}
+                                            </span>
+                                        </div>
+
+                                        <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                                            <span className="text-[10px] text-slate-400 block font-sans font-semibold">
+                                                {lang === "ar" ? "معرّف المستأجر (Tenant ID):" : "Tenant ID:"}
+                                            </span>
+                                            <span className="font-bold text-blue-400 select-all block mt-0.5 truncate">
+                                                {selectedTenant.id}
+                                            </span>
+                                        </div>
+
+                                        <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                                            <span className="text-[10px] text-slate-400 block font-sans font-semibold">
+                                                {lang === "ar" ? "المضيف (DB_HOST):" : "DB Host:"}
+                                            </span>
+                                            <span className="font-bold text-slate-200 select-all block mt-0.5">
+                                                {selectedTenant.db_host || "127.0.0.1"}
+                                            </span>
+                                        </div>
+
+                                        <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                                            <span className="text-[10px] text-slate-400 block font-sans font-semibold">
+                                                {lang === "ar" ? "المنفذ (DB_PORT):" : "DB Port:"}
+                                            </span>
+                                            <span className="font-bold text-slate-200 select-all block mt-0.5">
+                                                {selectedTenant.db_port || "5432"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Import Command Helper */}
+                                    <div className="pt-1 space-y-1">
+                                        <span className="text-[10px] text-slate-400 font-semibold block">
+                                            {lang === "ar" ? "أمر الاستيراد السريع لقاعدة/سكيمة هذا المستأجر (Terminal Command):" : "Terminal Import Command:"}
+                                        </span>
+                                        <div className="bg-slate-950 text-emerald-400 p-2 rounded-lg font-mono text-[11px] select-all flex items-center justify-between border border-slate-800 gap-2" dir="ltr">
+                                            <code className="truncate">
+                                                {selectedTenant.db_driver === 'pgsql' 
+                                                    ? `psql -U postgres -d ${selectedTenant.main_db_name || 'whms'} -c "SET search_path TO ${selectedTenant.db_name || `tenant_${selectedTenant.id}`};" -f live_tenant_backup.sql`
+                                                    : `mysql -u root ${selectedTenant.db_name || `tenant_${selectedTenant.id}`} < live_tenant_backup.sql`}
+                                            </code>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const cmd = selectedTenant.db_driver === 'pgsql' 
+                                                        ? `psql -U postgres -d ${selectedTenant.main_db_name || 'whms'} -c "SET search_path TO ${selectedTenant.db_name || `tenant_${selectedTenant.id}`};" -f live_tenant_backup.sql`
+                                                        : `mysql -u root ${selectedTenant.db_name || `tenant_${selectedTenant.id}`} < live_tenant_backup.sql`;
+                                                    navigator.clipboard.writeText(cmd);
+                                                    alert(lang === "ar" ? "تم نسخ أمر الاستيراد!" : "Import command copied!");
+                                                }}
+                                                className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded border border-slate-700 shrink-0 font-sans"
+                                            >
+                                                {lang === "ar" ? "نسخ" : "Copy"}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Direct 100% Guaranteed Download Button */}
+                                    <div className="pt-2 border-t border-slate-800 flex justify-end">
+                                        <a
+                                            href={`/dump-tenant-90083?tenant=${selectedTenant.id}`}
+                                            target="_blank"
+                                            download={`tenant_${selectedTenant.id}_dump.sql`}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md"
+                                        >
+                                            <Database className="w-4 h-4" />
+                                            <span>{lang === "ar" ? "تحميل نسخة الداتابيز المضمونة (.sql)" : "Download Guaranteed Tenant SQL (.sql)"}</span>
+                                        </a>
+                                    </div>
+                                </div>
+
                                 {selectedTenant.activation_link && (
                                     <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl space-y-2">
                                         <p className="text-xs font-bold text-amber-800 flex items-center gap-2">

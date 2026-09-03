@@ -101,6 +101,31 @@ class SaaSController extends Controller
 
             $totalRevenue += $revenue;
 
+            $dbName = null;
+            try {
+                if (method_exists($tenant, 'database') && $tenant->database()) {
+                    $dbName = $tenant->database()->getName();
+                }
+            } catch (\Throwable $e) {
+                // Ignore
+            }
+
+            if (!$dbName) {
+                $dbName = $tenant->tenancy_db_name ?? ($tenant->data['tenancy_db_name'] ?? null);
+            }
+
+            if (!$dbName) {
+                $prefix = config('tenancy.database.prefix', 'tenant');
+                $suffix = config('tenancy.database.suffix', '');
+                $dbName = $prefix . $tenant->id . $suffix;
+            }
+
+            $defaultDriver = config('database.default', 'pgsql');
+            $dbDriver = config("database.connections.tenant.driver", $defaultDriver);
+            $dbHost = config("database.connections.tenant.host", config("database.connections.{$defaultDriver}.host", '127.0.0.1'));
+            $dbPort = config("database.connections.tenant.port", config("database.connections.{$defaultDriver}.port", '5432'));
+            $mainDbName = config("database.connections.{$defaultDriver}.database", 'whms');
+
             $appDomain = config('app.domain', 'whms.test');
 
             $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: 'http';
@@ -108,6 +133,11 @@ class SaaSController extends Controller
                 'id' => $tenant->id,
                 'company_name' => $data['company_name'] ?? ('شركة ' . ucfirst($tenant->id)),
                 'subdomain' => $domain,
+                'db_name' => $dbName,
+                'main_db_name' => $mainDbName,
+                'db_host' => $dbHost,
+                'db_port' => $dbPort,
+                'db_driver' => $dbDriver,
                 'plan' => $data['plan'] ?? 'باقة أعمال (Business)',
                 'active_season' => $activeSeason,
                 'storage_used' => $storageUsed,

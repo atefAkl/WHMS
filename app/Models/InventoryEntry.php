@@ -10,6 +10,7 @@ class InventoryEntry extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'contract_id',
         'inventory_item_id',
         'inventory_item_variant_id',
         'pallet_id',
@@ -25,6 +26,11 @@ class InventoryEntry extends Model
         'quantity_out'   => 'float',
         'operation_date' => 'datetime',
     ];
+
+    public function contract()
+    {
+        return $this->belongsTo(Contract::class);
+    }
 
     public function inventoryItem()
     {
