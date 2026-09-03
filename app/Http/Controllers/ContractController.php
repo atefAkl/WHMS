@@ -1878,7 +1878,14 @@ class ContractController extends Controller
         $contract->load(['customer', 'periods']);
 
         $entries = \App\Models\InventoryEntry::query()
-            ->where('contract_id', $contract->id)
+            ->whereHasMorph('voucher', [
+                \App\Models\Reception::class,
+                \App\Models\Delivery::class,
+                \App\Models\InventoryAdjustment::class,
+                \App\Models\PalletRearrangement::class,
+            ], function ($query) use ($contract) {
+                $query->where('contract_id', $contract->id);
+            })
             ->with(['pallet', 'inventoryItem', 'variant', 'voucher.driver', 'voucher.representative'])
             ->orderBy('created_at', 'desc')
             ->get();
