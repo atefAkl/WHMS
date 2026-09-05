@@ -68,6 +68,53 @@ foreach ($centralDomains as $domain) {
             }
         });
 
+        // Prepare local/tenant schema (Migrate fresh structure + Truncate data)
+        Route::get('/prepare-tenant-schema-90083', function (\Illuminate\Http\Request $request) {
+            try {
+                $tenantId = $request->query('tenant');
+                $tenant = $tenantId ? \App\Models\Tenant::find($tenantId) : \App\Models\Tenant::first();
+
+                if (!$tenant) {
+                    return response('No tenant found', 404);
+                }
+
+                \Illuminate\Support\Facades\Artisan::call('tenants:run', [
+                    'commandname' => 'migrate --force',
+                    '--tenants' => [$tenant->id]
+                ]);
+
+                tenancy()->initialize($tenant);
+                $tables = [
+                    'customers',
+                    'contracts',
+                    'contract_periods',
+                    'contract_agents',
+                    'drivers',
+                    'inventory_categories',
+                    'inventory_items',
+                    'inventory_item_variants',
+                    'pallets',
+                    'receptions',
+                    'deliveries',
+                    'inventory_adjustments',
+                    'pallet_rearrangements',
+                    'inventory_entries',
+                    'users',
+                ];
+
+                foreach ($tables as $table) {
+                    if (\Illuminate\Support\Facades\Schema::hasTable($table)) {
+                        \Illuminate\Support\Facades\DB::statement('TRUNCATE TABLE "' . $table . '" CASCADE');
+                    }
+                }
+                tenancy()->end();
+
+                return "Tenant Schema Prepared & Truncated Successfully for tenant: " . $tenant->id;
+            } catch (\Exception $e) {
+                return response("Error preparing schema: " . $e->getMessage(), 500);
+            }
+        });
+
         Route::get('/deploy-seed-90083', function () {
             try {
                 \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
@@ -110,6 +157,7 @@ foreach ($centralDomains as $domain) {
 
                 $sql = "-- WHMS Tenant Backup for Tenant: {$tenantId}\n";
                 $sql .= "-- Generated at: " . date('Y-m-d H:i:s') . "\n\n";
+                $sql .= "SET session_replication_role = 'replica';\n\n";
 
                 foreach ($tables as $table) {
                     if (!\Illuminate\Support\Facades\Schema::hasTable($table)) {
@@ -131,14 +179,18 @@ foreach ($centralDomains as $domain) {
                             if (is_null($val)) return 'NULL';
                             if (is_bool($val)) return $val ? 'TRUE' : 'FALSE';
                             if (is_numeric($val)) return $val;
-                            $escaped = str_replace("'", "''", (string) $val);
-                            return "'" . $escaped . "'";
+                            $str = (string) $val;
+                            $str = str_replace(["\r\n", "\r", "\n"], "\\n", $str);
+                            $str = str_replace("'", "''", $str);
+                            return "'" . $str . "'";
                         }, array_values($array));
 
                         $sql .= 'INSERT INTO "' . $table . '" (' . implode(', ', $escapedColumns) . ') VALUES (' . implode(', ', $values) . ");\n";
                     }
                     $sql .= "\n";
                 }
+
+                $sql .= "SET session_replication_role = 'origin';\n";
 
                 tenancy()->end();
 
