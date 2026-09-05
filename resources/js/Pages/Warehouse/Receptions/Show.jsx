@@ -86,9 +86,9 @@ export default function Show({ reception }) {
                     setProcessingAction(false);
                     setErrorMsg(
                         errs.error ||
-                            (lang === "ar"
-                                ? "تعذر اعتماد السند."
-                                : "Failed to approve."),
+                        (lang === "ar"
+                            ? "تعذر اعتماد السند."
+                            : "Failed to approve."),
                     );
                 },
             },
@@ -239,11 +239,10 @@ export default function Show({ reception }) {
                                     : `Reception Receipt: ${reception.serial_number}`}
                             </span>
                             <span
-                                className={`text-[10px] px-2 py-0.5 rounded-none font-bold border ${
-                                    reception.status === "approved"
+                                className={`text-[10px] px-2 py-0.5 rounded-none font-bold border ${reception.status === "approved"
                                         ? "bg-emerald-500/10 text-emerald-600 border-emerald-200"
                                         : "bg-amber-500/10 text-amber-600 border-amber-200"
-                                }`}
+                                    }`}
                             >
                                 {reception.status === "approved" ? (
                                     <span className="flex items-center gap-0.5">
@@ -404,7 +403,7 @@ export default function Show({ reception }) {
                                 </a>
                             </Tooltip>
 
-                            <Tooltip 
+                            <Tooltip
                                 text={
                                     reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0
                                         ? (lang === "ar" ? "محظور أمنياً: لا يمكن حذف سند معتمد أو يحتوي على مدخلات مخزنية" : "Blocked: Cannot delete approved voucher or voucher with items")
@@ -426,11 +425,10 @@ export default function Show({ reception }) {
                                         setDeleteModalOpen(true);
                                     }}
                                     disabled={reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0}
-                                    className={`h-[30px] font-bold rounded-none flex items-center justify-center transition-all shadow-sm gap-1.5 ${
-                                        reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0
+                                    className={`h-[30px] font-bold rounded-none flex items-center justify-center transition-all shadow-sm gap-1.5 ${reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0
                                             ? "bg-gray-400 text-white cursor-not-allowed opacity-60"
                                             : "bg-danger hover:bg-danger-hover text-white"
-                                    } ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
+                                        } ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                     {showButtonText && (
@@ -544,12 +542,12 @@ export default function Show({ reception }) {
                                     <span className="text-text font-bold font-mono text-sm">
                                         {reception.reception_date
                                             ? new Date(
-                                                  reception.reception_date,
-                                              ).toLocaleDateString(
-                                                  lang === "ar"
-                                                      ? "ar-EG"
-                                                      : "en-US",
-                                              )
+                                                reception.reception_date,
+                                            ).toLocaleDateString(
+                                                lang === "ar"
+                                                    ? "ar-EG"
+                                                    : "en-US",
+                                            )
                                             : "—"}
                                     </span>
                                 </div>
@@ -813,7 +811,7 @@ export default function Show({ reception }) {
                             </div>
 
                             {reception.history &&
-                            reception.history.length > 0 ? (
+                                reception.history.length > 0 ? (
                                 <div className="space-y-4 relative border-s border-border ps-4 text-xs rtl:border-s-0 rtl:border-e rtl:pe-4">
                                     {reception.history.map((log, idx) => (
                                         <div key={idx} className="relative">
@@ -953,8 +951,8 @@ export default function Show({ reception }) {
                                                 ? "جاري الحذف..."
                                                 : "Deleting..."
                                             : lang === "ar"
-                                              ? "تأكيد الحذف"
-                                              : "Confirm Delete"}
+                                                ? "تأكيد الحذف"
+                                                : "Confirm Delete"}
                                     </span>
                                 )}
                             </button>
@@ -1073,8 +1071,8 @@ export default function Show({ reception }) {
                                                 ? "جاري المعالجة..."
                                                 : "Processing..."
                                             : lang === "ar"
-                                              ? "تأكيد إعادة الفتح"
-                                              : "Confirm Reopen"}
+                                                ? "تأكيد إعادة الفتح"
+                                                : "Confirm Reopen"}
                                     </span>
                                 )}
                             </button>
@@ -1150,8 +1148,8 @@ export default function Show({ reception }) {
                                                 ? "جاري الاعتماد..."
                                                 : "Approving..."
                                             : lang === "ar"
-                                              ? "تأكيد الاعتماد"
-                                              : "Confirm Approve"}
+                                                ? "تأكيد الاعتماد"
+                                                : "Confirm Approve"}
                                     </span>
                                 )}
                             </button>

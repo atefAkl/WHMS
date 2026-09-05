@@ -333,6 +333,7 @@ class DeliveryController extends Controller
             'inventoryEntries.inventoryItem',
             'inventoryEntries.variant',
             'inventoryEntries.pallet',
+            'inventoryEntries.contract',
             'creator',
             'editor',
             'exitAuthorization'

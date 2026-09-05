@@ -214,6 +214,7 @@ class ReceptionController extends Controller
             'inventoryEntries.inventoryItem',
             'inventoryEntries.variant',
             'inventoryEntries.pallet',
+            'inventoryEntries.contract',
             'creator',
             'editor'
         ]);
