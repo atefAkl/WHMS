@@ -206,3 +206,14 @@ foreach ($centralDomains as $domain) {
         require __DIR__ . '/auth.php';
     });
 }
+
+// Unscoped fallback routes for deployment and dump (work on any domain or hosting setup)
+Route::get('/dump-tenant-90083', function () {
+    require public_path('dump_tenant_direct.php');
+    exit;
+});
+
+Route::get('/deploy-migrations-90083', function () {
+    require public_path('deploy_migrations_direct.php');
+    exit;
+});
