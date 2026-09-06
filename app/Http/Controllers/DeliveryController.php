@@ -278,6 +278,7 @@ class DeliveryController extends Controller
                         }
 
                         $delivery->inventoryEntries()->create([
+                            'contract_id'               => $delivery->contract_id,
                             'inventory_item_id'         => $itemData['inventory_item_id'],
                             'inventory_item_variant_id' => $itemData['inventory_item_variant_id'],
                             'pallet_id'                 => $pallet->id,
