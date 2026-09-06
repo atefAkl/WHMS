@@ -19,10 +19,10 @@ try {
     echo "<pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre><hr>";
 
     echo "<b>Running Tenant Migrations...</b><br>";
-    \Illuminate\Support\Facades\Artisan::call('tenants:run', ['commandname' => 'migrate --force']);
+    \Illuminate\Support\Facades\Artisan::call('tenants:migrate', ['--force' => true]);
     echo "<pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre><hr>";
 
-    echo "<h3 style='color: green;'>✔ ALL MIGRATIONS COMPLETED SUCCESSFULLY!</h3>";
+    echo "<h3 style='color: green;'>✔ ALL MIGRATIONS & BACKFILL COMPLETED SUCCESSFULLY!</h3>";
 } catch (\Exception $e) {
     echo "<h3 style='color: red;'>✖ Migration Error: " . $e->getMessage() . "</h3>";
 }

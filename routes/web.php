@@ -61,7 +61,7 @@ foreach ($centralDomains as $domain) {
         Route::get('/deploy-migrations-90083', function () {
             try {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-                \Illuminate\Support\Facades\Artisan::call('tenants:run', ['commandname' => 'migrate --force']);
+                \Illuminate\Support\Facades\Artisan::call('tenants:migrate', ['--force' => true]);
                 return "Migrations Run Success:<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
             } catch (\Exception $e) {
                 return "Error: " . $e->getMessage();
