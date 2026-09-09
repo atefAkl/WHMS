@@ -15,6 +15,8 @@ export default function SearchableSelect({
     disabled = false,
     renderOption = null,
     inputRef = null,
+    onInputChange = null,
+    onKeyDown = null,
 }) {
     const [search, setSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -25,12 +27,12 @@ export default function SearchableSelect({
 
     // Sync external value to internal search display
     useEffect(() => {
-        if (value) {
+        if (value !== undefined && value !== null && value !== '') {
             const selectedItem = items.find(item => item[valueKey] == value);
             if (selectedItem) {
                 setSearch(displayFormat(selectedItem));
             } else {
-                setSearch('');
+                setSearch(String(value));
             }
         } else {
             setSearch('');
@@ -83,14 +85,21 @@ export default function SearchableSelect({
 
     const handleKeyDown = (e) => {
         if (!isOpen) {
-            if (e.key === 'ArrowDown' || e.key === 'Enter') {
+            if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setIsOpen(true);
+                return;
+            }
+            if (onKeyDown) {
+                onKeyDown(e);
             }
             return;
         }
 
-        if (filteredItems.length === 0) return;
+        if (filteredItems.length === 0) {
+            if (onKeyDown) onKeyDown(e);
+            return;
+        }
         
         if (e.key === "ArrowDown") {
             e.preventDefault();
@@ -99,13 +108,17 @@ export default function SearchableSelect({
             e.preventDefault();
             setActiveIndex(prev => prev > 0 ? prev - 1 : filteredItems.length - 1);
         } else if (e.key === "Enter") {
-            e.preventDefault();
             if (activeIndex >= 0 && activeIndex < filteredItems.length) {
+                e.preventDefault();
                 handleSelect(filteredItems[activeIndex]);
+            } else if (onKeyDown) {
+                onKeyDown(e);
             }
         } else if (e.key === "Escape") {
             e.preventDefault();
             setIsOpen(false);
+        } else if (onKeyDown) {
+            onKeyDown(e);
         }
     };
 
@@ -120,21 +133,23 @@ export default function SearchableSelect({
     return (
         <div className="relative" ref={wrapperRef}>
             <div className="relative">
-                <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                    <Search className="h-4 w-4 text-text-muted" />
+                <div className="absolute inset-y-0 start-0 flex items-center ps-2.5 pointer-events-none z-10">
+                    <Search className="h-3.5 w-3.5 text-text-muted" />
                 </div>
                 <input
                     ref={inputRef}
                     type="text"
-                    className={`block w-full ps-9 pe-3 border border-border bg-surface text-text rounded-md shadow-sm focus:border-primary focus:ring-primary sm:text-sm py-1.5 transition-colors ${error ? 'border-danger focus:border-danger focus:ring-danger' : ''} ${className}`}
+                    className={`block w-full ps-8 pe-3 border border-border bg-surface text-text rounded-md shadow-sm focus:border-primary focus:ring-primary sm:text-xs transition-colors ${error ? 'border-danger focus:border-danger focus:ring-danger' : ''} ${className}`}
                     placeholder={placeholder}
                     value={search}
                     onChange={(e) => {
-                        setSearch(e.target.value);
+                        const newVal = e.target.value;
+                        setSearch(newVal);
                         if (!isOpen) setIsOpen(true);
-                        
-                        // Clear the selected value if the user completely clears the input
-                        if (e.target.value === '' && onChange && value) {
+                        if (onInputChange) {
+                            onInputChange(newVal);
+                        }
+                        if (newVal === '' && onChange) {
                             onChange(null);
                         }
                     }}
@@ -153,8 +168,8 @@ export default function SearchableSelect({
                     {filteredItems.length > 0 ? (
                         filteredItems.map((item, index) => (
                             <div
-                                key={item[valueKey]}
-                                className={`px-4 py-2 cursor-pointer transition-colors text-sm border-b border-border last:border-0 ${
+                                key={item[valueKey] ?? index}
+                                className={`px-3 py-2 cursor-pointer transition-colors text-xs border-b border-border last:border-0 ${
                                     activeIndex === index 
                                         ? 'bg-primary text-white' 
                                         : 'text-text hover:bg-primary/10'
@@ -170,7 +185,7 @@ export default function SearchableSelect({
                             </div>
                         ))
                     ) : (
-                        <div className="px-4 py-3 text-sm text-text-muted text-center">
+                        <div className="px-4 py-3 text-xs text-text-muted text-center">
                             لا توجد نتائج
                         </div>
                     )}

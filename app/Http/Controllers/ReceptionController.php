@@ -83,7 +83,7 @@ class ReceptionController extends Controller
         $receptions = $query->latest()->paginate(15)->withQueryString();
 
         $customers = Customer::orderBy('name')->get();
-        $contracts = Contract::orderBy('contract_number')->get();
+        $contracts = Contract::with('customer')->orderBy('contract_number')->get();
         $drivers = \App\Models\Driver::orderBy('name')->get();
 
         return Inertia::render('Warehouse/Receptions/Index', [

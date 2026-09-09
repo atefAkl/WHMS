@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
@@ -28,6 +28,7 @@ import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
+import SearchableSelect from "@/Components/SearchableSelect";
 
 export default function Index({ receptions = { data: [] }, customers = [], contracts = [], drivers = [], filters = {} }) {
     const { lang, __ } = useLang();
@@ -50,6 +51,31 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
         }
         return rawText;
     };
+
+    // Combined Customer & Contract Options for SearchableSelect
+    const customerAndContractOptions = useMemo(() => {
+        const options = [];
+        (customers || []).forEach((c) => {
+            options.push({
+                id: `cust_${c.id}`,
+                value: c.name,
+                label: `${c.name} (${t("receptions.customer", "عميل")})`,
+                type: "customer",
+                searchKeys: [c.name, c.foreign_name || "", c.code || ""].filter(Boolean),
+            });
+        });
+        (contracts || []).forEach((cnt) => {
+            const custName = cnt.customer?.name || "";
+            options.push({
+                id: `cnt_${cnt.id}`,
+                value: cnt.contract_number,
+                label: `${cnt.contract_number} ${custName ? `- ${custName}` : ""} (${t("receptions.contract", "عقد")})`,
+                type: "contract",
+                searchKeys: [cnt.contract_number, custName].filter(Boolean),
+            });
+        });
+        return options;
+    }, [customers, contracts, lang]);
 
     // Explicit Filter States
     const [serialNumber, setSerialNumber] = useState(filters.serial_number || "");
@@ -286,15 +312,19 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
 
                             <div>
                                 <InputLabel value={t("receptions.filter_customer_or_contract", "اسم العميل أو رقم العقد")} />
-                                <div className="relative mt-1">
-                                    <TextInput
-                                        className="w-full text-xs rounded-none border-border ps-7 h-[30px]"
-                                        placeholder={t("receptions.placeholder_customer_contract", "ادخل العميل أو العقد...")}
+                                <div className="mt-1">
+                                    <SearchableSelect
+                                        items={customerAndContractOptions}
                                         value={customerOrContract}
-                                        onChange={(e) => setCustomerOrContract(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
+                                        valueKey="id"
+                                        displayFormat={(item) => item.label || item.value}
+                                        searchKeys={["label", "value"]}
+                                        placeholder={t("receptions.placeholder_customer_contract", "ادخل العميل أو العقد...")}
+                                        className="w-full text-xs rounded-none border-border h-[30px]"
+                                        onChange={(selected) => setCustomerOrContract(selected ? selected.value : "")}
+                                        onInputChange={(val) => setCustomerOrContract(val)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleSearch(e)}
                                     />
-                                    <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-text-muted" />
                                 </div>
                             </div>
 
@@ -329,21 +359,25 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
 
                         {/* Row 2: Selects, Sized Dates (10rem), Sized Qty Operator (3rem), and Filter Actions */}
                         <div className="flex flex-wrap items-end gap-3">
-                            {/* Driver Select */}
-                            <div className="flex-1 min-w-[140px]">
+                            {/* Driver SearchableSelect */}
+                            <div className="flex-1 min-w-[150px]">
                                 <InputLabel value={t("receptions.driver", "السائق")} />
-                                <select
-                                    className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
-                                    value={selectedDriver}
-                                    onChange={(e) => setSelectedDriver(e.target.value)}
-                                >
-                                    <option value="">{t("receptions.all_drivers", "كل السائقين")}</option>
-                                    {drivers.map((d) => (
-                                        <option key={d.id} value={d.id}>
-                                            {d.name} {d.vehicle_plate ? `(${d.vehicle_plate})` : ""}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mt-1">
+                                    <SearchableSelect
+                                        items={drivers}
+                                        value={selectedDriver}
+                                        valueKey="id"
+                                        displayFormat={(d) => `${d.name} ${d.vehicle_plate ? `(${d.vehicle_plate})` : ""}`}
+                                        searchKeys={["name", "vehicle_plate"]}
+                                        placeholder={t("receptions.all_drivers", "كل السائقين")}
+                                        className="w-full text-xs rounded-none border-border h-[30px]"
+                                        onChange={(d) => setSelectedDriver(d ? d.id : "")}
+                                        onInputChange={(val) => {
+                                            if (!val) setSelectedDriver("");
+                                        }}
+                                        onKeyDown={(e) => e.key === "Enter" && handleSearch(e)}
+                                    />
+                                </div>
                             </div>
 
                             {/* Status Select */}
@@ -382,7 +416,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                 />
                             </div>
 
-                            {/* Qty Filter: Sized Operator Dropdown (Max 3rem width) + Qty Input */}
+                            {/* Qty Filter: Sized Operator Dropdown (Max 3.5rem width) + Qty Input */}
                             <div className="flex flex-col">
                                 <InputLabel value={t("receptions.qty_filter", "الكمية الواردة")} />
                                 <div className="flex gap-1 mt-1 items-center">
@@ -408,9 +442,9 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                 </div>
                             </div>
 
-                            {/* Action Buttons & Shortcut Indicator */}
+                            {/* Action Buttons */}
                             <div className="flex items-center gap-1.5 h-[30px] shrink-0">
-                                <Tooltip text={`${t("common.filter", "تصفية")} (CTRL + ENTER)`}>
+                                <Tooltip text={t("common.filter", "تصفية")}>
                                     <button 
                                         type="submit" 
                                         className={`h-[30px] flex items-center justify-center rounded-none bg-primary text-white hover:bg-primary-hover shadow-sm transition duration-150 ease-in-out font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:opacity-90 gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'}`}
@@ -429,9 +463,6 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                         {showButtonText && <span>{t("common.reset", "إعادة تعيين")}</span>}
                                     </button>
                                 </Tooltip>
-                                <span className="text-[10px] text-text-muted font-mono bg-surface-muted px-1.5 py-1 border border-border hidden lg:inline-block" title={t("receptions.shortcut_info", "اضغط CTRL + ENTER للبحث الفوري")}>
-                                    CTRL + ↵
-                                </span>
                             </div>
                         </div>
                     </form>
@@ -623,15 +654,17 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                                 </button>
                                                             </Tooltip>
                                                         )}
-                                                        <Tooltip text={t("common.delete", "حذف")}>
-                                                            <button
-                                                                onClick={() => requestDelete(route("receptions.destroy", reception.id), reception)}
-                                                                className={`p-1.5 text-danger hover:bg-danger/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-2.5' : 'w-[30px]'}`}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                                {showButtonText && <span>{t("common.delete", "حذف")}</span>}
-                                                            </button>
-                                                        </Tooltip>
+                                                        {reception.status === "draft" && (
+                                                            <Tooltip text={t("common.delete", "حذف")}>
+                                                                <button
+                                                                    onClick={() => requestDelete(route("receptions.destroy", reception.id), reception)}
+                                                                    className={`p-1.5 text-danger hover:bg-danger/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-2.5' : 'w-[30px]'}`}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                    {showButtonText && <span>{t("common.delete", "حذف")}</span>}
+                                                                </button>
+                                                            </Tooltip>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
