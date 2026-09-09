@@ -21,40 +21,48 @@ class ReceptionController extends Controller
 
     public function index(Request $request)
     {
-        $query = Reception::with(['customer', 'contract', 'driver', 'representative', 'period'])
+        $query = Reception::with(['customer', 'contract', 'driver', 'representative', 'period', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant', 'inventoryEntries.pallet'])
             ->withSum('inventoryEntries as total_quantity', 'quantity_in');
 
         // Filters
-        if ($request->filled('customer_id')) {
-            $query->where('customer_id', $request->customer_id);
+        if ($request->filled('serial_number')) {
+            $query->where('serial_number', 'like', "%{$request->serial_number}%");
         }
-        if ($request->filled('contract_id')) {
-            $query->where('contract_id', $request->contract_id);
+
+        if ($request->filled('farm_source')) {
+            $query->where('farm_source', 'like', "%{$request->farm_source}%");
         }
+
+        if ($request->filled('customer_or_contract')) {
+            $term = $request->customer_or_contract;
+            $query->where(function ($q) use ($term) {
+                $q->whereHas('customer', function ($c) use ($term) {
+                    $c->where('name', 'like', "%{$term}%")
+                     ->orWhere('foreign_name', 'like', "%{$term}%");
+                })->orWhereHas('contract', function ($cn) use ($term) {
+                    $cn->where('contract_number', 'like', "%{$term}%");
+                });
+            });
+        }
+
+        if ($request->filled('notes')) {
+            $query->where('notes', 'like', "%{$request->notes}%");
+        }
+
         if ($request->filled('driver_id')) {
             $query->where('driver_id', $request->driver_id);
         }
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
+
         if ($request->filled('date_from')) {
             $query->whereDate('reception_date', '>=', $request->date_from);
         }
+
         if ($request->filled('date_to')) {
             $query->whereDate('reception_date', '<=', $request->date_to);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('serial_number', 'like', "%{$search}%")
-                    ->orWhere('farm_source', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($c) use ($search) {
-                        $c->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('driver', function ($d) use ($search) {
-                        $d->where('name', 'like', "%{$search}%");
-                    });
-            });
         }
 
         if ($request->filled('qty_value') && is_numeric($request->qty_value)) {
@@ -83,7 +91,18 @@ class ReceptionController extends Controller
             'customers' => $customers,
             'contracts' => $contracts,
             'drivers' => $drivers,
-            'filters' => $request->only(['customer_id', 'contract_id', 'driver_id', 'status', 'search', 'date_from', 'date_to', 'qty_operator', 'qty_value'])
+            'filters' => $request->only([
+                'serial_number',
+                'farm_source',
+                'customer_or_contract',
+                'notes',
+                'driver_id',
+                'status',
+                'date_from',
+                'date_to',
+                'qty_operator',
+                'qty_value'
+            ])
         ]);
     }
 
