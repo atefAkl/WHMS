@@ -58,7 +58,7 @@ Route::middleware([
             Route::get('api/contracts/{contract}/available-inventory', function (\App\Models\Contract $contract) {
                 try {
                     $entries = \App\Models\InventoryEntry::query()
-                        ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class], function ($q) use ($contract) {
+                        ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\ContractTransfer::class], function ($q) use ($contract) {
                             $q->where('contract_id', $contract->id);
                         })
                         ->whereNotNull('pallet_id')
@@ -215,7 +215,7 @@ Route::middleware([
 
                 Route::get('api/contracts/{contract}/pallets/{pallet}/items', function (\App\Models\Contract $contract, \App\Models\Pallet $pallet) {
                     $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
-                        ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
+                        ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
                             $query->where('contract_id', $contract->id);
                         })
                         ->with('inventoryItem')
@@ -238,7 +238,7 @@ Route::middleware([
                 Route::get('api/contracts/{contract}/pallets/{pallet}/items/{item}/variants', function (\App\Models\Contract $contract, \App\Models\Pallet $pallet, \App\Models\InventoryItem $item) {
                     $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
                         ->where('inventory_item_id', $item->id)
-                        ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
+                        ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
                             $query->where('contract_id', $contract->id);
                         })
                         ->with('variant')
@@ -310,6 +310,12 @@ Route::middleware([
                 Route::get('deliveries/{delivery}/print', [\App\Http\Controllers\DeliveryController::class, 'print'])->name('deliveries.print');
                 Route::post('deliveries/{delivery}/approve', [\App\Http\Controllers\DeliveryController::class, 'approve'])->name('deliveries.approve');
                 Route::post('deliveries/{delivery}/reopen', [\App\Http\Controllers\DeliveryController::class, 'reopen'])->name('deliveries.reopen');
+
+                // Contract Transfers (Pallet Transfers Between Contracts)
+                Route::resource('contract-transfers', \App\Http\Controllers\Warehouse\ContractTransferController::class);
+                Route::get('contract-transfers/{contractTransfer}/print', [\App\Http\Controllers\Warehouse\ContractTransferController::class, 'print'])->name('contract-transfers.print');
+                Route::post('contract-transfers/{contractTransfer}/approve', [\App\Http\Controllers\Warehouse\ContractTransferController::class, 'approve'])->name('contract-transfers.approve');
+                Route::post('contract-transfers/{contractTransfer}/reopen', [\App\Http\Controllers\Warehouse\ContractTransferController::class, 'reopen'])->name('contract-transfers.reopen');
 
                 // Exit Authorizations
                 Route::resource('exit-authorizations', \App\Http\Controllers\ExitAuthorizationController::class);

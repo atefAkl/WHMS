@@ -159,6 +159,14 @@ class Contract extends Model
     {
         return $this->hasMany(Reception::class);
     }
+    public function transfersFrom()
+    {
+        return $this->hasMany(ContractTransfer::class, 'source_contract_id');
+    }
+    public function transfersTo()
+    {
+        return $this->hasMany(ContractTransfer::class, 'destination_contract_id');
+    }
 
     public function ensureMandatoryPeriod(): ContractPeriod
     {

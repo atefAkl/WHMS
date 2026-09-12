@@ -119,6 +119,7 @@ const tenantNavItems = [
             { name: { ar: 'سندات الاستلام', en: 'Reception Vouchers' }, icon: FileText, route: 'receptions.index', active: 'receptions.*' },
             { name: { ar: 'أذونات الخروج', en: 'Exit Permits' }, icon: FileText, route: 'exit-authorizations.index', active: 'exit-authorizations.*' },
             { name: { ar: 'سندات التسليم', en: 'Delivery Notes' }, icon: FileText, route: 'deliveries.index', active: 'deliveries.*' },
+            { name: { ar: 'سندات تحويل الطبالي', en: 'Contract Transfers' }, icon: ArrowLeftRight, route: 'contract-transfers.index', active: 'contract-transfers.*' },
             { name: { ar: 'تسويات وطبالي المخزون', en: 'Pallet Adjustments' }, icon: SlidersHorizontal, route: 'inventory-adjustments.index', active: 'inventory-adjustments.*' },
             { name: { ar: 'ترتيب ونقل الطبالي (15)', en: 'Pallet Rearrangements' }, icon: ArrowLeftRight, route: 'pallet-rearrangements.index', active: 'pallet-rearrangements.*' }
         ]

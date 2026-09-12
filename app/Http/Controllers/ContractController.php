@@ -993,12 +993,20 @@ class ContractController extends Controller
             ->where('contract_id', $contract->id)
             ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
+        $transfersQuery = \App\Models\ContractTransfer::query()
+            ->where(function ($q) use ($contract) {
+                $q->where('source_contract_id', $contract->id)
+                  ->orWhere('destination_contract_id', $contract->id);
+            })
+            ->with(['period', 'sourceContract.customer', 'destinationContract.customer', 'sourceCustomer', 'destinationCustomer', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+
         // Filters:
         // 1. Search serial
         if ($request->filled('search_serial')) {
             $serial = $request->input('search_serial');
             $receptionsQuery->where('serial_number', 'like', "%{$serial}%");
             $deliveriesQuery->where('serial_number', 'like', "%{$serial}%");
+            $transfersQuery->where('serial_number', 'like', "%{$serial}%");
         }
 
         // 2. Billing Period
@@ -1006,18 +1014,21 @@ class ContractController extends Controller
             $periodId = $request->input('period_id');
             $receptionsQuery->where('period_id', $periodId);
             $deliveriesQuery->where('period_id', $periodId);
+            $transfersQuery->where('period_id', $periodId);
         }
 
         // 3. Date range
         if ($request->filled('start_date')) {
-            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $startDate = \Carbon\Carbon::parse($request->input('start_date'))->startOfDay();
             $receptionsQuery->where('reception_date', '>=', $startDate);
             $deliveriesQuery->where('delivery_date', '>=', $startDate);
+            $transfersQuery->where('transfer_date', '>=', $startDate);
         }
         if ($request->filled('end_date')) {
-            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+            $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
             $receptionsQuery->where('reception_date', '<=', $endDate);
             $deliveriesQuery->where('delivery_date', '<=', $endDate);
+            $transfersQuery->where('transfer_date', '<=', $endDate);
         }
 
         // 4. Pallet Number
@@ -1031,6 +1042,10 @@ class ContractController extends Controller
                 $q->where('pallet_number', 'like', "%{$pallet}%")
                     ->orWhere('pallet_code', 'like', "%{$pallet}%");
             });
+            $transfersQuery->whereHas('inventoryEntries.pallet', function ($q) use ($pallet) {
+                $q->where('pallet_number', 'like', "%{$pallet}%")
+                    ->orWhere('pallet_code', 'like', "%{$pallet}%");
+            });
         }
 
         // 5. Status
@@ -1038,6 +1053,7 @@ class ContractController extends Controller
             $status = $request->input('status');
             $receptionsQuery->where('status', $status);
             $deliveriesQuery->where('status', $status);
+            $transfersQuery->where('status', $status);
         }
 
         // 6. Goods Type (Item)
@@ -1049,6 +1065,9 @@ class ContractController extends Controller
             $deliveriesQuery->whereHas('inventoryEntries', function ($q) use ($goodsType) {
                 $q->where('inventory_item_id', $goodsType);
             });
+            $transfersQuery->whereHas('inventoryEntries', function ($q) use ($goodsType) {
+                $q->where('inventory_item_id', $goodsType);
+            });
         }
 
         // 7. Driver (السائق)
@@ -1056,6 +1075,7 @@ class ContractController extends Controller
             $driverId = $request->input('driver_id');
             $receptionsQuery->where('driver_id', $driverId);
             $deliveriesQuery->where('driver_id', $driverId);
+            $transfersQuery->where('driver_id', $driverId);
         }
 
         // Fetch
@@ -1080,23 +1100,43 @@ class ContractController extends Controller
             $vouchers = $vouchers->concat($deliveries);
         }
 
+        if (empty($typeFilter) || $typeFilter === 'transfer' || $typeFilter === 'transfer_in' || $typeFilter === 'transfer_out') {
+            $transfers = $transfersQuery->get()->map(function ($item) use ($contract) {
+                $isSource = $item->source_contract_id === $contract->id;
+                $item->voucher_type = $isSource ? 'transfer_out' : 'transfer_in';
+                $item->date = $item->transfer_date;
+                return $item;
+            });
+
+            if ($typeFilter === 'transfer_out') {
+                $transfers = $transfers->filter(fn($t) => $t->voucher_type === 'transfer_out');
+            } elseif ($typeFilter === 'transfer_in') {
+                $transfers = $transfers->filter(fn($t) => $t->voucher_type === 'transfer_in');
+            }
+
+            $vouchers = $vouchers->concat($transfers);
+        }
+
         // Sort descending by date
         $vouchers = $vouchers->sortByDesc('date')->values();
 
         // Calculate card content metrics dynamically
         foreach ($vouchers as $voucher) {
-            $entries = $voucher->inventoryEntries;
+            $entries = $voucher->inventoryEntries->where('contract_id', $contract->id);
             $voucher->pallet_count = $entries->pluck('pallet_id')->filter()->unique()->count();
             $voucher->item_count = $entries->pluck('inventory_item_id')->filter()->unique()->count();
             $voucher->variant_count = $entries->pluck('inventory_item_variant_id')->filter()->unique()->count();
-            $voucher->package_count = $voucher->voucher_type === 'reception'
-                ? (float) $entries->sum('quantity_in')
-                : (float) $entries->sum('quantity_out');
+            
+            if ($voucher->voucher_type === 'reception' || $voucher->voucher_type === 'transfer_in') {
+                $voucher->package_count = (float) $entries->sum('quantity_in');
+            } else {
+                $voucher->package_count = (float) $entries->sum('quantity_out');
+            }
         }
 
         // Goods types list for dropdown (distinct items)
         $goodsTypes = \App\Models\InventoryItem::whereHas('inventoryEntries', function ($q) use ($contract) {
-            $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class], function ($query) use ($contract) {
+            $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             });
         })->get(['id', 'name']);
@@ -1111,8 +1151,8 @@ class ContractController extends Controller
         $paginatedItems = $vouchers->slice(($page - 1) * $perPage, $perPage)->values();
 
         // Summary calculations
-        $totalIn = (float) $vouchers->where('voucher_type', 'reception')->sum('package_count');
-        $totalOut = (float) $vouchers->where('voucher_type', 'delivery')->sum('package_count');
+        $totalIn = (float) $vouchers->filter(fn($v) => in_array($v->voucher_type, ['reception', 'transfer_in']))->sum('package_count');
+        $totalOut = (float) $vouchers->filter(fn($v) => in_array($v->voucher_type, ['delivery', 'transfer_out']))->sum('package_count');
 
         return response()->json([
             'vouchers' => $paginatedItems,
@@ -1590,6 +1630,7 @@ class ContractController extends Controller
             \App\Models\Delivery::class,
             \App\Models\InventoryAdjustment::class,
             \App\Models\PalletRearrangement::class,
+            \App\Models\ContractTransfer::class,
         ];
 
         // 1. Query inventory entries associated with vouchers of this contract_id
@@ -1671,7 +1712,7 @@ class ContractController extends Controller
     {
         // Fetch distinct items and variants stored under the contract
         $entriesQuery = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             });
 
@@ -1744,7 +1785,7 @@ class ContractController extends Controller
         $variantId = (int) $request->input('variant_id');
 
         $entries = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             })
             ->where('inventory_item_id', $itemId)
@@ -1766,9 +1807,9 @@ class ContractController extends Controller
             $voucher = $entry->voucher;
             if (!$voucher) continue;
 
-            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : ($entry->voucher_type === 'App\\Models\\InventoryAdjustment' ? 'adjustment' : ($entry->voucher_type === 'App\\Models\\PalletRearrangement' ? 'rearrangement' : 'delivery'));
+            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : ($entry->voucher_type === 'App\\Models\\InventoryAdjustment' ? 'adjustment' : ($entry->voucher_type === 'App\\Models\\PalletRearrangement' ? 'rearrangement' : ($entry->voucher_type === 'App\\Models\\ContractTransfer' ? 'transfer' : 'delivery')));
             $operationDate = $entry->operation_date
-                ?? ($voucherType === 'reception' ? $voucher->reception_date : $voucher->delivery_date);
+                ?? ($voucherType === 'reception' ? $voucher->reception_date : ($voucherType === 'transfer' ? $voucher->transfer_date : $voucher->delivery_date));
 
             $qtyIn = (float) $entry->quantity_in;
             $qtyOut = (float) $entry->quantity_out;
@@ -1778,7 +1819,7 @@ class ContractController extends Controller
 
             $movements[] = [
                 'serial_number' => $voucher->serial_number,
-                'operation_date' => $operationDate ? Carbon::parse($operationDate)->toDateString() : null,
+                'operation_date' => $operationDate ? \Carbon\Carbon::parse($operationDate)->toDateString() : null,
                 'type' => $voucherType,
                 'quantity_in' => $qtyIn,
                 'quantity_out' => $qtyOut,
@@ -1807,7 +1848,7 @@ class ContractController extends Controller
         $pallet = \App\Models\Pallet::findOrFail($palletId);
 
         $entries = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
+            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             })
             ->where('pallet_id', $palletId)
@@ -1838,9 +1879,9 @@ class ContractController extends Controller
             $voucher = $entry->voucher;
             if (!$voucher) continue;
 
-            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : ($entry->voucher_type === 'App\\Models\\InventoryAdjustment' ? 'adjustment' : ($entry->voucher_type === 'App\\Models\\PalletRearrangement' ? 'rearrangement' : 'delivery'));
+            $voucherType = $entry->voucher_type === 'App\\Models\\Reception' ? 'reception' : ($entry->voucher_type === 'App\\Models\\InventoryAdjustment' ? 'adjustment' : ($entry->voucher_type === 'App\\Models\\PalletRearrangement' ? 'rearrangement' : ($entry->voucher_type === 'App\\Models\\ContractTransfer' ? 'transfer' : 'delivery')));
             $operationDate = $entry->operation_date
-                ?? ($voucherType === 'reception' ? $voucher->reception_date : $voucher->delivery_date);
+                ?? ($voucherType === 'reception' ? $voucher->reception_date : ($voucherType === 'transfer' ? $voucher->transfer_date : $voucher->delivery_date));
 
             $qtyIn = (float) $entry->quantity_in;
             $qtyOut = (float) $entry->quantity_out;
@@ -1850,7 +1891,7 @@ class ContractController extends Controller
 
             $movements[] = [
                 'serial_number' => $voucher->serial_number,
-                'operation_date' => $operationDate ? Carbon::parse($operationDate)->toDateString() : null,
+                'operation_date' => $operationDate ? \Carbon\Carbon::parse($operationDate)->toDateString() : null,
                 'type' => $voucherType,
                 'quantity_in' => $qtyIn,
                 'quantity_out' => $qtyOut,
@@ -1883,6 +1924,7 @@ class ContractController extends Controller
                 \App\Models\Delivery::class,
                 \App\Models\InventoryAdjustment::class,
                 \App\Models\PalletRearrangement::class,
+                \App\Models\ContractTransfer::class,
             ], function ($query) use ($contract) {
                 $query->where('contract_id', $contract->id);
             })
@@ -1902,6 +1944,10 @@ class ContractController extends Controller
                 $voucherType = 'delivery';
             } elseif ($entry->voucher_type === 'App\\Models\\InventoryAdjustment') {
                 $voucherType = 'adjustment';
+            } elseif ($entry->voucher_type === 'App\\Models\\PalletRearrangement') {
+                $voucherType = 'rearrangement';
+            } elseif ($entry->voucher_type === 'App\\Models\\ContractTransfer') {
+                $voucherType = 'transfer';
             }
 
             $qtyIn = (float) $entry->quantity_in;

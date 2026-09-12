@@ -51,6 +51,7 @@ class ContractPalletStatsController extends Controller
             Delivery::class,
             InventoryAdjustment::class,
             PalletRearrangement::class,
+            \App\Models\ContractTransfer::class,
         ];
 
         // Global list of unique pallet size categories found across active/selected contracts
