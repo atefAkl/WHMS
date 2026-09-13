@@ -4424,22 +4424,27 @@ export default function Show({
                                                                     }
                                                                     className="h-3.5 w-3.5 rounded text-primary focus:ring-primary border-border"
                                                                 />
-                                                                <span
-                                                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                                        isReception
-                                                                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                                                                            : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                                                                    }`}
-                                                                >
-                                                                    {isReception
-                                                                        ? lang ===
-                                                                          "ar"
-                                                                            ? "استلام"
-                                                                            : "Reception"
-                                                                        : lang ===
-                                                                            "ar"
-                                                                          ? "صرف"
-                                                                          : "Delivery"}
+                                                                <span className="flex items-center gap-1">
+                                                                    {voucher.voucher_type === 'reception' && (
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                                                            {lang === "ar" ? "استلام" : "Reception"}
+                                                                        </span>
+                                                                    )}
+                                                                    {voucher.voucher_type === 'delivery' && (
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                                                                            {lang === "ar" ? "صرف" : "Delivery"}
+                                                                        </span>
+                                                                    )}
+                                                                    {voucher.voucher_type === 'transfer_out' && (
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                                                            {lang === "ar" ? "تحويل (خروج)" : "Transfer (Out)"}
+                                                                        </span>
+                                                                    )}
+                                                                    {voucher.voucher_type === 'transfer_in' && (
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                                                                            {lang === "ar" ? "تحويل (دخول)" : "Transfer (In)"}
+                                                                        </span>
+                                                                    )}
                                                                 </span>
                                                             </div>
                                                             <span className="text-[10px] text-text-muted font-mono font-bold">
@@ -4454,15 +4459,11 @@ export default function Show({
                                                             <div>
                                                                 <a
                                                                     href={
-                                                                        isReception
-                                                                            ? route(
-                                                                                  "receptions.show",
-                                                                                  voucher.id,
-                                                                              )
-                                                                            : route(
-                                                                                  "deliveries.show",
-                                                                                  voucher.id,
-                                                                              )
+                                                                        voucher.voucher_type === 'reception'
+                                                                            ? route("receptions.show", voucher.id)
+                                                                            : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                ? route("contract-transfers.show", voucher.id)
+                                                                                : route("deliveries.show", voucher.id)
                                                                     }
                                                                     className="text-xs font-black text-primary hover:underline font-mono"
                                                                 >
@@ -4570,15 +4571,11 @@ export default function Show({
                                                                 >
                                                                     <a
                                                                         href={
-                                                                            isReception
-                                                                                ? route(
-                                                                                      "receptions.show",
-                                                                                      voucher.id,
-                                                                                  )
-                                                                                : route(
-                                                                                      "deliveries.show",
-                                                                                      voucher.id,
-                                                                                  )
+                                                                            voucher.voucher_type === 'reception'
+                                                                                ? route("receptions.show", voucher.id)
+                                                                                : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                    ? route("contract-transfers.show", voucher.id)
+                                                                                    : route("deliveries.show", voucher.id)
                                                                         }
                                                                         className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
                                                                     >
@@ -4598,15 +4595,11 @@ export default function Show({
                                                                     >
                                                                         <a
                                                                             href={
-                                                                                isReception
-                                                                                    ? route(
-                                                                                          "receptions.edit",
-                                                                                          voucher.id,
-                                                                                      )
-                                                                                    : route(
-                                                                                          "deliveries.edit",
-                                                                                          voucher.id,
-                                                                                      )
+                                                                                voucher.voucher_type === 'reception'
+                                                                                    ? route("receptions.edit", voucher.id)
+                                                                                    : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                        ? route("contract-transfers.edit", voucher.id)
+                                                                                        : route("deliveries.edit", voucher.id)
                                                                             }
                                                                             className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
                                                                         >
@@ -4625,15 +4618,11 @@ export default function Show({
                                                                 >
                                                                     <a
                                                                         href={
-                                                                            isReception
-                                                                                ? route(
-                                                                                      "receptions.print",
-                                                                                      voucher.id,
-                                                                                  )
-                                                                                : route(
-                                                                                      "deliveries.print",
-                                                                                      voucher.id,
-                                                                                  )
+                                                                            voucher.voucher_type === 'reception'
+                                                                                ? route("receptions.print", voucher.id)
+                                                                                : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                    ? route("contract-transfers.print", voucher.id)
+                                                                                    : route("deliveries.print", voucher.id)
                                                                         }
                                                                         target="_blank"
                                                                         rel="noreferrer"
@@ -4753,15 +4742,11 @@ export default function Show({
                                                                         <td className="px-4 py-2.5">
                                                                             <a
                                                                                 href={
-                                                                                    isReception
-                                                                                        ? route(
-                                                                                              "receptions.show",
-                                                                                              voucher.id,
-                                                                                          )
-                                                                                        : route(
-                                                                                              "deliveries.show",
-                                                                                              voucher.id,
-                                                                                          )
+                                                                                    voucher.voucher_type === 'reception'
+                                                                                        ? route("receptions.show", voucher.id)
+                                                                                        : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                            ? route("contract-transfers.show", voucher.id)
+                                                                                            : route("deliveries.show", voucher.id)
                                                                                 }
                                                                                 className="font-black text-primary hover:underline font-mono"
                                                                             >
@@ -4783,22 +4768,27 @@ export default function Show({
                                                                                 : "—"}
                                                                         </td>
                                                                         <td className="px-4 py-2.5">
-                                                                            <span
-                                                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                                                    isReception
-                                                                                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                                                                                        : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                                                                                }`}
-                                                                            >
-                                                                                {isReception
-                                                                                    ? lang ===
-                                                                                      "ar"
-                                                                                        ? "استلام"
-                                                                                        : "Reception"
-                                                                                    : lang ===
-                                                                                        "ar"
-                                                                                      ? "صرف بضاعة"
-                                                                                      : "Delivery"}
+                                                                            <span className="flex items-center gap-1">
+                                                                                {voucher.voucher_type === 'reception' && (
+                                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                                                                        {lang === "ar" ? "استلام" : "Reception"}
+                                                                                    </span>
+                                                                                )}
+                                                                                {voucher.voucher_type === 'delivery' && (
+                                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                                                                                        {lang === "ar" ? "صرف بضاعة" : "Delivery"}
+                                                                                    </span>
+                                                                                )}
+                                                                                {voucher.voucher_type === 'transfer_out' && (
+                                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                                                                        {lang === "ar" ? "تحويل (خروج)" : "Transfer (Out)"}
+                                                                                    </span>
+                                                                                )}
+                                                                                {voucher.voucher_type === 'transfer_in' && (
+                                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                                                                                        {lang === "ar" ? "تحويل (دخول)" : "Transfer (In)"}
+                                                                                    </span>
+                                                                                )}
                                                                             </span>
                                                                         </td>
                                                                         <td className="px-4 py-2.5">
@@ -4857,15 +4847,11 @@ export default function Show({
                                                                             >
                                                                                 <a
                                                                                     href={
-                                                                                        isReception
-                                                                                            ? route(
-                                                                                                  "receptions.show",
-                                                                                                  voucher.id,
-                                                                                              )
-                                                                                            : route(
-                                                                                                  "deliveries.show",
-                                                                                                  voucher.id,
-                                                                                              )
+                                                                                        voucher.voucher_type === 'reception'
+                                                                                            ? route("receptions.show", voucher.id)
+                                                                                            : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                                ? route("contract-transfers.show", voucher.id)
+                                                                                                : route("deliveries.show", voucher.id)
                                                                                     }
                                                                                     className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
                                                                                 >
@@ -4885,15 +4871,11 @@ export default function Show({
                                                                                 >
                                                                                     <a
                                                                                         href={
-                                                                                            isReception
-                                                                                                ? route(
-                                                                                                      "receptions.edit",
-                                                                                                      voucher.id,
-                                                                                                  )
-                                                                                                : route(
-                                                                                                      "deliveries.edit",
-                                                                                                      voucher.id,
-                                                                                                  )
+                                                                                            voucher.voucher_type === 'reception'
+                                                                                                ? route("receptions.edit", voucher.id)
+                                                                                                : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                                    ? route("contract-transfers.edit", voucher.id)
+                                                                                                    : route("deliveries.edit", voucher.id)
                                                                                         }
                                                                                         className="flex items-center justify-center h-6 w-6 rounded-lg bg-surface border border-border text-text-muted hover:bg-surface-muted hover:text-text transition-colors"
                                                                                     >
@@ -4912,15 +4894,11 @@ export default function Show({
                                                                             >
                                                                                 <a
                                                                                     href={
-                                                                                        isReception
-                                                                                            ? route(
-                                                                                                  "receptions.print",
-                                                                                                  voucher.id,
-                                                                                              )
-                                                                                            : route(
-                                                                                                  "deliveries.print",
-                                                                                                  voucher.id,
-                                                                                              )
+                                                                                        voucher.voucher_type === 'reception'
+                                                                                            ? route("receptions.print", voucher.id)
+                                                                                            : (voucher.voucher_type === 'transfer_in' || voucher.voucher_type === 'transfer_out' || voucher.voucher_type === 'transfer')
+                                                                                                ? route("contract-transfers.print", voucher.id)
+                                                                                                : route("deliveries.print", voucher.id)
                                                                                     }
                                                                                     target="_blank"
                                                                                     rel="noreferrer"
