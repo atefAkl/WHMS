@@ -55,7 +55,7 @@ class ContractPalletStatsController extends Controller
         ];
 
         // Global list of unique pallet size categories found across active/selected contracts
-        $allSizesSet = collect();
+        $allSizesSet = collect(['كبيرة', 'صغيرة']);
 
         // Calculate detailed stats per contract
         $reportData = $contracts->map(function ($contract) use ($voucherMorphClasses, &$allSizesSet) {
@@ -89,110 +89,47 @@ class ContractPalletStatsController extends Controller
                     ->all();
             }
 
+            // Push occupied pallet sizes to global set
+            foreach (array_keys($occupiedPallets) as $szName) {
+                if ($szName) {
+                    $allSizesSet->push($szName);
+                }
+            }
+
+            $rawBookedBySize = [];
+            foreach ($periodItems as $item) {
+                $rawLabel = $item->short_name ?: ($item->storageItem->short_name ?? $item->storageItem->name_ar ?? 'طبلية');
+                $sizeKey = 'كبيرة';
+                if (mb_strpos($rawLabel, 'صغير') !== false || mb_strpos($rawLabel, 'سمول') !== false) {
+                    $sizeKey = 'صغيرة';
+                } elseif (mb_strpos($rawLabel, 'وسط') !== false || mb_strpos($rawLabel, 'ميديوم') !== false) {
+                    $sizeKey = 'وسط';
+                }
+                $allSizesSet->push($sizeKey);
+                $booked = (int) ($item->unit_count ?? 0);
+                $rawBookedBySize[$sizeKey] = ($rawBookedBySize[$sizeKey] ?? 0) + $booked;
+            }
+
+            // Determine canonical sizes list for this contract
+            $currentSizes = $allSizesSet->unique()->values()->all();
+
             $bookedBySize = [];
             $usedBySize = [];
             $remainingBySize = [];
 
-            $totalBooked = 0;
-            $totalUsed = 0;
-            $totalRemaining = 0;
-
-            if ($periodItems->count() === 1) {
-                // Single item in contract: all occupied pallets belong to this item
-                $item = $periodItems->first();
-                $rawLabel = $item->short_name ?: ($item->storageItem->short_name ?? $item->storageItem->name_ar ?? 'طبلية');
-                
-                $sizeKey = $rawLabel;
-                if (mb_strpos($rawLabel, 'صغير') !== false || mb_strpos($rawLabel, 'سمول') !== false) {
-                    $sizeKey = 'صغيرة';
-                } elseif (mb_strpos($rawLabel, 'كبير') !== false || mb_strpos($rawLabel, 'لارج') !== false) {
-                    $sizeKey = 'كبيرة';
-                } elseif (mb_strpos($rawLabel, 'وسط') !== false || mb_strpos($rawLabel, 'ميديوم') !== false) {
-                    $sizeKey = 'وسط';
-                }
-
-                $allSizesSet->push($sizeKey);
-
-                $booked = (int) ($item->unit_count ?? 0);
-                $used = $totalOccupiedPalletsCount;
+            foreach ($currentSizes as $sz) {
+                $used = $occupiedPallets[$sz] ?? 0;
+                $booked = $rawBookedBySize[$sz] ?? ($used > 0 ? $used : 0);
                 $remaining = max(0, $booked - $used);
 
-                $bookedBySize[$sizeKey] = $booked;
-                $usedBySize[$sizeKey] = $used;
-                $remainingBySize[$sizeKey] = $remaining;
-
-                $totalBooked = $booked;
-                $totalUsed = $used;
-                $totalRemaining = $remaining;
-            } elseif ($periodItems->count() > 1) {
-                // Multiple items in contract: match per size category
-                $assignedUsedCount = 0;
-
-                foreach ($periodItems as $item) {
-                    $rawLabel = $item->short_name ?: ($item->storageItem->short_name ?? $item->storageItem->name_ar ?? 'طبلية');
-                    
-                    $sizeKey = $rawLabel;
-                    if (mb_strpos($rawLabel, 'صغير') !== false || mb_strpos($rawLabel, 'سمول') !== false) {
-                        $sizeKey = 'صغيرة';
-                    } elseif (mb_strpos($rawLabel, 'كبير') !== false || mb_strpos($rawLabel, 'لارج') !== false) {
-                        $sizeKey = 'كبيرة';
-                    } elseif (mb_strpos($rawLabel, 'وسط') !== false || mb_strpos($rawLabel, 'ميديوم') !== false) {
-                        $sizeKey = 'وسط';
-                    }
-
-                    $allSizesSet->push($sizeKey);
-
-                    $booked = (int) ($item->unit_count ?? 0);
-
-                    // Match occupied pallets by sizeKey or label or partial string
-                    $used = $occupiedPallets[$sizeKey] ?? $occupiedPallets[$rawLabel] ?? 0;
-                    if ($used === 0 && !empty($occupiedPallets)) {
-                        foreach ($occupiedPallets as $sz => $cnt) {
-                            if ($sz && (str_contains($sizeKey, $sz) || str_contains($sz, $sizeKey) || str_contains($rawLabel, $sz))) {
-                                $used += $cnt;
-                            }
-                        }
-                    }
-
-                    $remaining = max(0, $booked - $used);
-
-                    $bookedBySize[$sizeKey] = ($bookedBySize[$sizeKey] ?? 0) + $booked;
-                    $usedBySize[$sizeKey] = ($usedBySize[$sizeKey] ?? 0) + $used;
-                    $remainingBySize[$sizeKey] = ($remainingBySize[$sizeKey] ?? 0) + $remaining;
-
-                    $totalBooked += $booked;
-                    $totalUsed += $used;
-                    $totalRemaining += $remaining;
-
-                    $assignedUsedCount += $used;
-                }
-
-                // If items exist but size matching didn't catch all occupied pallets (e.g. size string mismatches)
-                if ($totalOccupiedPalletsCount > $assignedUsedCount && $totalUsed < $totalOccupiedPalletsCount) {
-                    $unassigned = $totalOccupiedPalletsCount - $assignedUsedCount;
-                    $totalUsed = $totalOccupiedPalletsCount;
-                    $totalRemaining = max(0, $totalBooked - $totalUsed);
-                    
-                    $firstKey = array_key_first($usedBySize);
-                    if ($firstKey) {
-                        $usedBySize[$firstKey] += $unassigned;
-                        $remainingBySize[$firstKey] = max(0, ($bookedBySize[$firstKey] ?? 0) - $usedBySize[$firstKey]);
-                    }
-                }
+                $bookedBySize[$sz] = $booked;
+                $usedBySize[$sz] = $used;
+                $remainingBySize[$sz] = $remaining;
             }
 
-            // Fallback if no items configured at all in contract/periods but occupied pallets exist
-            if ($totalBooked === 0 && $totalOccupiedPalletsCount > 0) {
-                $sizeKey = 'عامة';
-                $allSizesSet->push($sizeKey);
-                $bookedBySize[$sizeKey] = $totalOccupiedPalletsCount;
-                $usedBySize[$sizeKey] = $totalOccupiedPalletsCount;
-                $remainingBySize[$sizeKey] = 0;
-                $totalBooked = $totalOccupiedPalletsCount;
-                $totalUsed = $totalOccupiedPalletsCount;
-                $totalRemaining = 0;
-            }
-
+            $totalBooked = array_sum($bookedBySize);
+            $totalUsed = array_sum($usedBySize);
+            $totalRemaining = array_sum($remainingBySize);
             $utilizationRate = $totalBooked > 0 ? round(($totalUsed / $totalBooked) * 100, 1) : 0;
 
             return [
@@ -212,11 +149,8 @@ class ContractPalletStatsController extends Controller
             ];
         });
 
-        // Ensure default sizes "صغيرة", "كبيرة" exist if set is empty
+        // Unique size columns across all contracts
         $allSizes = $allSizesSet->unique()->values()->all();
-        if (empty($allSizes)) {
-            $allSizes = ['صغيرة', 'كبيرة'];
-        }
 
         // Overall summary statistics
         $overallBooked = $reportData->sum('total_booked');
