@@ -987,11 +987,11 @@ class ContractController extends Controller
 
         $receptionsQuery = \App\Models\Reception::query()
             ->where('contract_id', $contract->id)
-            ->with(['period', 'items', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+            ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
         $deliveriesQuery = \App\Models\Delivery::query()
             ->where('contract_id', $contract->id)
-            ->with(['period', 'items', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+            ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
         $transfersQuery = \App\Models\ContractTransfer::query()
             ->where(function ($q) use ($contract) {
