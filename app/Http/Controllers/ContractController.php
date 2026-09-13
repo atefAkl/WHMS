@@ -987,18 +987,18 @@ class ContractController extends Controller
 
         $receptionsQuery = \App\Models\Reception::query()
             ->where('contract_id', $contract->id)
-            ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+            ->with(['period', 'items', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
         $deliveriesQuery = \App\Models\Delivery::query()
             ->where('contract_id', $contract->id)
-            ->with(['period', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+            ->with(['period', 'items', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
         $transfersQuery = \App\Models\ContractTransfer::query()
             ->where(function ($q) use ($contract) {
                 $q->where('source_contract_id', $contract->id)
                   ->orWhere('destination_contract_id', $contract->id);
             })
-            ->with(['period', 'sourceContract.customer', 'destinationContract.customer', 'sourceCustomer', 'destinationCustomer', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+            ->with(['period', 'items', 'sourceContract.customer', 'destinationContract.customer', 'sourceCustomer', 'destinationCustomer', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
         // Filters:
         // 1. Search serial
@@ -1123,14 +1123,25 @@ class ContractController extends Controller
         // Calculate card content metrics dynamically
         foreach ($vouchers as $voucher) {
             $entries = $voucher->inventoryEntries->where('contract_id', $contract->id);
-            $voucher->pallet_count = $entries->pluck('pallet_id')->filter()->unique()->count();
-            $voucher->item_count = $entries->pluck('inventory_item_id')->filter()->unique()->count();
-            $voucher->variant_count = $entries->pluck('inventory_item_variant_id')->filter()->unique()->count();
-            
-            if ($voucher->voucher_type === 'reception' || $voucher->voucher_type === 'transfer_in') {
-                $voucher->package_count = (float) $entries->sum('quantity_in');
+            if ($entries->count() > 0) {
+                $voucher->pallet_count = $entries->pluck('pallet_id')->filter()->unique()->count();
+                $voucher->item_count = $entries->pluck('inventory_item_id')->filter()->unique()->count();
+                $voucher->variant_count = $entries->pluck('inventory_item_variant_id')->filter()->unique()->count();
+                
+                if ($voucher->voucher_type === 'reception' || $voucher->voucher_type === 'transfer_in') {
+                    $voucher->package_count = (float) $entries->sum('quantity_in');
+                } else {
+                    $voucher->package_count = (float) $entries->sum('quantity_out');
+                }
             } else {
-                $voucher->package_count = (float) $entries->sum('quantity_out');
+                // Fallback for draft vouchers before inventory entries are posted upon approval
+                $draftItems = $voucher->items ?? collect();
+                $voucher->pallet_count = $draftItems->pluck('pallet_id')->filter()->unique()->count();
+                $voucher->item_count = $draftItems->pluck('inventory_item_id')->filter()->unique()->count();
+                $voucher->variant_count = $draftItems->pluck('inventory_item_variant_id')->filter()->unique()->count();
+                $voucher->package_count = (float) $draftItems->sum(function ($item) {
+                    return $item->quantity ?? $item->quantity_in ?? $item->quantity_out ?? 0;
+                });
             }
         }
 
