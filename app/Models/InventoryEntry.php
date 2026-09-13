@@ -9,6 +9,22 @@ class InventoryEntry extends Model
 {
     use SoftDeletes;
 
+    protected static function booted()
+    {
+        static::creating(function ($entry) {
+            if (\Illuminate\Support\Facades\DB::connection()->getDriverName() === 'pgsql') {
+                try {
+                    $maxId = static::withTrashed()->max('id');
+                    if ($maxId !== null && $maxId > 0) {
+                        \Illuminate\Support\Facades\DB::statement("SELECT setval('inventory_entries_id_seq', {$maxId}, true)");
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore if sequence not found or already synced
+                }
+            }
+        });
+    }
+
     protected $fillable = [
         'contract_id',
         'inventory_item_id',
