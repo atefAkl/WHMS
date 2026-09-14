@@ -27,6 +27,25 @@ export default function Index({
     const [statusFilter, setStatusFilter] = useState(filters.status || "");
     const [customerIdFilter, setCustomerIdFilter] = useState(filters.customer_id || "");
     const [searchTerm, setSearchTerm] = useState(filters.search || "");
+    const [sortByFilter, setSortByFilter] = useState(filters.sort_by || "id_desc");
+
+    const getContractSuffix = (contractNumber, contractId) => {
+        if (!contractNumber) return contractId ? String(contractId).padStart(3, "0") : "000";
+        const match = String(contractNumber).match(/(\d+)\s*$/);
+        if (match && match[1]) {
+            return match[1].slice(-3).padStart(3, "0");
+        }
+        return String(contractNumber).slice(-3);
+    };
+
+    const formatRemaining = (val) => {
+        if (val === undefined || val === null) return "0";
+        const num = Number(val);
+        if (num < 0) {
+            return `(-${Math.abs(num)})`;
+        }
+        return String(num);
+    };
 
     const handleFilter = () => {
         router.get(
@@ -35,6 +54,7 @@ export default function Index({
                 status: statusFilter,
                 customer_id: customerIdFilter,
                 search: searchTerm,
+                sort_by: sortByFilter,
             },
             { preserveState: true, replace: true }
         );
@@ -44,6 +64,7 @@ export default function Index({
         setStatusFilter("");
         setCustomerIdFilter("");
         setSearchTerm("");
+        setSortByFilter("id_desc");
         router.get(route("sales.contract-pallet-stats.index"), {}, { preserveState: true, replace: true });
     };
 
@@ -149,7 +170,7 @@ export default function Index({
                             {lang === "ar" ? "رصيد الطبالي المتبقي" : "Remaining Pallets"}
                         </p>
                         <h3 className="text-2xl font-black text-emerald-700 font-mono">
-                            {(summary.total_remaining || 0).toLocaleString()}
+                            {formatRemaining(summary.total_remaining)}
                         </h3>
                         <p className="text-[10px] text-emerald-600 font-bold">
                             {lang === "ar" ? "المتاح للإدخال الجديد" : "Available Capacity"}
@@ -201,7 +222,7 @@ export default function Index({
                         {lang === "ar" ? "تصفية النتائج" : "Filter Results"}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
                         {/* Contract Status */}
                         <div className="text-start">
                             <label className="block text-[11px] font-bold text-text-muted mb-1">
@@ -235,6 +256,23 @@ export default function Index({
                                         {c.name}
                                     </option>
                                 ))}
+                            </select>
+                        </div>
+
+                        {/* Sort Order */}
+                        <div className="text-start">
+                            <label className="block text-[11px] font-bold text-text-muted mb-1">
+                                {lang === "ar" ? "ترتيب العرض" : "Sort Order"}
+                            </label>
+                            <select
+                                value={sortByFilter}
+                                onChange={(e) => setSortByFilter(e.target.value)}
+                                className="w-full text-xs h-9 rounded-lg border-border bg-surface text-text font-semibold focus:ring-primary focus:border-primary"
+                            >
+                                <option value="id_desc">{lang === "ar" ? "أحدث العقود (ID تنازلي)" : "Latest Contracts (ID Desc)"}</option>
+                                <option value="id_asc">{lang === "ar" ? "أقدم العقود (ID تصاعدي)" : "Oldest Contracts (ID Asc)"}</option>
+                                <option value="contract_number_asc">{lang === "ar" ? "رقم العقد (تصاعدي)" : "Contract # (Asc)"}</option>
+                                <option value="contract_number_desc">{lang === "ar" ? "رقم العقد (تنازلي)" : "Contract # (Desc)"}</option>
                             </select>
                         </div>
 
@@ -403,9 +441,9 @@ export default function Index({
                                     {reportData.map((row, idx) => (
                                         <tr key={row.id} className="hover:bg-surface-muted/30 print:hover:bg-transparent">
                                             
-                                            {/* Serial Number # */}
+                                             {/* Serial Number # */}
                                             <td className="p-3 text-center align-middle font-mono font-extrabold text-text-muted print:text-black border-e border-border print:border-gray-300">
-                                                {idx + 1}
+                                                {getContractSuffix(row.contract_number, row.id)}
                                             </td>
 
                                             {/* Column 1: Client Name + Contract Number + Status Badge */}
@@ -460,7 +498,7 @@ export default function Index({
                                                 const colorClass = getConsumptionColor(usedVal, bookedVal);
                                                 return (
                                                     <td key={`r-${sz}`} className={`p-2 text-center font-mono border-e border-border print:border-gray-300 ${colorClass}`}>
-                                                        {remVal}
+                                                        {formatRemaining(remVal)}
                                                     </td>
                                                 );
                                             })}
@@ -509,7 +547,7 @@ export default function Index({
                                             const totColorClass = getConsumptionColor(totUsedSz, totBookedSz);
                                             return (
                                                 <td key={`tot-r-${sz}`} className={`p-2 text-center font-mono border-e border-border print:border-gray-400 ${totColorClass}`}>
-                                                    {totRemSz}
+                                                    {formatRemaining(totRemSz)}
                                                 </td>
                                             );
                                         })}

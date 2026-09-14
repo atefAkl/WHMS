@@ -43,7 +43,18 @@ class ContractPalletStatsController extends Controller
             });
         }
 
-        $contracts = $query->orderBy('contract_number', 'asc')->get();
+        $sortBy = $request->input('sort_by', 'id_desc');
+        if ($sortBy === 'id_asc') {
+            $query->orderBy('id', 'asc');
+        } elseif ($sortBy === 'contract_number_asc') {
+            $query->orderBy('contract_number', 'asc');
+        } elseif ($sortBy === 'contract_number_desc') {
+            $query->orderBy('contract_number', 'desc');
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+
+        $contracts = $query->get();
 
         // Helper voucher morph classes for contract matching
         $voucherMorphClasses = [
@@ -120,7 +131,7 @@ class ContractPalletStatsController extends Controller
             foreach ($currentSizes as $sz) {
                 $used = $occupiedPallets[$sz] ?? 0;
                 $booked = $rawBookedBySize[$sz] ?? 0;
-                $remaining = max(0, $booked - $used);
+                $remaining = $booked - $used;
 
                 $bookedBySize[$sz] = $booked;
                 $usedBySize[$sz] = $used;
@@ -172,7 +183,7 @@ class ContractPalletStatsController extends Controller
             ],
             'customers' => $customers,
             'companySettings' => $companySettings,
-            'filters' => $request->only(['status', 'customer_id', 'search']),
+            'filters' => $request->only(['status', 'customer_id', 'search', 'sort_by']),
         ]);
     }
 }
