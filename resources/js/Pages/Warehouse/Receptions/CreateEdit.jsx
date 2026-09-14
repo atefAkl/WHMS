@@ -47,7 +47,8 @@ export default function CreateEdit({
     reception = null,
     draftReceptions = [],
 }) {
-    const { lang } = useLang();
+    const { lang, __ } = useLang();
+
     const { auth } = usePage().props;
     const user = auth.user;
     const showButtonText = user?.preferences?.show_button_text ?? false;
@@ -377,9 +378,7 @@ export default function CreateEdit({
         if (!data.contract_id) {
             setPalletLookupData(null);
             setPosRowError(
-                lang === "ar"
-                    ? "يرجى اختيار العقد أولاً للبحث عن بيانات الطبلية."
-                    : "Please select a contract first before searching for pallet data."
+                __("receptions.create_edit.please_select_a_contract_first")
             );
             return;
         }
@@ -401,9 +400,7 @@ export default function CreateEdit({
                 setPalletLookupData(null);
                 console.error(err);
                 setPosRowError(
-                    lang === "ar"
-                        ? "خطأ في الاتصال بالخادم للتحقق من الطبلية."
-                        : "Error checking pallet code.",
+                    __("receptions.create_edit.error_checking_pallet_code"),
                 );
             });
     };
@@ -438,9 +435,7 @@ export default function CreateEdit({
                     setDriverError(err.response.data.message);
                 } else {
                     setDriverError(
-                        lang === "ar"
-                            ? "تعذر إضافة السائق. يرجى التحقق من المدخلات."
-                            : "Could not add driver.",
+                        __("receptions.create_edit.could_not_add_driver"),
                     );
                 }
             });
@@ -489,36 +484,28 @@ export default function CreateEdit({
         setPosRowError("");
         if (!posPalletNumber.trim()) {
             setPosRowError(
-                lang === "ar"
-                    ? "يجب إدخال رقم الطبلية."
-                    : "Pallet number is required.",
+                __("receptions.create_edit.pallet_number_is_required"),
             );
             palletInputRef.current?.focus();
             return;
         }
         if (!posItemId) {
             setPosRowError(
-                lang === "ar"
-                    ? "يجب اختيار الصنف المخزني."
-                    : "Inventory item is required.",
+                __("receptions.create_edit.inventory_item_is_required"),
             );
             itemSearchRef.current?.focus();
             return;
         }
         if (!posVariantId) {
             setPosRowError(
-                lang === "ar"
-                    ? "يجب اختيار عبوة الصنف."
-                    : "Variant is required.",
+                __("receptions.create_edit.variant_is_required"),
             );
             variantSelectRef.current?.focus();
             return;
         }
         if (!posQuantity || parseFloat(posQuantity) <= 0) {
             setPosRowError(
-                lang === "ar"
-                    ? "الكمية يجب أن تكون أكبر من الصفر."
-                    : "Quantity must be greater than zero.",
+                __("receptions.create_edit.quantity_must_be_greater_than_"),
             );
             qtyInputRef.current?.focus();
             return;
@@ -611,25 +598,21 @@ export default function CreateEdit({
         <div className="flex items-center gap-[6px] text-xs text-text-muted">
             <Home className="h-3.5 w-3.5" />
             <ChevronRight
-                className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 ${__("receptions.create_edit.str_8")}`}
             />
             <Link
                 href={route("receptions.index")}
                 className="hover:text-primary transition-colors"
             >
-                {lang === "ar" ? "سندات الاستلام" : "Reception Vouchers"}
+                {__("receptions.create_edit.reception_vouchers")}
             </Link>
             <ChevronRight
-                className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 ${__("receptions.create_edit.str_10")}`}
             />
             <span className="text-primary font-medium">
                 {isEdit
-                    ? lang === "ar"
-                        ? "تعديل سند"
-                        : "Edit Voucher"
-                    : lang === "ar"
-                        ? "إنشاء سند جديد"
-                        : "New Voucher"}
+                    ? __("receptions.create_edit.edit_voucher")
+                    : __("receptions.create_edit.new_voucher")}
             </span>
         </div>
     );
@@ -639,36 +622,26 @@ export default function CreateEdit({
             <Head
                 title={
                     isEdit
-                        ? lang === "ar"
-                            ? "تعديل سند استلام"
-                            : "Edit Reception Voucher"
-                        : lang === "ar"
-                            ? "إنشاء سند استلام"
-                            : "New Reception Voucher"
+                        ? __("receptions.create_edit.edit_reception_voucher")
+                        : __("receptions.create_edit.new_reception_voucher")
                 }
             />
 
             <div
                 className="max-w-6xl mx-auto pb-12 main-stack-y"
-                dir={lang === "ar" ? "rtl" : "ltr"}
+                dir={__("receptions.create_edit.ltr")}
             >
                 {/* Page header title bar */}
                 <PageHeader
                     icon={Layers}
                     title={
                         isEdit
-                            ? lang === "ar"
-                                ? `تعديل إيصال استلام: ${reception.serial_number}`
-                                : `Edit Receipt: ${reception.serial_number}`
-                            : lang === "ar"
-                                ? "إنشاء إيصال استلام جديد"
-                                : "Create New Reception Receipt"
+                            ? __("receptions.create_edit.edit_receipt_reception_serial_")
+                            : __("receptions.create_edit.create_new_reception_receipt")
                     }
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
-                            {lang === "ar"
-                                ? "قم بتعبئة بيانات السند الرئيسي ثم أضف البنود المستلمة على الطبالي (POS style)."
-                                : "Fill out the reception header, then add items using the quick keyboard interface."}
+                            {__("receptions.create_edit.fill_out_the_reception_header_")}
                         </p>
                     }
                     actions={
@@ -676,9 +649,7 @@ export default function CreateEdit({
                             {/* Save Draft button abbreviated to icon with hover tooltip */}
                             <Tooltip
                                 text={
-                                    lang === "ar"
-                                        ? "حفظ كمسودة (Ctrl+S)"
-                                        : "Save Draft (Ctrl+S)"
+                                    __("receptions.create_edit.save_draft_ctrl_s")
                                 }
                             >
                                 <button
@@ -698,9 +669,7 @@ export default function CreateEdit({
                             {/* Approve & Print button abbreviated to icon with hover tooltip */}
                             <Tooltip
                                 text={
-                                    lang === "ar"
-                                        ? "اعتماد وطباعة (Ctrl+E)"
-                                        : "Approve & Print (Ctrl+E)"
+                                    __("receptions.create_edit.approve_print_ctrl_e")
                                 }
                             >
                                 <button
@@ -720,7 +689,7 @@ export default function CreateEdit({
                             <div className="h-6 w-px bg-border mx-1" />
 
                             {/* Back button abbreviated to icon with hover tooltip */}
-                            <Tooltip text={lang === "ar" ? "رجوع" : "Back"}>
+                            <Tooltip text={__("receptions.create_edit.back")}>
                                 <Link
                                     href={
                                         isEdit
@@ -733,7 +702,7 @@ export default function CreateEdit({
                                     className="border border-border bg-surface text-text hover:bg-surface-muted rounded-none h-[30px] w-[30px] flex items-center justify-center transition-all"
                                 >
                                     <ArrowRight
-                                        className={`h-4 w-4 ${lang === "ar" ? "rotate-0" : "rotate-180"}`}
+                                        className={`h-4 w-4 ${__("receptions.create_edit.rotate_180")}`}
                                     />
                                 </Link>
                             </Tooltip>
@@ -746,19 +715,15 @@ export default function CreateEdit({
                     <div className="bg-amber-500/5 border border-amber-500/25 p-3 rounded-none flex flex-wrap items-center gap-3">
                         <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
                             <FolderSync className="h-4 w-4" />
-                            {lang === "ar"
-                                ? "المسودات النشطة المعلقة:"
-                                : "Active Pending Drafts:"}
+                            {__("receptions.create_edit.active_pending_drafts")}
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                             {draftReceptions.map((draft) => {
                                 const draftTooltipText = draft.customer
                                     ? draft.contract
                                         ? `${draft.customer.name} (${draft.contract.contract_number})`
-                                        : `${draft.customer.name} - ${lang === "ar" ? "لم يتم تعيين عقد" : "No contract assigned"}`
-                                    : lang === "ar"
-                                        ? "لم يتم تعيين عقد"
-                                        : "Contract not assigned yet";
+                                        : `${draft.customer.name} - ${__("receptions.create_edit.no_contract_assigned")}`
+                                    : __("receptions.create_edit.contract_not_assigned_yet");
 
                                 return (
                                     <Tooltip
@@ -792,9 +757,7 @@ export default function CreateEdit({
                             {/* Collapsible header section */}
                             <div className="flex items-center justify-between border-b border-border pb-3">
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "معلومات السند الأساسية"
-                                        : "Voucher General Information"}
+                                    {__("receptions.create_edit.voucher_general_information")}
                                 </h3>
                                 <button
                                     type="button"
@@ -805,9 +768,7 @@ export default function CreateEdit({
                                     }
                                     className="text-text-muted hover:text-text focus:outline-none transition-colors"
                                     title={
-                                        lang === "ar"
-                                            ? "طي/عرض معلومات السند"
-                                            : "Collapse/Expand Voucher Info"
+                                        __("receptions.create_edit.collapse_expand_voucher_info")
                                     }
                                 >
                                     {isGeneralCollapsed ? (
@@ -826,9 +787,7 @@ export default function CreateEdit({
                                         <div>
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "رقم السند"
-                                                        : "Serial Number"
+                                                    __("receptions.create_edit.serial_number")
                                                 }
                                             />
                                             <TextInput
@@ -836,9 +795,7 @@ export default function CreateEdit({
                                                 className="mt-1 w-full text-sm rounded-none border-border bg-slate-50 text-slate-500 font-mono font-bold"
                                                 value={
                                                     reception?.serial_number ||
-                                                    (lang === "ar"
-                                                        ? "سيتم توليده تلقائياً"
-                                                        : "Auto-generated")
+                                                    (__("receptions.create_edit.auto_generated"))
                                                 }
                                                 disabled
                                                 readOnly
@@ -849,9 +806,7 @@ export default function CreateEdit({
                                         <div className="relative">
                                             <SearchableSelect
                                                 label={
-                                                    lang === "ar"
-                                                        ? "العقد المرتبط *"
-                                                        : "Linked Contract *"
+                                                    __("receptions.create_edit.linked_contract")
                                                 }
                                                 items={allContracts}
                                                 value={data.contract_id}
@@ -861,9 +816,7 @@ export default function CreateEdit({
                                                     )
                                                 }
                                                 placeholder={
-                                                    lang === "ar"
-                                                        ? "ابحث برقم العقد أو اسم العميل..."
-                                                        : "Type contract number or customer..."
+                                                    __("receptions.create_edit.type_contract_number_or_custom")
                                                 }
                                                 searchKeys={[
                                                     "contract_number",
@@ -888,9 +841,7 @@ export default function CreateEdit({
                                         <div className="relative">
                                             <SearchableSelect
                                                 label={
-                                                    lang === "ar"
-                                                        ? "العميل *"
-                                                        : "Customer *"
+                                                    __("receptions.create_edit.customer")
                                                 }
                                                 items={customers}
                                                 value={data.customer_id}
@@ -904,9 +855,7 @@ export default function CreateEdit({
                                                     }
                                                 }}
                                                 placeholder={
-                                                    lang === "ar"
-                                                        ? "ابحث عن اسم العميل..."
-                                                        : "Type customer name..."
+                                                    __("receptions.create_edit.type_customer_name")
                                                 }
                                                 searchKeys={["name"]}
                                                 displayFormat={(c) => c.name}
@@ -923,9 +872,7 @@ export default function CreateEdit({
                                         <div>
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "فترة الفوترة المرتبطة *"
-                                                        : "Linked Period *"
+                                                    __("receptions.create_edit.linked_period")
                                                 }
                                             />
                                             <select
@@ -941,18 +888,14 @@ export default function CreateEdit({
                                                 required
                                             >
                                                 <option value="">
-                                                    {lang === "ar"
-                                                        ? "-- اختر الفترة --"
-                                                        : "-- Select Period --"}
+                                                    {__("receptions.create_edit.select_period")}
                                                 </option>
                                                 {availablePeriods.map((p) => (
                                                     <option
                                                         key={p.id}
                                                         value={p.id}
                                                     >
-                                                        {lang === "ar"
-                                                            ? "فترة"
-                                                            : "Period"}{" "}
+                                                        {__("receptions.create_edit.period")}{" "}
                                                         {p.period_number} (
                                                         {p.start_date} إلى{" "}
                                                         {p.end_date})
@@ -970,9 +913,7 @@ export default function CreateEdit({
                                             <div className="flex justify-between items-center">
                                                 <InputLabel
                                                     value={
-                                                        lang === "ar"
-                                                            ? "السائق الناقل"
-                                                            : "Carrier Driver"
+                                                        __("receptions.create_edit.carrier_driver")
                                                     }
                                                 />
                                                 <button
@@ -983,9 +924,7 @@ export default function CreateEdit({
                                                     className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
                                                 >
                                                     <UserPlus className="h-3 w-3" />
-                                                    {lang === "ar"
-                                                        ? "سائق جديد"
-                                                        : "New Driver"}
+                                                    {__("receptions.create_edit.new_driver")}
                                                 </button>
                                             </div>
                                             <select
@@ -999,9 +938,7 @@ export default function CreateEdit({
                                                 }
                                             >
                                                 <option value="">
-                                                    {lang === "ar"
-                                                        ? "-- لا يوجد سائق مسجل --"
-                                                        : "-- No Driver --"}
+                                                    {__("receptions.create_edit.no_driver")}
                                                 </option>
                                                 {driverList.map((d) => (
                                                     <option
@@ -1024,9 +961,7 @@ export default function CreateEdit({
                                         <div>
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "مندوب العميل (المستلم منه)"
-                                                        : "Customer Agent"
+                                                    __("receptions.create_edit.customer_agent")
                                                 }
                                             />
                                             <select
@@ -1041,9 +976,7 @@ export default function CreateEdit({
                                                 disabled={!data.contract_id}
                                             >
                                                 <option value="">
-                                                    {lang === "ar"
-                                                        ? "-- لا يوجد مندوب محدد --"
-                                                        : "-- No Representative --"}
+                                                    {__("receptions.create_edit.no_representative")}
                                                 </option>
                                                 {availableRepresentatives.map(
                                                     (r) => (
@@ -1069,18 +1002,14 @@ export default function CreateEdit({
                                         <div>
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "المزرعة أو المصدر"
-                                                        : "Farm / Source"
+                                                    __("receptions.create_edit.farm_source")
                                                 }
                                             />
                                             <TextInput
                                                 type="text"
                                                 className="mt-1 w-full text-sm rounded-none border-border"
                                                 placeholder={
-                                                    lang === "ar"
-                                                        ? "مصدر البضاعة (مثال: مزرعة القصيم)"
-                                                        : "e.g. Al-Qassim Farm"
+                                                    __("receptions.create_edit.e_g_al_qassim_farm")
                                                 }
                                                 value={data.farm_source}
                                                 onChange={(e) =>
@@ -1100,9 +1029,7 @@ export default function CreateEdit({
                                         <div>
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "تاريخ الاستلام الفعلي *"
-                                                        : "Reception Date *"
+                                                    __("receptions.create_edit.reception_date")
                                                 }
                                             />
                                             <TextInput
@@ -1128,9 +1055,7 @@ export default function CreateEdit({
                                     <div className="pt-2">
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "ملاحظات السند"
-                                                    : "Voucher Notes"
+                                                __("receptions.create_edit.voucher_notes")
                                             }
                                         />
                                         <textarea
@@ -1140,9 +1065,7 @@ export default function CreateEdit({
                                                 setData("notes", e.target.value)
                                             }
                                             placeholder={
-                                                lang === "ar"
-                                                    ? "اكتب أي ملاحظات أو تفاصيل إضافية حول هذا السند..."
-                                                    : "Write any additional notes or details about this voucher..."
+                                                __("receptions.create_edit.write_any_additional_notes_or_")
                                             }
                                         />
                                         <InputError
@@ -1156,9 +1079,7 @@ export default function CreateEdit({
                                         <div className="pt-2">
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "سبب التعديل (يسجل في سجل المراجعة)"
-                                                        : "Modification Reason"
+                                                    __("receptions.create_edit.modification_reason")
                                                 }
                                             />
                                             <TextInput
@@ -1171,9 +1092,7 @@ export default function CreateEdit({
                                                     )
                                                 }
                                                 placeholder={
-                                                    lang === "ar"
-                                                        ? "اكتب سبب تعديل هذا السند بالتفصيل..."
-                                                        : "Write why you are editing..."
+                                                    __("receptions.create_edit.write_why_you_are_editing")
                                                 }
                                                 required={false}
                                             />
@@ -1193,9 +1112,7 @@ export default function CreateEdit({
                         <div className="bg-surface border border-primary/20 p-5 shadow-sm rounded-none space-y-4">
                             <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider flex items-center gap-1.5">
                                 <Layers className="h-4 w-4 text-primary" />
-                                {lang === "ar"
-                                    ? "إدخال البند السريع (POS Bar)"
-                                    : "Quick POS Item Entry"}
+                                {__("receptions.create_edit.quick_pos_item_entry")}
                             </h3>
 
                             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
@@ -1203,9 +1120,7 @@ export default function CreateEdit({
                                 <div className="sm:col-span-2">
                                     <InputLabel
                                         value={
-                                            lang === "ar"
-                                                ? "رقم الطبلية *"
-                                                : "Pallet No. *"
+                                            __("receptions.create_edit.pallet_no")
                                         }
                                     />
                                     <input
@@ -1234,9 +1149,7 @@ export default function CreateEdit({
                                 <div className="sm:col-span-2">
                                     <InputLabel
                                         value={
-                                            lang === "ar"
-                                                ? "الحجم والنوع *"
-                                                : "Size & Type *"
+                                            __("receptions.create_edit.size_type")
                                         }
                                     />
                                     <select
@@ -1256,21 +1169,19 @@ export default function CreateEdit({
                                         required
                                     >
                                         <option value="صغيرة">
-                                            {lang === "ar" ? "صغيرة" : "Small"}
+                                            {__("receptions.create_edit.small")}
                                         </option>
                                         <option value="وسط">
-                                            {lang === "ar" ? "وسط" : "Medium"}
+                                            {__("receptions.create_edit.medium")}
                                         </option>
                                         <option value="كبيرة">
-                                            {lang === "ar" ? "كبيرة" : "Large"}
+                                            {__("receptions.create_edit.large")}
                                         </option>
                                         <option value="خشب">
-                                            {lang === "ar" ? "خشب" : "Wood"}
+                                            {__("receptions.create_edit.wood")}
                                         </option>
                                         <option value="بلاستيك">
-                                            {lang === "ar"
-                                                ? "بلاستيك"
-                                                : "Plastic"}
+                                            {__("receptions.create_edit.plastic")}
                                         </option>
                                     </select>
                                 </div>
@@ -1279,9 +1190,7 @@ export default function CreateEdit({
                                 <div className="sm:col-span-3 relative">
                                     <SearchableSelect
                                         label={
-                                            lang === "ar"
-                                                ? "الصنف المخزني *"
-                                                : "Inventory Item *"
+                                            __("receptions.create_edit.inventory_item")
                                         }
                                         inputRef={itemSearchRef}
                                         items={inventoryItems}
@@ -1298,9 +1207,7 @@ export default function CreateEdit({
                                             }
                                         }}
                                         placeholder={
-                                            lang === "ar"
-                                                ? "ابحث عن الصنف..."
-                                                : "Search item..."
+                                            __("receptions.create_edit.search_item")
                                         }
                                         searchKeys={["name", "code"]}
                                         displayFormat={(item) =>
@@ -1330,9 +1237,7 @@ export default function CreateEdit({
                                 <div className="sm:col-span-2">
                                     <InputLabel
                                         value={
-                                            lang === "ar"
-                                                ? "العبوة *"
-                                                : "Variant *"
+                                            __("receptions.create_edit.variant")
                                         }
                                     />
                                     <select
@@ -1353,9 +1258,7 @@ export default function CreateEdit({
                                         required
                                     >
                                         <option value="">
-                                            {lang === "ar"
-                                                ? "-- عبوة --"
-                                                : "-- Variant --"}
+                                            {__("receptions.create_edit.variant")}
                                         </option>
                                         {posVariants.map((v) => (
                                             <option key={v.id} value={v.id}>
@@ -1372,7 +1275,7 @@ export default function CreateEdit({
                                 <div className="sm:col-span-1">
                                     <InputLabel
                                         value={
-                                            lang === "ar" ? "الدرجة" : "Quality"
+                                            __("receptions.create_edit.quality")
                                         }
                                     />
                                     <TextInput
@@ -1387,7 +1290,7 @@ export default function CreateEdit({
                                 <div className="sm:col-span-1">
                                     <InputLabel
                                         value={
-                                            lang === "ar" ? "الكمية *" : "Qty *"
+                                            __("receptions.create_edit.qty")
                                         }
                                     />
                                     <input
@@ -1439,12 +1342,12 @@ export default function CreateEdit({
                                         {editingRowIndex !== null ? (
                                             <>
                                                 <Edit className="h-3.5 w-3.5" />
-                                                <span>{lang === "ar" ? "تحديث البند" : "Update"}</span>
+                                                <span>{__("receptions.create_edit.update")}</span>
                                             </>
                                         ) : (
                                             <>
                                                 <Plus className="h-3.5 w-3.5" />
-                                                <span>{lang === "ar" ? "إدراج" : "Insert"}</span>
+                                                <span>{__("receptions.create_edit.insert")}</span>
                                             </>
                                         )}
                                     </button>
@@ -1453,7 +1356,7 @@ export default function CreateEdit({
                                             type="button"
                                             onClick={handleCancelEditRow}
                                             className="px-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold h-[38px] flex items-center justify-center rounded-none transition-all shrink-0"
-                                            title={lang === "ar" ? "إلغاء التعديل" : "Cancel Edit"}
+                                            title={__("receptions.create_edit.cancel_edit")}
                                         >
                                             <X className="h-4 w-4" />
                                         </button>
@@ -1472,17 +1375,15 @@ export default function CreateEdit({
                             <div className="flex flex-wrap items-center justify-between text-[11px] text-text-muted border-t border-border/60 pt-2.5">
                                 <div className="flex items-center gap-1.5 font-bold text-primary">
                                     <Search className="h-3.5 w-3.5" />
-                                    <span>{lang === "ar" ? "أدخل رقم الطبلية للبحث" : "Enter pallet number for search"}</span>
+                                    <span>{__("receptions.create_edit.enter_pallet_number_for_search")}</span>
                                     <span className="text-text-muted font-normal">
-                                        {lang === "ar"
-                                            ? "(عند الخروج من الحقل (Blur) يتم جلب بيانات الطبلية وحمولتها والأصناف والعقد المرتبط تلقائياً)"
-                                            : "(On field blur, pallet capacity, contents, qualities and contract are fetched automatically)"}
+                                        {__("receptions.create_edit.on_field_blur_pallet_capacity_")}
                                     </span>
                                 </div>
                                 {loadingPallet && (
                                     <span className="flex items-center gap-1 text-primary font-bold animate-pulse">
                                         <RefreshCw className="h-3 w-3 animate-spin" />
-                                        {lang === "ar" ? "جاري جلب بيانات الطبلية..." : "Fetching pallet data..."}
+                                        {__("receptions.create_edit.fetching_pallet_data")}
                                     </span>
                                 )}
                             </div>
@@ -1494,18 +1395,18 @@ export default function CreateEdit({
                                         <div className="flex items-center gap-2 font-bold text-text">
                                             <Box className="h-4 w-4 text-primary" />
                                             <span>
-                                                {lang === "ar" ? `طبلية رقم: ${palletLookupData.pallet_number}` : `Pallet No: ${palletLookupData.pallet_number}`}
+                                                {__("receptions.create_edit.pallet_no_palletlookupdata_pal")}
                                             </span>
                                             <span className="font-mono text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
                                                 {palletLookupData.pallet_code}
                                             </span>
                                             <span className="text-text-muted">
-                                                • {lang === "ar" ? `الحمولة / الحجم: ${palletLookupData.size}` : `Capacity / Size: ${palletLookupData.size}`}
+                                                • {__("receptions.create_edit.capacity_size_palletlookupdata")}
                                             </span>
                                         </div>
                                         {palletLookupData.contract && (
                                             <div className="text-[11px] font-bold text-text-muted">
-                                                {lang === "ar" ? "العقد المرتبط: " : "Contract: "}
+                                                {__("receptions.create_edit.contract")}
                                                 <span className="text-primary font-mono">{palletLookupData.contract.contract_number}</span>
                                                 {palletLookupData.contract.customer_name && (
                                                     <span> ({palletLookupData.contract.customer_name})</span>
@@ -1517,7 +1418,7 @@ export default function CreateEdit({
                                     {/* Contents & Qualities */}
                                     <div>
                                         <span className="font-bold text-[11px] text-text-muted block mb-1">
-                                            {lang === "ar" ? "المحتويات والأصناف المسجلة حالياً على الطبلية:" : "Current Stored Contents on Pallet:"}
+                                            {__("receptions.create_edit.current_stored_contents_on_pal")}
                                         </span>
                                         {palletLookupData.contents && palletLookupData.contents.length > 0 ? (
                                             <div className="flex flex-wrap gap-2">
@@ -1530,13 +1431,13 @@ export default function CreateEdit({
                                                                 {c.quality}
                                                             </span>
                                                         )}
-                                                        <span className="text-primary font-mono">{c.quantity} {lang === "ar" ? "عبوة" : "Packs"}</span>
+                                                        <span className="text-primary font-mono">{c.quantity} {__("receptions.create_edit.packs")}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
                                             <p className="text-[11px] text-text-muted italic">
-                                                {lang === "ar" ? "طبلية فارغة / جديدة (لا تحتوي على بضائع مسجلة حالياً على هذا العقد)." : "New / Empty pallet (no stored items currently on this contract)."}
+                                                {__("receptions.create_edit.new_empty_pallet_no_stored_ite")}
                                             </p>
                                         )}
                                     </div>
@@ -1546,9 +1447,7 @@ export default function CreateEdit({
                                         <div className="bg-amber-500/10 border border-amber-500/30 p-2 text-amber-700 text-[11px] font-bold flex items-center gap-1.5 mt-2">
                                             <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
                                             <span>
-                                                {lang === "ar"
-                                                    ? `تنبيه: هذه الطبلية مشغولة حالياً على عقد آخر: ${palletLookupData.other_contract.contract_number} (${palletLookupData.other_contract.customer_name}) بحمولة ${palletLookupData.other_contract.active_packages} عبوة!`
-                                                    : `Warning: This pallet is currently occupied on another contract: ${palletLookupData.other_contract.contract_number} (${palletLookupData.other_contract.customer_name}) with ${palletLookupData.other_contract.active_packages} packs!`}
+                                                {__("receptions.create_edit.warning_this_pallet_is_current")}
                                             </span>
                                         </div>
                                     )}
@@ -1559,9 +1458,7 @@ export default function CreateEdit({
                         {/* List of Added Receptions Items */}
                         <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-4">
                             <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider">
-                                {lang === "ar"
-                                    ? "البنود المدرجة حالياً بالسند"
-                                    : "Pallets List in this Voucher"}
+                                {__("receptions.create_edit.pallets_list_in_this_voucher")}
                             </h3>
 
                             <div className="overflow-x-auto">
@@ -1572,39 +1469,25 @@ export default function CreateEdit({
                                                 #
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "رقم الطبلية"
-                                                    : "Pallet No."}
+                                                {__("receptions.create_edit.pallet_no")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "حجم/نوع الطبلية"
-                                                    : "Pallet Size"}
+                                                {__("receptions.create_edit.pallet_size")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "الصنف المخزني"
-                                                    : "Inventory Item"}
+                                                {__("receptions.create_edit.inventory_item")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "العبوة"
-                                                    : "Variant"}
+                                                {__("receptions.create_edit.variant")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "الدرجة"
-                                                    : "Quality"}
+                                                {__("receptions.create_edit.quality")}
                                             </th>
                                             <th className="px-3 py-2 text-end">
-                                                {lang === "ar"
-                                                    ? "الكمية المستلمة"
-                                                    : "Qty Received"}
+                                                {__("receptions.create_edit.qty_received")}
                                             </th>
                                             <th className="px-3 py-2 text-center w-26">
-                                                {lang === "ar"
-                                                    ? "إجراء"
-                                                    : "Action"}
+                                                {__("receptions.create_edit.action")}
                                             </th>
                                         </tr>
                                     </thead>
@@ -1615,9 +1498,7 @@ export default function CreateEdit({
                                                     colSpan="8"
                                                     className="px-3 py-6 text-center text-text-muted font-bold"
                                                 >
-                                                    {lang === "ar"
-                                                        ? "لا توجد بنود مضافة لهذا السند بعد. استخدم الشريط السريع بالأعلى لإدخال البنود."
-                                                        : "No items added yet. Use the POS bar to add items."}
+                                                    {__("receptions.create_edit.no_items_added_yet_use_the_pos")}
                                                 </td>
                                             </tr>
                                         ) : (
@@ -1682,9 +1563,7 @@ export default function CreateEdit({
                                                                 }
                                                                 className="p-1 text-text-muted hover:text-amber-600 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/25 transition-all rounded-none inline-flex items-center"
                                                                 title={
-                                                                    lang === "ar"
-                                                                        ? "تعديل البند"
-                                                                        : "Edit Row"
+                                                                    __("receptions.create_edit.edit_row")
                                                                 }
                                                             >
                                                                 <Edit className="h-4 w-4" />
@@ -1698,9 +1577,7 @@ export default function CreateEdit({
                                                                 }
                                                                 className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 border border-transparent hover:border-danger/25 transition-all rounded-none inline-flex items-center"
                                                                 title={
-                                                                    lang === "ar"
-                                                                        ? "حذف البند"
-                                                                        : "Delete Row"
+                                                                    __("receptions.create_edit.delete_row")
                                                                 }
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -1721,9 +1598,7 @@ export default function CreateEdit({
 
                             <div className="flex justify-end gap-3 text-xs text-text-muted mt-2">
                                 <div className="font-bold text-text">
-                                    {lang === "ar"
-                                        ? "الإجمالي الكلي:"
-                                        : "Total:"}
+                                    {__("receptions.create_edit.total")}
                                 </div>
                                 <div className="font-mono font-semibold text-text">
                                     {totalReception.toLocaleString(undefined, {
@@ -1743,9 +1618,7 @@ export default function CreateEdit({
                                 <div className="flex items-center gap-2">
                                     <Calculator className="h-4 w-4 text-primary" />
                                     <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                        {lang === "ar"
-                                            ? "سعة وحالة إشغال العقد"
-                                            : "Contract Capacity Stats"}
+                                        {__("receptions.create_edit.contract_capacity_stats")}
                                     </h3>
                                 </div>
                                 <button
@@ -1767,57 +1640,43 @@ export default function CreateEdit({
                                 <>
                                     {loadingStats ? (
                                         <div className="py-6 text-center text-xs text-text-muted">
-                                            {lang === "ar"
-                                                ? "جاري تحميل إحصاءات السعة..."
-                                                : "Loading stats..."}
+                                            {__("receptions.create_edit.loading_stats")}
                                         </div>
                                     ) : contractStats ? (
                                         <div className="space-y-4 text-xs">
                                             <div className="bg-slate-50 border border-border p-3 space-y-3">
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-text-muted font-medium">
-                                                        {lang === "ar"
-                                                            ? "السعة الكلية للعقد:"
-                                                            : "Total Capacity:"}
+                                                        {__("receptions.create_edit.total_capacity")}
                                                     </span>
                                                     <span className="font-bold text-text font-mono text-sm">
                                                         {
                                                             contractStats.total_capacity
                                                         }{" "}
-                                                        {lang === "ar"
-                                                            ? "طبلية"
-                                                            : "Pallets"}
+                                                        {__("receptions.create_edit.pallets")}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-text-muted font-medium">
-                                                        {lang === "ar"
-                                                            ? "المستلم بالمخازن:"
-                                                            : "Received in Store:"}
+                                                        {__("receptions.create_edit.received_in_store")}
                                                     </span>
                                                     <span className="font-bold text-amber-600 font-mono text-sm">
                                                         {
                                                             liveCurrentlyInWarehouse
                                                         }{" "}
-                                                        {lang === "ar"
-                                                            ? "طبلية"
-                                                            : "Pallets"}
+                                                        {__("receptions.create_edit.pallets")}
                                                     </span>
                                                 </div>
                                                 <hr className="border-border" />
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-text-muted font-bold">
-                                                        {lang === "ar"
-                                                            ? "السعة المتبقية:"
-                                                            : "Remaining Space:"}
+                                                        {__("receptions.create_edit.remaining_space")}
                                                     </span>
                                                     <span
                                                         className={`font-black font-mono text-[15px] ${liveRemaining > 0 ? "text-emerald-600" : "text-danger"}`}
                                                     >
                                                         {liveRemaining}{" "}
-                                                        {lang === "ar"
-                                                            ? "طبلية"
-                                                            : "Pallets"}
+                                                        {__("receptions.create_edit.pallets")}
                                                     </span>
                                                 </div>
                                             </div>
@@ -1826,9 +1685,7 @@ export default function CreateEdit({
                                                 <div className="bg-danger/10 border border-danger/25 text-danger font-bold p-3 rounded-none flex items-start gap-1.5 text-[11px]">
                                                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                                                     <span>
-                                                        {lang === "ar"
-                                                            ? "لقد تم استهلاك كامل سعة العقد، استمرار الاستلام قد يتجاوز السقف المحدد."
-                                                            : "Contract has reached full capacity. Proceeding may exceed terms limit."}
+                                                        {__("receptions.create_edit.contract_has_reached_full_capa")}
                                                     </span>
                                                 </div>
                                             )}
@@ -1837,9 +1694,7 @@ export default function CreateEdit({
                                                 <div className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 font-bold p-3 rounded-none flex items-start gap-1.5 text-[11px]">
                                                     <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
                                                     <span>
-                                                        {lang === "ar"
-                                                            ? "السعة كافية والربط القانوني والفوترة سليم للاستلام."
-                                                            : "Capacity is sufficient for receiving pallets under contract."}
+                                                        {__("receptions.create_edit.capacity_is_sufficient_for_rec")}
                                                     </span>
                                                 </div>
                                             )}
@@ -1847,7 +1702,7 @@ export default function CreateEdit({
                                             {contractStats.items_breakdown && contractStats.items_breakdown.length > 0 && (
                                                 <div className="space-y-2 pt-3 border-t border-border mt-3">
                                                     <h4 className="font-bold text-[11px] text-primary uppercase">
-                                                        {lang === "ar" ? "مقاصة الأصناف بحسب الحجم:" : "Item Size Breakdown:"}
+                                                        {__("receptions.create_edit.item_size_breakdown")}
                                                     </h4>
                                                     <div className="space-y-2">
                                                         {contractStats.items_breakdown.map((item, idx) => (
@@ -1855,12 +1710,12 @@ export default function CreateEdit({
                                                                 <div className="flex justify-between items-center font-sans font-bold text-text">
                                                                     <span className="truncate max-w-[130px]" title={item.full_name}>📦 {item.label}</span>
                                                                     <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 border border-emerald-300 font-mono text-[10px] font-bold">
-                                                                        {lang === "ar" ? "متبقي:" : "Rem:"} {item.available}
+                                                                        {__("receptions.create_edit.rem")} {item.available}
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex justify-between text-[11px] text-text-muted">
-                                                                    <span>{lang === "ar" ? "محجوز:" : "Booked:"} <strong className="text-text font-bold">{item.booked}</strong></span>
-                                                                    <span className="text-amber-700 font-bold">{lang === "ar" ? "مشغول:" : "Used:"} <strong>{item.utilized}</strong></span>
+                                                                    <span>{__("receptions.create_edit.booked")} <strong className="text-text font-bold">{item.booked}</strong></span>
+                                                                    <span className="text-amber-700 font-bold">{__("receptions.create_edit.used")} <strong>{item.utilized}</strong></span>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -1870,9 +1725,7 @@ export default function CreateEdit({
                                         </div>
                                     ) : (
                                         <div className="py-4 text-center text-xs text-text-muted">
-                                            {lang === "ar"
-                                                ? "يرجى تحديد العقد لإظهار إحصاءات الإشغال."
-                                                : "Select contract to calculate capacity stats."}
+                                            {__("receptions.create_edit.select_contract_to_calculate_c")}
                                         </div>
                                     )}
                                 </>
@@ -1891,13 +1744,11 @@ export default function CreateEdit({
                 <form
                     onSubmit={handleCreateDriver}
                     className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("receptions.create_edit.ltr")}
                 >
                     <div className="flex items-center justify-between border-b border-border pb-3">
                         <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "إضافة سائق ناقل جديد"
-                                : "Add New Carrier Driver"}
+                            {__("receptions.create_edit.add_new_carrier_driver")}
                         </h3>
                         <button
                             type="button"
@@ -1912,9 +1763,7 @@ export default function CreateEdit({
                         <div>
                             <InputLabel
                                 value={
-                                    lang === "ar"
-                                        ? "اسم السائق *"
-                                        : "Driver Name *"
+                                    __("receptions.create_edit.driver_name")
                                 }
                             />
                             <TextInput
@@ -1933,9 +1782,7 @@ export default function CreateEdit({
                         <div>
                             <InputLabel
                                 value={
-                                    lang === "ar"
-                                        ? "رقم الجوال"
-                                        : "Phone Number"
+                                    __("receptions.create_edit.phone_number")
                                 }
                             />
                             <TextInput
@@ -1953,9 +1800,7 @@ export default function CreateEdit({
                         <div>
                             <InputLabel
                                 value={
-                                    lang === "ar"
-                                        ? "رقم الهوية / الإقامة"
-                                        : "ID / Iqama Number"
+                                    __("receptions.create_edit.id_iqama_number")
                                 }
                             />
                             <TextInput
@@ -1973,9 +1818,7 @@ export default function CreateEdit({
                         <div>
                             <InputLabel
                                 value={
-                                    lang === "ar"
-                                        ? "رقم اللوحة"
-                                        : "Vehicle Plate No."
+                                    __("receptions.create_edit.vehicle_plate_no")
                                 }
                             />
                             <TextInput
@@ -1993,9 +1836,7 @@ export default function CreateEdit({
                         <div>
                             <InputLabel
                                 value={
-                                    lang === "ar"
-                                        ? "نوع السيارة"
-                                        : "Vehicle Type"
+                                    __("receptions.create_edit.vehicle_type")
                                 }
                             />
                             <TextInput
@@ -2007,16 +1848,14 @@ export default function CreateEdit({
                                         vehicle_type: e.target.value,
                                     }))
                                 }
-                                placeholder={lang === "ar" ? "دينا، تريلا، لوري..." : "Dina, Trailer, Lorry..."}
+                                placeholder={__("receptions.create_edit.dina_trailer_lorry")}
                             />
                         </div>
 
                         <div>
                             <InputLabel
                                 value={
-                                    lang === "ar"
-                                        ? "رقم رخصة القيادة"
-                                        : "Driver License No."
+                                    __("receptions.create_edit.driver_license_no")
                                 }
                             />
                             <TextInput
@@ -2039,7 +1878,7 @@ export default function CreateEdit({
                     )}
 
                     <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
+                        <Tooltip text={__("receptions.create_edit.cancel")}>
                             <button
                                 type="button"
                                 onClick={() => setDriverModalOpen(false)}
@@ -2048,13 +1887,13 @@ export default function CreateEdit({
                                 <X className="h-4 w-4" />
                                 {showButtonText && (
                                     <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                                        {__("receptions.create_edit.cancel")}
                                     </span>
                                 )}
                             </button>
                         </Tooltip>
                         <Tooltip
-                            text={lang === "ar" ? "إضافة السائق" : "Add Driver"}
+                            text={__("receptions.create_edit.add_driver")}
                         >
                             <button
                                 type="submit"
@@ -2065,12 +1904,8 @@ export default function CreateEdit({
                                 {showButtonText && (
                                     <span>
                                         {addingDriver
-                                            ? lang === "ar"
-                                                ? "جاري الإضافة..."
-                                                : "Adding..."
-                                            : lang === "ar"
-                                                ? "إضافة السائق"
-                                                : "Add Driver"}
+                                            ? __("receptions.create_edit.adding")
+                                            : __("receptions.create_edit.add_driver")}
                                     </span>
                                 )}
                             </button>
@@ -2083,14 +1918,10 @@ export default function CreateEdit({
             <ConfirmationModal
                 show={!!deleteItem}
                 title={
-                    lang === "ar"
-                        ? "تأكيد حذف سند الاستلام"
-                        : "Confirm Reception Deletion"
+                    __("receptions.create_edit.confirm_reception_deletion")
                 }
                 message={
-                    lang === "ar"
-                        ? "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع."
-                        : "You are about to permanently delete this reception voucher and all associated inventory entries. This action cannot be undone."
+                    __("receptions.create_edit.you_are_about_to_permanently_d")
                 }
                 onConfirm={() => confirmDelete()}
                 onCancel={cancelDelete}

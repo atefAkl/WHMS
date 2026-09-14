@@ -33,7 +33,7 @@ import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
 
 export default function Show({ reception }) {
-    const { lang } = useLang();
+    const { lang, __ } = useLang();
     const displayBilingual = (rawText) => {
         if (!rawText) return "";
         const parts = rawText.split("|").map((s) => s.trim());
@@ -48,11 +48,11 @@ export default function Show({ reception }) {
     const getPalletSizeDisplay = (pallet) => {
         if (!pallet || !pallet.size) return "";
         const sizeMap = {
-            كبيرة: lang === "ar" ? "كبيرة" : "Large",
-            وسط: lang === "ar" ? "وسط" : "Medium",
-            صغيرة: lang === "ar" ? "صغيرة" : "Small",
-            خشب: lang === "ar" ? "خشب" : "Wood",
-            بلاستيك: lang === "ar" ? "بلاستيك" : "Plastic",
+            'كبيرة': __("receptions.show.large"),
+            'وسط': __("receptions.show.medium"),
+            'صغيرة': __("receptions.show.small"),
+            'خشب': __("receptions.show.wood"),
+            'بلاستيك': __("receptions.show.plastic"),
         };
         return sizeMap[pallet.size] || pallet.size;
     };
@@ -86,9 +86,7 @@ export default function Show({ reception }) {
                     setProcessingAction(false);
                     setErrorMsg(
                         errs.error ||
-                        (lang === "ar"
-                            ? "تعذر اعتماد السند."
-                            : "Failed to approve."),
+                        __("receptions.show.failed_to_approve"),
                     );
                 },
             },
@@ -134,9 +132,7 @@ export default function Show({ reception }) {
                         setErrorMsg(errs.reason);
                     } else {
                         setErrorMsg(
-                            lang === "ar"
-                                ? "تعذر إلغاء الاعتماد."
-                                : "Failed to reopen.",
+                            __("receptions.show.failed_to_reopen"),
                         );
                     }
                 },
@@ -169,9 +165,7 @@ export default function Show({ reception }) {
                         setErrorMsg(errs.password);
                     } else {
                         setErrorMsg(
-                            lang === "ar"
-                                ? "تعذر حذف السند."
-                                : "Failed to delete.",
+                            __("receptions.show.failed_to_delete"),
                         );
                     }
                 },
@@ -183,16 +177,16 @@ export default function Show({ reception }) {
         <div className="flex items-center gap-[6px] text-xs text-text-muted">
             <Home className="h-3.5 w-3.5" />
             <ChevronRight
-                className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 ${__("receptions.show.str_9")}`}
             />
             <Link
                 href={route("receptions.index")}
                 className="hover:text-primary transition-colors"
             >
-                {lang === "ar" ? "سندات الاستلام" : "Reception Vouchers"}
+                {__("receptions.show.reception_vouchers")}
             </Link>
             <ChevronRight
-                className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
+                className={`h-3.5 w-3.5 ${__("receptions.show.str_9")}`}
             />
             <span className="text-primary font-medium">
                 {reception.serial_number}
@@ -204,15 +198,13 @@ export default function Show({ reception }) {
         <AuthenticatedLayout header={breadcrumbs}>
             <Head
                 title={
-                    lang === "ar"
-                        ? `تفاصيل سند الاستلام: ${reception.serial_number}`
-                        : `Reception Voucher Details: ${reception.serial_number}`
+                    __("receptions.show.reception_voucher_details_rece", { serial: reception.serial_number })
                 }
             />
 
             <div
                 className="max-w-6xl mx-auto pb-12 main-stack-y"
-                dir={lang === "ar" ? "rtl" : "ltr"}
+                dir={__("receptions.show.ltr")}
             >
                 {/* Session Alerts */}
                 {flash?.success && (
@@ -234,27 +226,23 @@ export default function Show({ reception }) {
                     title={
                         <div className="flex items-center gap-3">
                             <span className="font-extrabold text-lg text-text">
-                                {lang === "ar"
-                                    ? `إيصال استلام: ${reception.serial_number}`
-                                    : `Reception Receipt: ${reception.serial_number}`}
+                                {__("receptions.show.reception_receipt_reception_se", { serial: reception.serial_number })}
                             </span>
                             <span
                                 className={`text-[10px] px-2 py-0.5 rounded-none font-bold border ${reception.status === "approved"
-                                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-200"
-                                        : "bg-amber-500/10 text-amber-600 border-amber-200"
+                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                                    : "bg-amber-500/10 text-amber-600 border-amber-200"
                                     }`}
                             >
                                 {reception.status === "approved" ? (
                                     <span className="flex items-center gap-0.5">
                                         <Lock className="h-2.5 w-2.5" />
-                                        {lang === "ar"
-                                            ? "معتمد ومغلق"
-                                            : "Approved & Locked"}
+                                        {__("receptions.show.approved_locked")}
                                     </span>
                                 ) : (
                                     <span className="flex items-center gap-0.5">
                                         <Unlock className="h-2.5 w-2.5" />
-                                        {lang === "ar" ? "مسودة" : "Draft"}
+                                        {__("receptions.show.draft")}
                                     </span>
                                 )}
                             </span>
@@ -262,9 +250,10 @@ export default function Show({ reception }) {
                     }
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
-                            {lang === "ar"
-                                ? `تم الإنشاء بواسطة: ${reception.creator?.name || "النظام"} في ${new Date(reception.created_at).toLocaleString("ar-EG")}`
-                                : `Created by: ${reception.creator?.name || "System"} on ${new Date(reception.created_at).toLocaleString()}`}
+                            {__("receptions.show.created_by_reception_creator_n", {
+                                creator: reception.creator?.name || __("receptions.show.system"),
+                                date: new Date(reception.created_at).toLocaleString(__("receptions.show.en_us"))
+                            })}
                         </p>
                     }
                     actions={
@@ -272,11 +261,7 @@ export default function Show({ reception }) {
                             {reception.status === "draft" && (
                                 <>
                                     <Tooltip
-                                        text={
-                                            lang === "ar"
-                                                ? "تعديل السند"
-                                                : "Edit Voucher"
-                                        }
+                                        text={__("receptions.show.edit_voucher")}
                                     >
                                         <Link
                                             href={route(
@@ -288,24 +273,18 @@ export default function Show({ reception }) {
                                             <Edit className="h-4 w-4" />
                                             {showButtonText && (
                                                 <span>
-                                                    {lang === "ar"
-                                                        ? "تعديل"
-                                                        : "Edit"}
+                                                    {__("receptions.show.edit")}
                                                 </span>
                                             )}
                                         </Link>
                                     </Tooltip>
                                     <Tooltip
-                                        text={
-                                            lang === "ar"
-                                                ? "اعتماد السند"
-                                                : "Approve Voucher"
-                                        }
+                                        text={__("receptions.show.approve_voucher")}
                                     >
                                         <button
                                             onClick={() => {
                                                 if (!reception.customer_id || !reception.contract_id || !reception.period_id || (reception.inventory_entries?.length || 0) === 0) {
-                                                    setErrorMsg(lang === "ar" ? "لا يمكن اعتماد سند غير مكتمل البيانات! (يجب اختيار العميل والعقد والفترة التخزينية وإدخال الأصناف)." : "Incomplete data for approval.");
+                                                    setErrorMsg(__("receptions.show.incomplete_data_for_approval"));
                                                     return;
                                                 }
                                                 setErrorMsg("");
@@ -316,9 +295,7 @@ export default function Show({ reception }) {
                                             <CheckCircle2 className="h-4 w-4" />
                                             {showButtonText && (
                                                 <span>
-                                                    {lang === "ar"
-                                                        ? "اعتماد"
-                                                        : "Approve"}
+                                                    {__("receptions.show.approve")}
                                                 </span>
                                             )}
                                         </button>
@@ -327,11 +304,7 @@ export default function Show({ reception }) {
                                     {/* Cancel Voucher Button for Drafts with items */}
                                     {(reception.inventory_entries?.length || 0) > 0 && (
                                         <Tooltip
-                                            text={
-                                                lang === "ar"
-                                                    ? "إلغاء السند وتجميده"
-                                                    : "Cancel Voucher"
-                                            }
+                                            text={__("receptions.show.cancel_voucher")}
                                         >
                                             <button
                                                 onClick={() => {
@@ -344,9 +317,7 @@ export default function Show({ reception }) {
                                                 <X className="h-4 w-4" />
                                                 {showButtonText && (
                                                     <span>
-                                                        {lang === "ar"
-                                                            ? "إلغاء السند"
-                                                            : "Cancel"}
+                                                        {__("receptions.show.cancel")}
                                                     </span>
                                                 )}
                                             </button>
@@ -357,11 +328,7 @@ export default function Show({ reception }) {
 
                             {reception.status === "approved" && (
                                 <Tooltip
-                                    text={
-                                        lang === "ar"
-                                            ? "إعادة فتح السند"
-                                            : "Reopen Voucher"
-                                    }
+                                    text={__("receptions.show.reopen_voucher")}
                                 >
                                     <button
                                         onClick={() => {
@@ -375,16 +342,14 @@ export default function Show({ reception }) {
                                         <Unlock className="h-4 w-4" />
                                         {showButtonText && (
                                             <span>
-                                                {lang === "ar"
-                                                    ? "إعادة فتح"
-                                                    : "Reopen"}
+                                                {__("receptions.show.reopen")}
                                             </span>
                                         )}
                                     </button>
                                 </Tooltip>
                             )}
 
-                            <Tooltip text={lang === "ar" ? "طباعة" : "Print"}>
+                            <Tooltip text={__("receptions.show.print")}>
                                 <a
                                     href={route(
                                         "receptions.print",
@@ -397,7 +362,7 @@ export default function Show({ reception }) {
                                     <Printer className="h-4 w-4" />
                                     {showButtonText && (
                                         <span>
-                                            {lang === "ar" ? "طباعة" : "Print"}
+                                            {__("receptions.show.print")}
                                         </span>
                                     )}
                                 </a>
@@ -406,18 +371,18 @@ export default function Show({ reception }) {
                             <Tooltip
                                 text={
                                     reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0
-                                        ? (lang === "ar" ? "محظور أمنياً: لا يمكن حذف سند معتمد أو يحتوي على مدخلات مخزنية" : "Blocked: Cannot delete approved voucher or voucher with items")
-                                        : (lang === "ar" ? "حذف السند" : "Delete Voucher")
+                                        ? __("receptions.show.blocked_cannot_delete_approved")
+                                        : __("receptions.show.delete_voucher")
                                 }
                             >
                                 <button
                                     onClick={() => {
                                         if (reception.status === "approved") {
-                                            setErrorMsg(lang === "ar" ? "إجراء محظور أمنياً: لا يمكن حذف سند معتمد نهائياً! يجب إلغاء اعتماده أولاً." : "Security Error: Cannot delete an approved voucher.");
+                                            setErrorMsg(__("receptions.show.security_error_cannot_delete_a"));
                                             return;
                                         }
                                         if ((reception.inventory_entries?.length || 0) > 0) {
-                                            setErrorMsg(lang === "ar" ? "إجراء محظور أمنياً: لا يمكن حذف سند يحتوي على مدخلات أو أصناف مخزنية! يجب تفريغ الأصناف أولاً." : "Security Error: Cannot delete a voucher containing inventory items.");
+                                            setErrorMsg(__("receptions.show.security_error_cannot_delete_b"));
                                             return;
                                         }
                                         setErrorMsg("");
@@ -426,14 +391,14 @@ export default function Show({ reception }) {
                                     }}
                                     disabled={reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0}
                                     className={`h-[30px] font-bold rounded-none flex items-center justify-center transition-all shadow-sm gap-1.5 ${reception.status === "approved" || (reception.inventory_entries?.length || 0) > 0
-                                            ? "bg-gray-400 text-white cursor-not-allowed opacity-60"
-                                            : "bg-danger hover:bg-danger-hover text-white"
+                                        ? "bg-gray-400 text-white cursor-not-allowed opacity-60"
+                                        : "bg-danger hover:bg-danger-hover text-white"
                                         } ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                     {showButtonText && (
                                         <span>
-                                            {lang === "ar" ? "حذف" : "Delete"}
+                                            {__("receptions.show.delete")}
                                         </span>
                                     )}
                                 </button>
@@ -443,9 +408,7 @@ export default function Show({ reception }) {
 
                             <Tooltip
                                 text={
-                                    lang === "ar"
-                                        ? "رجوع للقائمة"
-                                        : "Back to List"
+                                    __("receptions.show.back_to_list")
                                 }
                             >
                                 <Link
@@ -453,11 +416,11 @@ export default function Show({ reception }) {
                                     className={`border border-border bg-surface text-text hover:bg-surface-muted rounded-none flex items-center justify-center h-[30px] transition-all gap-1.5 ${showButtonText ? "px-3" : "w-[30px] p-0"}`}
                                 >
                                     <ArrowRight
-                                        className={`h-4 w-4 ${lang === "ar" ? "" : "rotate-180"}`}
+                                        className={`h-4 w-4 ${__("receptions.show.rotate_180")}`}
                                     />
                                     {showButtonText && (
                                         <span>
-                                            {lang === "ar" ? "العودة" : "Back"}
+                                            {__("receptions.show.back")}
                                         </span>
                                     )}
                                 </Link>
@@ -475,18 +438,14 @@ export default function Show({ reception }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Briefcase className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "بيانات السند والعميل"
-                                        : "Voucher & Customer Information"}
+                                    {__("receptions.show.voucher_customer_information")}
                                 </h3>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs">
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "العميل:"
-                                            : "Customer:"}
+                                        {__("receptions.show.customer")}
                                     </span>
                                     <span className="text-text font-bold text-sm">
                                         {reception.customer?.name}
@@ -495,9 +454,7 @@ export default function Show({ reception }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "العقد المرتبط:"
-                                            : "Linked Contract:"}
+                                        {__("receptions.show.linked_contract")}
                                     </span>
                                     {reception.contract ? (
                                         <Link
@@ -518,16 +475,14 @@ export default function Show({ reception }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "الفترة:"
-                                            : "Period:"}
+                                        {__("receptions.show.period")}
                                     </span>
                                     <span className="text-text font-semibold">
-                                        {lang === "ar" ? "الفترة" : "Period"}{" "}
+                                        {__("receptions.show.period")}{" "}
                                         {reception.period?.period_number}{" "}
                                         <span className="text-text-muted font-mono font-normal">
                                             ({reception.period?.start_date}{" "}
-                                            {lang === "ar" ? "إلى" : "to"}{" "}
+                                            {__("receptions.show.to")}{" "}
                                             {reception.period?.end_date})
                                         </span>
                                     </span>
@@ -535,18 +490,14 @@ export default function Show({ reception }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "تاريخ الاستلام الفعلي:"
-                                            : "Actual Date:"}
+                                        {__("receptions.show.actual_date")}
                                     </span>
                                     <span className="text-text font-bold font-mono text-sm">
                                         {reception.reception_date
                                             ? new Date(
                                                 reception.reception_date,
                                             ).toLocaleDateString(
-                                                lang === "ar"
-                                                    ? "ar-EG"
-                                                    : "en-US",
+                                                __("receptions.show.en_us"),
                                             )
                                             : "—"}
                                     </span>
@@ -554,9 +505,7 @@ export default function Show({ reception }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "مندوب العميل (المستلم منه):"
-                                            : "Customer Representative:"}
+                                        {__("receptions.show.customer_representative")}
                                     </span>
                                     {reception.representative ? (
                                         <span className="text-text font-semibold">
@@ -572,18 +521,14 @@ export default function Show({ reception }) {
                                         </span>
                                     ) : (
                                         <span className="text-text-muted font-semibold">
-                                            {lang === "ar"
-                                                ? "لا يوجد مندوب مسجل"
-                                                : "None"}
+                                            {__("receptions.show.none")}
                                         </span>
                                     )}
                                 </div>
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "آخر تعديل بواسطة:"
-                                            : "Last Updated By:"}
+                                        {__("receptions.show.last_updated_by")}
                                     </span>
                                     <span className="text-text font-semibold">
                                         {reception.editor?.name || "—"}{" "}
@@ -592,9 +537,7 @@ export default function Show({ reception }) {
                                             {new Date(
                                                 reception.updated_at,
                                             ).toLocaleString(
-                                                lang === "ar"
-                                                    ? "ar-EG"
-                                                    : "en-US",
+                                                __("receptions.show.en_us"),
                                             )}
                                             )
                                         </span>
@@ -608,9 +551,7 @@ export default function Show({ reception }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Activity className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "البضائع والكميات المستلمة"
-                                        : "Items & Pallets List"}
+                                    {__("receptions.show.items_pallets_list")}
                                 </h3>
                             </div>
                             <div className="overflow-x-auto">
@@ -618,29 +559,19 @@ export default function Show({ reception }) {
                                     <thead className="bg-surface-muted/50 text-text-muted font-bold border-b border-border">
                                         <tr>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "رقم البند"
-                                                    : "Row #"}
+                                                {__("receptions.show.row")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "الصنف المخزني"
-                                                    : "Inventory Item"}
+                                                {__("receptions.show.inventory_item")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "الشكل/البديل"
-                                                    : "Variant"}
+                                                {__("receptions.show.variant")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "رقم الطبلية"
-                                                    : "Pallet Number"}
+                                                {__("receptions.show.pallet_number")}
                                             </th>
                                             <th className="px-3 py-2 text-end">
-                                                {lang === "ar"
-                                                    ? "الكمية المستلمة"
-                                                    : "Qty Received"}
+                                                {__("receptions.show.qty_received")}
                                             </th>
                                         </tr>
                                     </thead>
@@ -689,18 +620,14 @@ export default function Show({ reception }) {
                             </div>
                             <div className="mt-4 flex flex-col items-end gap-2 text-xs text-text-muted">
                                 <div className="font-semibold text-sm text-text">
-                                    {lang === "ar"
-                                        ? "إجمالي الوارد:"
-                                        : "Total In:"}{" "}
+                                    {__("receptions.show.total_in")}{" "}
                                     {Math.round(
                                         totalReception,
                                     ).toLocaleString()}
                                 </div>
                                 {totalDispatch > 0 && (
                                     <div className="font-semibold text-sm text-text">
-                                        {lang === "ar"
-                                            ? "إجمالي الصادر:"
-                                            : "Total Out:"}{" "}
+                                        {__("receptions.show.total_out")}{" "}
                                         {Math.round(
                                             totalDispatch,
                                         ).toLocaleString()}
@@ -717,9 +644,7 @@ export default function Show({ reception }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Truck className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "بيانات السائق الناقل"
-                                        : "Carrier Driver Info"}
+                                    {__("receptions.show.carrier_driver_info")}
                                 </h3>
                             </div>
 
@@ -727,9 +652,7 @@ export default function Show({ reception }) {
                                 <div className="space-y-3 text-xs">
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "اسم السائق:"
-                                                : "Driver Name:"}
+                                            {__("receptions.show.driver_name")}
                                         </span>
                                         <span className="text-text font-bold">
                                             {reception.driver.name}
@@ -737,9 +660,7 @@ export default function Show({ reception }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "رقم الجوال:"
-                                                : "Phone Number:"}
+                                            {__("receptions.show.phone_number")}
                                         </span>
                                         <span className="text-text font-mono font-bold">
                                             {reception.driver.phone_number ||
@@ -748,9 +669,7 @@ export default function Show({ reception }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "رقم الهوية / الإقامة:"
-                                                : "ID / Iqama No.:"}
+                                            {__("receptions.show.id_iqama_no")}
                                         </span>
                                         <span className="text-text font-mono font-bold">
                                             {reception.driver.id_number || "—"}
@@ -758,9 +677,7 @@ export default function Show({ reception }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "رقم اللوحة:"
-                                                : "Plate Number:"}
+                                            {__("receptions.show.plate_number")}
                                         </span>
                                         <span className="text-text font-bold font-mono">
                                             {reception.driver.vehicle_plate ||
@@ -769,9 +686,7 @@ export default function Show({ reception }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "نوع السيارة:"
-                                                : "Vehicle Type:"}
+                                            {__("receptions.show.vehicle_type")}
                                         </span>
                                         <span className="text-text font-semibold">
                                             {reception.driver.vehicle_type ||
@@ -780,9 +695,7 @@ export default function Show({ reception }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "رقم رخصة السير:"
-                                                : "License No.:"}
+                                            {__("receptions.show.license_no")}
                                         </span>
                                         <span className="text-text font-mono">
                                             {reception.driver.license_number ||
@@ -792,9 +705,7 @@ export default function Show({ reception }) {
                                 </div>
                             ) : (
                                 <div className="py-4 text-center text-xs text-text-muted">
-                                    {lang === "ar"
-                                        ? "لم يتم تحديد بيانات سائق."
-                                        : "No carrier driver assigned."}
+                                    {__("receptions.show.no_carrier_driver_assigned")}
                                 </div>
                             )}
                         </div>
@@ -804,9 +715,7 @@ export default function Show({ reception }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Clock className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "سجل التعديلات والعمليات"
-                                        : "Modification Log"}
+                                    {__("receptions.show.modification_log")}
                                 </h3>
                             </div>
 
@@ -820,9 +729,7 @@ export default function Show({ reception }) {
                                                 {new Date(
                                                     log.date,
                                                 ).toLocaleString(
-                                                    lang === "ar"
-                                                        ? "ar-EG"
-                                                        : "en-US",
+                                                    __("receptions.show.en_us"),
                                                 )}
                                             </div>
                                             <div className="font-bold text-text mt-0.5">
@@ -836,9 +743,7 @@ export default function Show({ reception }) {
                                 </div>
                             ) : (
                                 <div className="py-4 text-center text-xs text-text-muted">
-                                    {lang === "ar"
-                                        ? "لا توجد تعديلات سابقة مسجلة."
-                                        : "No previous adjustments recorded."}
+                                    {__("receptions.show.no_previous_adjustments_record")}
                                 </div>
                             )}
                         </div>
@@ -855,29 +760,23 @@ export default function Show({ reception }) {
                 <form
                     onSubmit={handleDelete}
                     className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("receptions.show.ltr")}
                 >
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <ShieldAlert className="h-6 w-6 text-danger animate-bounce" />
                         <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "تأكيد حذف سند الاستلام"
-                                : "Confirm Voucher Deletion"}
+                            {__("receptions.show.confirm_voucher_deletion")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {lang === "ar"
-                            ? "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع."
-                            : "You are about to permanently delete this reception voucher and all associated inventory entries. This action cannot be undone."}
+                        {__("receptions.show.you_are_about_to_permanently_d")}
                     </p>
 
                     <div className="bg-surface-muted/50 p-3 border border-border text-xs font-mono rounded-none">
                         <div>
                             <span className="font-bold text-text-muted">
-                                {lang === "ar"
-                                    ? "رقم السند: "
-                                    : "Voucher Serial: "}
+                                {__("receptions.show.voucher_serial")}
                             </span>
                             <span className="text-text font-bold">
                                 {reception.serial_number}
@@ -885,7 +784,7 @@ export default function Show({ reception }) {
                         </div>
                         <div className="mt-1">
                             <span className="font-bold text-text-muted">
-                                {lang === "ar" ? "العميل: " : "Customer: "}
+                                {__("receptions.show.customer")}
                             </span>
                             <span className="text-text font-bold">
                                 {reception.customer?.name}
@@ -897,9 +796,7 @@ export default function Show({ reception }) {
                         <InputLabel
                             htmlFor="delete_password"
                             value={
-                                lang === "ar"
-                                    ? "كلمة مرور العمليات الآمنة *"
-                                    : "Secure Operations Password *"
+                                __("receptions.show.secure_operations_password")
                             }
                         />
                         <TextInput
@@ -919,7 +816,7 @@ export default function Show({ reception }) {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
+                        <Tooltip text={__("receptions.show.cancel")}>
                             <button
                                 type="button"
                                 onClick={() => setDeleteModalOpen(false)}
@@ -928,14 +825,14 @@ export default function Show({ reception }) {
                                 <X className="h-4 w-4" />
                                 {showButtonText && (
                                     <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                                        {__("receptions.show.cancel")}
                                     </span>
                                 )}
                             </button>
                         </Tooltip>
                         <Tooltip
                             text={
-                                lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"
+                                __("receptions.show.confirm_delete")
                             }
                         >
                             <button
@@ -947,12 +844,8 @@ export default function Show({ reception }) {
                                 {showButtonText && (
                                     <span>
                                         {processingAction
-                                            ? lang === "ar"
-                                                ? "جاري الحذف..."
-                                                : "Deleting..."
-                                            : lang === "ar"
-                                                ? "تأكيد الحذف"
-                                                : "Confirm Delete"}
+                                            ? __("receptions.show.deleting")
+                                            : __("receptions.show.confirm_delete")}
                                     </span>
                                 )}
                             </button>
@@ -970,30 +863,24 @@ export default function Show({ reception }) {
                 <form
                     onSubmit={handleReopen}
                     className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("receptions.show.ltr")}
                 >
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <Unlock className="h-6 w-6 text-amber-500 animate-pulse" />
                         <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "إعادة فتح السند (إلغاء الاعتماد)"
-                                : "Reopen Approved Voucher"}
+                            {__("receptions.show.reopen_approved_voucher")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {lang === "ar"
-                            ? "بإعادة فتح السند، سيعود لحالة المسودة (Draft) لتتمكن من تعديله. يتطلب هذا الإجراء كلمة مرور العمليات وتوثيق السبب."
-                            : "Reopening will return the voucher to Draft status, allowing modifications. This requires the secure password and a documented reason."}
+                        {__("receptions.show.reopening_will_return_the_vouc")}
                     </p>
 
                     <div>
                         <InputLabel
                             htmlFor="reopen_reason"
                             value={
-                                lang === "ar"
-                                    ? "سبب إلغاء الاعتماد وإعادة الفتح *"
-                                    : "Reason for Reopening *"
+                                __("receptions.show.reason_for_reopening")
                             }
                         />
                         <TextInput
@@ -1003,9 +890,7 @@ export default function Show({ reception }) {
                             value={reopenReason}
                             onChange={(e) => setReopenReason(e.target.value)}
                             placeholder={
-                                lang === "ar"
-                                    ? "مثال: تعديل كمية طبلية خاطئة..."
-                                    : "e.g., correcting incorrect pallet quantity..."
+                                __("receptions.show.e_g_correcting_incorrect_pal")
                             }
                             required
                         />
@@ -1015,9 +900,7 @@ export default function Show({ reception }) {
                         <InputLabel
                             htmlFor="reopen_password"
                             value={
-                                lang === "ar"
-                                    ? "كلمة مرور العمليات الآمنة *"
-                                    : "Secure Operations Password *"
+                                __("receptions.show.secure_operations_password")
                             }
                         />
                         <TextInput
@@ -1037,7 +920,7 @@ export default function Show({ reception }) {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
+                        <Tooltip text={__("receptions.show.cancel")}>
                             <button
                                 type="button"
                                 onClick={() => setReopenModalOpen(false)}
@@ -1046,16 +929,14 @@ export default function Show({ reception }) {
                                 <X className="h-4 w-4" />
                                 {showButtonText && (
                                     <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                                        {__("receptions.show.cancel")}
                                     </span>
                                 )}
                             </button>
                         </Tooltip>
                         <Tooltip
                             text={
-                                lang === "ar"
-                                    ? "تأكيد إعادة الفتح"
-                                    : "Confirm Reopen"
+                                __("receptions.show.confirm_reopen")
                             }
                         >
                             <button
@@ -1067,12 +948,8 @@ export default function Show({ reception }) {
                                 {showButtonText && (
                                     <span>
                                         {processingAction
-                                            ? lang === "ar"
-                                                ? "جاري المعالجة..."
-                                                : "Processing..."
-                                            : lang === "ar"
-                                                ? "تأكيد إعادة الفتح"
-                                                : "Confirm Reopen"}
+                                            ? __("receptions.show.processing")
+                                            : __("receptions.show.confirm_reopen")}
                                     </span>
                                 )}
                             </button>
@@ -1089,21 +966,17 @@ export default function Show({ reception }) {
             >
                 <div
                     className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("receptions.show.ltr")}
                 >
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <Lock className="h-6 w-6 text-emerald-500" />
                         <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "اعتماد وإغلاق سند الاستلام"
-                                : "Approve & Lock Voucher"}
+                            {__("receptions.show.approve_lock_voucher")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {lang === "ar"
-                            ? "هل أنت متأكد من اعتماد هذا السند؟ سيتم تثبيت الكميات في المخازن بشكل رسمي، وسيتحول السند إلى حالة القفل ولا يمكن تعديله إلا بكلمة مرور العمليات."
-                            : "Are you sure you want to approve this voucher? Items will officially be registered, and the voucher will be locked and cannot be edited without secure supervisor password."}
+                        {__("receptions.show.are_you_sure_you_want_to_appro")}
                     </p>
 
                     {errorMsg && (
@@ -1113,7 +986,7 @@ export default function Show({ reception }) {
                     )}
 
                     <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
+                        <Tooltip text={__("receptions.show.cancel")}>
                             <button
                                 type="button"
                                 onClick={() => setApproveModalOpen(false)}
@@ -1122,16 +995,14 @@ export default function Show({ reception }) {
                                 <X className="h-4 w-4" />
                                 {showButtonText && (
                                     <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                                        {__("receptions.show.cancel")}
                                     </span>
                                 )}
                             </button>
                         </Tooltip>
                         <Tooltip
                             text={
-                                lang === "ar"
-                                    ? "تأكيد الاعتماد"
-                                    : "Confirm Approve"
+                                __("receptions.show.confirm_approve")
                             }
                         >
                             <button
@@ -1144,12 +1015,8 @@ export default function Show({ reception }) {
                                 {showButtonText && (
                                     <span>
                                         {processingAction
-                                            ? lang === "ar"
-                                                ? "جاري الاعتماد..."
-                                                : "Approving..."
-                                            : lang === "ar"
-                                                ? "تأكيد الاعتماد"
-                                                : "Confirm Approve"}
+                                            ? __("receptions.show.approving")
+                                            : __("receptions.show.confirm_approve")}
                                     </span>
                                 )}
                             </button>

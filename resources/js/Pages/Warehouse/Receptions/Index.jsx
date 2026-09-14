@@ -37,12 +37,6 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
     const showButtonText = user?.preferences?.show_button_text ?? false;
 
     // Translation Helper
-    const t = (key, fallback) => {
-        if (!key) return fallback || "";
-        const translated = __ ? __(key) : key;
-        return (translated && translated !== key) ? translated : fallback;
-    };
-
     const displayBilingual = (rawText) => {
         if (!rawText) return "";
         const parts = rawText.split("|").map((s) => s.trim());
@@ -59,7 +53,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
             options.push({
                 id: `cust_${c.id}`,
                 value: c.name,
-                label: `${c.name} (${t("receptions.customer", "عميل")})`,
+                label: `${c.name} (${__("receptions.customer")})`,
                 type: "customer",
                 searchKeys: [c.name, c.foreign_name || "", c.code || ""].filter(Boolean),
             });
@@ -69,7 +63,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
             options.push({
                 id: `cnt_${cnt.id}`,
                 value: cnt.contract_number,
-                label: `${cnt.contract_number} ${custName ? `- ${custName}` : ""} (${t("receptions.contract", "عقد")})`,
+                label: `${cnt.contract_number} ${custName ? `- ${custName}` : ""} (${__("receptions.contract")})`,
                 type: "contract",
                 searchKeys: [cnt.contract_number, custName].filter(Boolean),
             });
@@ -180,7 +174,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                 },
                 onError: (errs) => {
                     setProcessingAction(false);
-                    setErrorMsg(errs.error || t("receptions.failed_to_approve", "تعذر اعتماد السند."));
+                    setErrorMsg(errs.error || __("receptions.failed_to_approve"));
                 }
             }
         );
@@ -215,7 +209,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                     } else if (errs.reason) {
                         setErrorMsg(errs.reason);
                     } else {
-                        setErrorMsg(t("receptions.failed_to_reopen", "تعذر إلغاء الاعتماد."));
+                        setErrorMsg(__("receptions.failed_to_reopen"));
                     }
                 }
             }
@@ -237,34 +231,34 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
     const breadcrumbs = (
         <div className="flex items-center gap-[6px] text-xs text-text-muted">
             <Home className="h-3.5 w-3.5" />
-            <ChevronRight className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`} />
+            <ChevronRight className={`h-3.5 w-3.5 ${__("receptions.index.str_1")}`} />
             <span className="text-primary font-medium">
                 {t("warehouse.management", "إدارة المخازن")}
             </span>
-            <ChevronRight className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`} />
+            <ChevronRight className={`h-3.5 w-3.5 ${__("receptions.index.str_2")}`} />
             <span className="text-primary font-medium">
-                {t("receptions.title", "سندات الاستلام")}
+                {__("receptions.title")}
             </span>
         </div>
     );
 
     return (
         <AuthenticatedLayout header={breadcrumbs}>
-            <Head title={t("receptions.title", "سندات الاستلام")} />
+            <Head title={__("receptions.title")} />
 
-            <div className="max-w-7xl mx-auto pb-8 main-stack-y" dir={lang === "ar" ? "rtl" : "ltr"}>
+            <div className="max-w-7xl mx-auto pb-8 main-stack-y" dir={__("receptions.index.ltr")}>
                 <PageHeader
                     icon={FileText}
-                    title={t("receptions.title_header", "سندات وإيصالات الاستلام")}
+                    title={__("receptions.title_header")}
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
-                            {t("receptions.description", "تسجيل بضائع وأصناف العملاء المستلمة على طبالي وتثبيتها في حركة المخازن.")}
+                            {__("receptions.description")}
                         </p>
                     }
                     actions={
                         <div className="flex items-center gap-2">
                             {receptions?.data?.length > 0 && (
-                                <Tooltip text={t("receptions.bulk_print", "طباعة مجمعة للسندات")}>
+                                <Tooltip text={__("receptions.bulk_print")}>
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -274,11 +268,11 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                         className="bg-slate-800 hover:bg-slate-700 text-white rounded-none flex items-center justify-center transition-all h-[30px] px-3 gap-1.5 text-xs font-bold"
                                     >
                                         <Printer className="h-4 w-4 shrink-0" />
-                                        <span>{t("receptions.bulk_print_btn", "طباعة مجمعة")}</span>
+                                        <span>{__("receptions.bulk_print_btn")}</span>
                                     </button>
                                 </Tooltip>
                             )}
-                            <Tooltip text={t("receptions.new_button", "إنشاء سند استلام جديد")}>
+                            <Tooltip text={__("receptions.new_button")}>
                                 <Link
                                     href={route("receptions.create")}
                                     className={`bg-primary text-white hover:bg-primary-hover rounded-none flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'}`}
@@ -297,11 +291,11 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                         {/* Row 1: Explicit Search Inputs */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
-                                <InputLabel value={t("receptions.filter_serial", "رقم المسلسل للسند")} />
+                                <InputLabel value={__("receptions.filter_serial")} />
                                 <div className="relative mt-1">
                                     <TextInput
                                         className="w-full text-xs rounded-none border-border ps-7 h-[30px]"
-                                        placeholder={t("receptions.placeholder_serial", "ابحث برقم المسلسل...")}
+                                        placeholder={__("receptions.placeholder_serial")}
                                         value={serialNumber}
                                         onChange={(e) => setSerialNumber(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
@@ -311,7 +305,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                             </div>
 
                             <div>
-                                <InputLabel value={t("receptions.filter_customer_or_contract", "اسم العميل أو رقم العقد")} />
+                                <InputLabel value={__("receptions.filter_customer_or_contract")} />
                                 <div className="mt-1">
                                     <SearchableSelect
                                         items={customerAndContractOptions}
@@ -319,7 +313,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                         valueKey="id"
                                         displayFormat={(item) => item.label || item.value}
                                         searchKeys={["label", "value"]}
-                                        placeholder={t("receptions.placeholder_customer_contract", "ادخل العميل أو العقد...")}
+                                        placeholder={__("receptions.placeholder_customer_contract")}
                                         className="w-full text-xs rounded-none border-border h-[30px]"
                                         onChange={(selected) => setCustomerOrContract(selected ? selected.value : "")}
                                         onInputChange={(val) => setCustomerOrContract(val)}
@@ -329,11 +323,11 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                             </div>
 
                             <div>
-                                <InputLabel value={t("receptions.filter_farm_source", "مصدر المزرعة")} />
+                                <InputLabel value={__("receptions.filter_farm_source")} />
                                 <div className="relative mt-1">
                                     <TextInput
                                         className="w-full text-xs rounded-none border-border ps-7 h-[30px]"
-                                        placeholder={t("receptions.placeholder_farm_source", "المزرعة أو المصدر...")}
+                                        placeholder={__("receptions.placeholder_farm_source")}
                                         value={farmSource}
                                         onChange={(e) => setFarmSource(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
@@ -343,11 +337,11 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                             </div>
 
                             <div>
-                                <InputLabel value={t("receptions.filter_notes", "البحث في الملاحظات")} />
+                                <InputLabel value={__("receptions.filter_notes")} />
                                 <div className="relative mt-1">
                                     <TextInput
                                         className="w-full text-xs rounded-none border-border ps-7 h-[30px]"
-                                        placeholder={t("receptions.placeholder_notes", "كلمات من الملاحظات...")}
+                                        placeholder={__("receptions.placeholder_notes")}
                                         value={notes}
                                         onChange={(e) => setNotes(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
@@ -361,7 +355,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                         <div className="flex flex-wrap items-end gap-3">
                             {/* Driver SearchableSelect */}
                             <div className="flex-1 min-w-[150px]">
-                                <InputLabel value={t("receptions.driver", "السائق")} />
+                                <InputLabel value={__("receptions.driver")} />
                                 <div className="mt-1">
                                     <SearchableSelect
                                         items={drivers}
@@ -369,7 +363,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                         valueKey="id"
                                         displayFormat={(d) => `${d.name} ${d.vehicle_plate ? `(${d.vehicle_plate})` : ""}`}
                                         searchKeys={["name", "vehicle_plate"]}
-                                        placeholder={t("receptions.all_drivers", "كل السائقين")}
+                                        placeholder={__("receptions.all_drivers")}
                                         className="w-full text-xs rounded-none border-border h-[30px]"
                                         onChange={(d) => setSelectedDriver(d ? d.id : "")}
                                         onInputChange={(val) => {
@@ -382,21 +376,21 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
 
                             {/* Status Select */}
                             <div className="flex-1 min-w-[130px]">
-                                <InputLabel value={t("receptions.status", "حالة السند")} />
+                                <InputLabel value={__("receptions.status")} />
                                 <select
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
                                     value={selectedStatus}
                                     onChange={(e) => setSelectedStatus(e.target.value)}
                                 >
-                                    <option value="">{t("receptions.all_statuses", "كل الحالات")}</option>
-                                    <option value="draft">{t("receptions.status_draft", "مسودة")}</option>
-                                    <option value="approved">{t("receptions.status_approved", "معتمد ومغلق")}</option>
+                                    <option value="">{__("receptions.all_statuses")}</option>
+                                    <option value="draft">{__("receptions.status_draft")}</option>
+                                    <option value="approved">{__("receptions.status_approved")}</option>
                                 </select>
                             </div>
 
                             {/* Date From (Max 10rem width) */}
                             <div className="w-[10rem] max-w-[10rem]">
-                                <InputLabel value={t("receptions.date_from", "التاريخ من")} />
+                                <InputLabel value={__("receptions.date_from")} />
                                 <input
                                     type="date"
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2 font-mono"
@@ -407,7 +401,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
 
                             {/* Date To (Max 10rem width) */}
                             <div className="w-[10rem] max-w-[10rem]">
-                                <InputLabel value={t("receptions.date_to", "التاريخ إلى")} />
+                                <InputLabel value={__("receptions.date_to")} />
                                 <input
                                     type="date"
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2 font-mono"
@@ -418,7 +412,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
 
                             {/* Qty Filter: Sized Operator Dropdown (Max 3.5rem width) + Qty Input */}
                             <div className="flex flex-col">
-                                <InputLabel value={t("receptions.qty_filter", "الكمية الواردة")} />
+                                <InputLabel value={__("receptions.qty_filter")} />
                                 <div className="flex gap-1 mt-1 items-center">
                                     <select
                                         className="w-[3.5rem] max-w-[3.5rem] border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-1 font-bold text-center shrink-0"
@@ -433,7 +427,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                     </select>
                                     <TextInput
                                         className="w-[7rem] text-xs rounded-none border-border h-[30px] px-2 font-mono"
-                                        placeholder={t("receptions.qty_placeholder", "الكمية...")}
+                                        placeholder={__("receptions.qty_placeholder")}
                                         type="number"
                                         value={qtyValue}
                                         onChange={(e) => setQtyValue(e.target.value)}
@@ -475,20 +469,20 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                             <thead>
                                 <tr className="bg-background border-b border-border text-text-muted font-bold">
                                     <th className="p-3 text-start w-12">#</th>
-                                    <th className="p-3 text-start">{t("receptions.col_document", "المستند والمعرفات")}</th>
-                                    <th className="p-3 text-start">{t("receptions.col_notes", "ملاحظات وتفاصيل")}</th>
-                                    <th className="p-3 text-start">{t("receptions.col_date", "تاريخ الاستلام")}</th>
-                                    <th className="p-3 text-start">{t("receptions.col_driver", "السائق")}</th>
-                                    <th className="p-3 text-center">{t("receptions.col_total_qty", "إجمالي الوارد")}</th>
-                                    <th className="p-3 text-center">{t("receptions.col_status", "الحالة")}</th>
-                                    <th className="p-3 text-center">{t("receptions.col_actions", "الخيارات")}</th>
+                                    <th className="p-3 text-start">{__("receptions.col_document")}</th>
+                                    <th className="p-3 text-start">{__("receptions.col_notes")}</th>
+                                    <th className="p-3 text-start">{__("receptions.col_date")}</th>
+                                    <th className="p-3 text-start">{__("receptions.col_driver")}</th>
+                                    <th className="p-3 text-center">{__("receptions.col_total_qty")}</th>
+                                    <th className="p-3 text-center">{__("receptions.col_status")}</th>
+                                    <th className="p-3 text-center">{__("receptions.col_actions")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {receptions.data.length === 0 ? (
                                     <tr>
                                         <td colSpan="8" className="p-8 text-center text-text-muted">
-                                            {t("receptions.no_records", "لم يتم العثور على أي سندات استلام.")}
+                                            {__("receptions.no_records")}
                                         </td>
                                     </tr>
                                 ) : (
@@ -537,7 +531,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                 <td className="p-3 text-text-muted">
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="font-semibold text-text text-xs">
-                                                            {t("receptions.period", "الفترة")} {reception.period?.period_number || 1}
+                                                            {__("receptions.period")} {reception.period?.period_number || 1}
                                                         </span>
                                                         {truncatedNotes ? (
                                                             <span className="text-[11px] text-text-muted font-normal max-w-[220px] truncate" title={notesStr}>
@@ -549,7 +543,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                     </div>
                                                 </td>
                                                 <td className="p-3 text-text-muted font-mono">
-                                                    {reception.reception_date ? new Date(reception.reception_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}
+                                                    {reception.reception_date ? new Date(reception.reception_date).toLocaleDateString(__("receptions.index.en_us")) : "—"}
                                                 </td>
                                                 <td className="p-3 text-text text-xs">
                                                     {reception.driver ? (
@@ -570,13 +564,13 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                             ? 'bg-success/10 text-success border border-success/30' 
                                                             : 'bg-warning/10 text-warning border border-warning/30'
                                                     }`}>
-                                                        {reception.status === 'approved' ? t("receptions.status_approved", "معتمد") : t("receptions.status_draft", "مسودة")}
+                                                        {reception.status === 'approved' ? __("receptions.status_approved") : __("receptions.status_draft")}
                                                     </span>
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     <div className="flex justify-center items-center gap-1.5">
                                                         {/* Quick View Modal Icon (Eye) */}
-                                                        <Tooltip text={t("receptions.quick_view", "معاينة سريعة للسند")}>
+                                                        <Tooltip text={__("receptions.quick_view")}>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
@@ -591,7 +585,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                         </Tooltip>
 
                                                         {/* Full Screen Show Page Icon (Monitor) */}
-                                                        <Tooltip text={t("receptions.full_view", "فتح الشاشة الكاملة للسند")}>
+                                                        <Tooltip text={__("receptions.full_view")}>
                                                             <Link
                                                                 href={route("receptions.show", reception.id)}
                                                                 className={`p-1.5 text-primary hover:bg-primary/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-2.5' : 'w-[30px]'}`}
@@ -709,12 +703,12 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
             {/* Quick View Modal */}
             <Modal show={isQuickViewModalOpen} onClose={() => setIsQuickViewModalOpen(false)} maxWidth="2xl">
                 {quickViewReception && (
-                    <div className="p-6 space-y-4 text-start" dir={lang === "ar" ? "rtl" : "ltr"}>
+                    <div className="p-6 space-y-4 text-start" dir={__("receptions.index.ltr")}>
                         <div className="flex items-center justify-between border-b border-border pb-3">
                             <div className="flex items-center gap-2">
                                 <FileText className="h-5 w-5 text-primary" />
                                 <h3 className="font-bold text-base text-text">
-                                    {t("receptions.quick_modal_title", "معاينة إيصال الاستلام")}:{" "}
+                                    {__("receptions.quick_modal_title")}:{" "}
                                     <span className="font-mono text-primary">{quickViewReception.serial_number}</span>
                                 </h3>
                             </div>
@@ -730,37 +724,37 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                         {/* Summary Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-surface-muted/30 border border-border p-3 text-xs">
                             <div>
-                                <span className="text-text-muted block">{t("receptions.customer", "العميل")}:</span>
+                                <span className="text-text-muted block">{__("receptions.customer")}:</span>
                                 <span className="font-bold text-text">{quickViewReception.customer?.name || "—"}</span>
                             </div>
                             <div>
-                                <span className="text-text-muted block">{t("receptions.contract", "العقد")}:</span>
+                                <span className="text-text-muted block">{__("receptions.contract")}:</span>
                                 <span className="font-mono font-bold text-primary">{quickViewReception.contract?.contract_number || "—"}</span>
                             </div>
                             <div>
-                                <span className="text-text-muted block">{t("receptions.farm_source", "مصدر المزرعة")}:</span>
+                                <span className="text-text-muted block">{__("receptions.farm_source")}:</span>
                                 <span className="font-semibold text-emerald-700">{quickViewReception.farm_source || "—"}</span>
                             </div>
                             <div>
-                                <span className="text-text-muted block">{t("receptions.reception_date", "تاريخ الاستلام")}:</span>
+                                <span className="text-text-muted block">{__("receptions.reception_date")}:</span>
                                 <span className="font-mono font-semibold">{quickViewReception.reception_date || "—"}</span>
                             </div>
                             <div>
-                                <span className="text-text-muted block">{t("receptions.driver", "السائق")}:</span>
+                                <span className="text-text-muted block">{__("receptions.driver")}:</span>
                                 <span className="font-semibold">{quickViewReception.driver?.name || "—"}</span>
                             </div>
                             <div>
-                                <span className="text-text-muted block">{t("receptions.status", "الحالة")}:</span>
+                                <span className="text-text-muted block">{__("receptions.status")}:</span>
                                 <span className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded-none inline-block ${
                                     quickViewReception.status === 'approved' 
                                         ? 'bg-success/10 text-success border border-success/30' 
                                         : 'bg-warning/10 text-warning border border-warning/30'
                                 }`}>
-                                    {quickViewReception.status === 'approved' ? t("receptions.status_approved", "معتمد") : t("receptions.status_draft", "مسودة")}
+                                    {quickViewReception.status === 'approved' ? __("receptions.status_approved") : __("receptions.status_draft")}
                                 </span>
                             </div>
                             <div className="col-span-2">
-                                <span className="text-text-muted block">{t("receptions.notes", "الملاحظات")}:</span>
+                                <span className="text-text-muted block">{__("receptions.notes")}:</span>
                                 <span className="font-normal text-text">{quickViewReception.notes || "—"}</span>
                             </div>
                         </div>
@@ -769,17 +763,17 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                         <div className="space-y-2">
                             <div className="flex items-center gap-1 text-xs font-bold text-primary">
                                 <Activity className="h-4 w-4" />
-                                <span>{t("receptions.quick_modal_items", "جدول أصناف وبضائع السند")}</span>
+                                <span>{__("receptions.quick_modal_items")}</span>
                             </div>
                             <div className="border border-border max-h-[260px] overflow-y-auto">
                                 <table className="w-full text-xs text-start border-collapse">
                                     <thead className="bg-surface-muted text-text-muted font-bold sticky top-0">
                                         <tr className="border-b border-border">
                                             <th className="p-2 text-start w-10">#</th>
-                                            <th className="p-2 text-start">{t("receptions.col_item", "الصنف المخزني")}</th>
-                                            <th className="p-2 text-start">{t("receptions.col_variant", "البديل/الشكل")}</th>
-                                            <th className="p-2 text-start">{t("receptions.col_pallet", "رقم الطبلية")}</th>
-                                            <th className="p-2 text-end">{t("receptions.col_qty", "الكمية")}</th>
+                                            <th className="p-2 text-start">{__("receptions.col_item")}</th>
+                                            <th className="p-2 text-start">{__("receptions.col_variant")}</th>
+                                            <th className="p-2 text-start">{__("receptions.col_pallet")}</th>
+                                            <th className="p-2 text-end">{__("receptions.col_qty")}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -804,7 +798,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                         ) : (
                                             <tr>
                                                 <td colSpan="5" className="p-4 text-center text-text-muted">
-                                                    {t("receptions.no_entries_quick", "لا توجد أسطر حركات مضافة للسند.")}
+                                                    {__("receptions.no_entries_quick")}
                                                 </td>
                                             </tr>
                                         )}
@@ -820,7 +814,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                 className="bg-primary hover:bg-primary-hover text-white text-xs font-bold px-3 py-1.5 flex items-center gap-1.5 transition-all"
                             >
                                 <Monitor className="h-4 w-4" />
-                                <span>{t("receptions.go_to_full_page", "الانتقال لصفحة السند الكاملة")}</span>
+                                <span>{__("receptions.go_to_full_page")}</span>
                             </Link>
                             <button
                                 type="button"
@@ -837,8 +831,8 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
             {/* Confirm Secure Delete Modal */}
             <ConfirmationModal
                 show={!!receptionToDelete}
-                title={t("receptions.confirm_delete_title", "تأكيد حذف سند الاستلام")}
-                message={t("receptions.confirm_delete_msg", "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع.")}
+                title={__("receptions.confirm_delete_title")}
+                message={__("receptions.confirm_delete_msg")}
                 onConfirm={() => confirmDelete()}
                 onCancel={cancelDelete}
                 requirePassword={true}
@@ -850,22 +844,22 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
 
             {/* Modal: Confirm Reopen */}
             <Modal show={isReopenModalOpen} onClose={() => setReopenModalOpen(false)} maxWidth="md">
-                <form onSubmit={handleReopen} className="p-6 space-y-4 text-start" dir={lang === "ar" ? "rtl" : "ltr"}>
+                <form onSubmit={handleReopen} className="p-6 space-y-4 text-start" dir={__("receptions.index.ltr")}>
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <Unlock className="h-6 w-6 text-amber-500 animate-pulse" />
                         <h3 className="font-bold text-lg text-text">
-                            {t("receptions.reopen_title", "إعادة فتح السند (إلغاء الاعتماد)")}
+                            {__("receptions.reopen_title")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {t("receptions.reopen_desc", "بإعادة فتح السند، سيعود لحالة المسودة (Draft) لتتمكن من تعديله. يتطلب هذا الإجراء كلمة مرور العمليات وتوثيق السبب.")}
+                        {__("receptions.reopen_desc")}
                     </p>
 
                     <div>
                         <InputLabel
                             htmlFor="reopen_reason"
-                            value={t("receptions.reopen_reason_label", "سبب إلغاء الاعتماد وإعادة الفتح *")}
+                            value={__("receptions.reopen_reason_label")}
                         />
                         <TextInput
                             id="reopen_reason"
@@ -873,7 +867,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                             className="mt-1 block w-full text-sm rounded-none border-border"
                             value={reopenReason}
                             onChange={(e) => setReopenReason(e.target.value)}
-                            placeholder={t("receptions.reopen_reason_placeholder", "مثال: تعديل كمية طبلية خاطئة...")}
+                            placeholder={__("receptions.reopen_reason_placeholder")}
                             required
                         />
                     </div>
@@ -881,7 +875,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                     <div>
                         <InputLabel
                             htmlFor="reopen_password"
-                            value={t("receptions.reopen_password_label", "كلمة مرور العمليات الآمنة *")}
+                            value={__("receptions.reopen_password_label")}
                         />
                         <TextInput
                             id="reopen_password"
@@ -906,7 +900,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                 {showButtonText && <span>{t("common.cancel", "إلغاء")}</span>}
                             </button>
                         </Tooltip>
-                        <Tooltip text={t("receptions.confirm_reopen", "تأكيد إعادة الفتح")}>
+                        <Tooltip text={__("receptions.confirm_reopen")}>
                             <button
                                 type="submit"
                                 disabled={processingAction}
@@ -917,7 +911,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                     <span>
                                         {processingAction
                                             ? t("common.processing", "جاري المعالجة...")
-                                            : t("receptions.confirm_reopen", "تأكيد إعادة الفتح")}
+                                            : __("receptions.confirm_reopen")}
                                     </span>
                                 )}
                             </button>
@@ -928,16 +922,16 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
 
             {/* Modal: Confirm Approve */}
             <Modal show={isApproveModalOpen} onClose={() => setApproveModalOpen(false)} maxWidth="sm">
-                <div className="p-6 space-y-4 text-start" dir={lang === "ar" ? "rtl" : "ltr"}>
+                <div className="p-6 space-y-4 text-start" dir={__("receptions.index.ltr")}>
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <Lock className="h-6 w-6 text-emerald-500" />
                         <h3 className="font-bold text-lg text-text">
-                            {t("receptions.approve_title", "اعتماد وإغلاق سند الاستلام")}
+                            {__("receptions.approve_title")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {t("receptions.approve_desc", "هل أنت متأكد من اعتماد هذا السند؟ سيتم تثبيت الكميات في المخازن بشكل رسمي، وسيتحول السند إلى حالة القفل ولا يمكن تعديله إلا بكلمة مرور العمليات.")}
+                        {__("receptions.approve_desc")}
                     </p>
 
                     {errorMsg && <p className="text-xs text-danger mt-1 font-bold">{errorMsg}</p>}
@@ -953,7 +947,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                 {showButtonText && <span>{t("common.cancel", "إلغاء")}</span>}
                             </button>
                         </Tooltip>
-                        <Tooltip text={t("receptions.confirm_approve", "تأكيد الاعتماد")}>
+                        <Tooltip text={__("receptions.confirm_approve")}>
                             <button
                                 type="button"
                                 onClick={handleApprove}
@@ -965,7 +959,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                     <span>
                                         {processingAction
                                             ? t("common.approving", "جاري الاعتماد...")
-                                            : t("receptions.confirm_approve", "تأكيد الاعتماد")}
+                                            : __("receptions.confirm_approve")}
                                     </span>
                                 )}
                             </button>

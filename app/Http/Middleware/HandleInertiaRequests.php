@@ -30,7 +30,7 @@ class HandleInertiaRequests extends Middleware
     public function handle(Request $request, \Closure $next)
     {
         $locale = $request->cookie('wms_locale', 'ar');
-        if (in_array($locale, ['ar', 'en'])) {
+        if (file_exists(base_path("lang/{$locale}")) || (function_exists('lang_path') && file_exists(lang_path($locale)))) {
             app()->setLocale($locale);
         }
 
