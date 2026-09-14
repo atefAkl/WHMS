@@ -119,7 +119,7 @@ class ContractPalletStatsController extends Controller
 
             foreach ($currentSizes as $sz) {
                 $used = $occupiedPallets[$sz] ?? 0;
-                $booked = $rawBookedBySize[$sz] ?? ($used > 0 ? $used : 0);
+                $booked = $rawBookedBySize[$sz] ?? 0;
                 $remaining = max(0, $booked - $used);
 
                 $bookedBySize[$sz] = $booked;
