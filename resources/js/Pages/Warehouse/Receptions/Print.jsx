@@ -56,7 +56,7 @@ export default function Print({ reception, companySettings = {} }) {
     const formatItemAndPackage = (entry) => {
         let rawItemName = displayBilingual(entry.inventoryItem?.name || entry.inventory_item?.name) || "";
         let rawVarName = displayBilingual(entry.variant?.name) || "";
-        let boxType = entry.variant?.unit || entry.variant?.package_type || "كرتون";
+        let boxType = entry.variant?.unit || entry.variant?.package_type || (lang === "ar" ? "كرتون" : "Carton");
 
         let extraCap = "";
 
@@ -275,7 +275,7 @@ export default function Print({ reception, companySettings = {} }) {
                                 <div className="space-y-1">
                                     <div className="flex gap-2">
                                         <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المشرف / المستلم:" : "Receiver:"}</span>
-                                        <span className="font-bold text-black">{reception.recipient_name || user?.name || "أمين المستودع"}</span>
+                                        <span className="font-bold text-black">{reception.recipient_name || user?.name || (lang === "ar" ? "أمين المستودع" : "Warehouse Keeper")}</span>
                                     </div>
                                     <div className="flex gap-4">
                                         <div className="flex gap-2 flex-1">

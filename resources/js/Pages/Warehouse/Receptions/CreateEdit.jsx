@@ -1530,7 +1530,7 @@ export default function CreateEdit({
                                                                 {c.quality}
                                                             </span>
                                                         )}
-                                                        <span className="text-primary font-mono">{c.quantity} عبوة</span>
+                                                        <span className="text-primary font-mono">{c.quantity} {lang === "ar" ? "عبوة" : "Packs"}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -1855,12 +1855,12 @@ export default function CreateEdit({
                                                                 <div className="flex justify-between items-center font-sans font-bold text-text">
                                                                     <span className="truncate max-w-[130px]" title={item.full_name}>📦 {item.label}</span>
                                                                     <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 border border-emerald-300 font-mono text-[10px] font-bold">
-                                                                        متبقي: {item.available}
+                                                                        {lang === "ar" ? "متبقي:" : "Rem:"} {item.available}
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex justify-between text-[11px] text-text-muted">
-                                                                    <span>محجوز: <strong className="text-text font-bold">{item.booked}</strong></span>
-                                                                    <span className="text-amber-700 font-bold">مشغول: <strong>{item.utilized}</strong></span>
+                                                                    <span>{lang === "ar" ? "محجوز:" : "Booked:"} <strong className="text-text font-bold">{item.booked}</strong></span>
+                                                                    <span className="text-amber-700 font-bold">{lang === "ar" ? "مشغول:" : "Used:"} <strong>{item.utilized}</strong></span>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -2007,7 +2007,7 @@ export default function CreateEdit({
                                         vehicle_type: e.target.value,
                                     }))
                                 }
-                                placeholder="دينا، تريلا، لوري..."
+                                placeholder={lang === "ar" ? "دينا، تريلا، لوري..." : "Dina, Trailer, Lorry..."}
                             />
                         </div>
 
