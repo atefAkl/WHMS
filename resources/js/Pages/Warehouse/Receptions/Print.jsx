@@ -6,6 +6,17 @@ import { Printer, FileText, FileCheck, List, Plus, ArrowRight, X } from "lucide-
 export default function Print({ reception, companySettings = {} }) {
     const { lang, __ } = useLang();
 
+    // Translation Helper
+    const t = (key, fallbackAr = "", fallbackEn = "") => {
+        if (key && __) {
+            const translated = __(key);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return lang === "en" ? (fallbackEn || fallbackAr || key) : (fallbackAr || fallbackEn || key);
+    };
+
     const user = usePage().props.auth.user;
 
     const [hasReferrer, setHasReferrer] = useState(false);

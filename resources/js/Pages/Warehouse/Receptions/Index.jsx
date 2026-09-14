@@ -32,6 +32,18 @@ import SearchableSelect from "@/Components/SearchableSelect";
 
 export default function Index({ receptions = { data: [] }, customers = [], contracts = [], drivers = [], filters = {} }) {
     const { lang, __ } = useLang();
+
+    // Translation Helper
+    const t = (key, fallbackAr = "", fallbackEn = "") => {
+        if (key && __) {
+            const translated = __(key);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return lang === "en" ? (fallbackEn || fallbackAr || key) : (fallbackAr || fallbackEn || key);
+    };
+
     const { auth } = usePage().props;
     const user = auth.user;
     const showButtonText = user?.preferences?.show_button_text ?? false;

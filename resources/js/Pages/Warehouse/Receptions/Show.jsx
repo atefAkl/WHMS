@@ -34,6 +34,18 @@ import PageHeader from "@/Components/PageHeader";
 
 export default function Show({ reception }) {
     const { lang, __ } = useLang();
+
+    // Translation Helper
+    const t = (key, fallbackAr = "", fallbackEn = "") => {
+        if (key && __) {
+            const translated = __(key);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return lang === "en" ? (fallbackEn || fallbackAr || key) : (fallbackAr || fallbackEn || key);
+    };
+
     const displayBilingual = (rawText) => {
         if (!rawText) return "";
         const parts = rawText.split("|").map((s) => s.trim());
