@@ -2,25 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, Link, router, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import {
-    Home,
-    ChevronRight,
-    Plus,
-    Trash2,
-    Save,
-    ArrowRight,
-    UserPlus,
-    X,
-    FolderSync,
-    Layers,
-    Calculator,
-    AlertCircle,
-    CheckCircle2,
-    ChevronUp,
-    ChevronDown,
-    Printer,
-    RefreshCw,
-} from "lucide-react";
+import {  AlertCircle, ArrowRight, Calculator, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Edit, FolderSync, Home, Layers, Plus, Printer, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
 import Modal from "@/Components/Modal";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import { useSecureDelete } from "@/Hooks/useSecureDelete";

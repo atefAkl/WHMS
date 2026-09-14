@@ -2,21 +2,7 @@ import React from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import {
-    Home,
-    ChevronRight,
-    ArrowLeftRight,
-    Printer,
-    Edit,
-    CheckCircle2,
-    Unlock,
-    ArrowLeft,
-    FileText,
-    User,
-    Calendar,
-    Truck,
-    ArrowRight
-} from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Calendar, CheckCircle2, ChevronRight, Edit, FileText, Home, Printer, Truck, Unlock, User } from "lucide-react";
 import PageHeader from "@/Components/PageHeader";
 
 export default function Show({ transfer }) {

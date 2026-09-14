@@ -2,24 +2,7 @@ import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import {
-    Home,
-    ChevronRight,
-    Plus,
-    Edit,
-    Trash2,
-    Eye,
-    Printer,
-    FileText,
-    Search,
-    Filter,
-    ShieldAlert,
-    CheckCircle2,
-    RefreshCw,
-    Unlock,
-    Lock,
-    X
-} from "lucide-react";
+import { CheckCircle2, ChevronRight, Edit, Eye, FileText, Filter, Home, Lock, Plus, Printer, RefreshCw, Search, ShieldAlert, Trash2, Unlock, X } from "lucide-react";
 import Modal from "@/Components/Modal";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";

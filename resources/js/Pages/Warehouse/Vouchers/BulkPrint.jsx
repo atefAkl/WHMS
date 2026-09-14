@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, usePage, Link } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import { Printer, ArrowRight, X, FileText } from "lucide-react";
+import { ArrowRight, FileText, Printer, X } from "lucide-react";
 
 export default function BulkPrint({ vouchers = [], contract, companySettings = {} }) {
     const { lang, __ } = useLang();

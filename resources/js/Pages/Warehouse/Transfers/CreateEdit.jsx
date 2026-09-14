@@ -2,19 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import {
-    Home,
-    ChevronRight,
-    ArrowLeftRight,
-    Save,
-    CheckCircle2,
-    X,
-    Plus,
-    Trash2,
-    Search,
-    AlertCircle,
-    ArrowRight
-} from "lucide-react";
+import { AlertCircle, ArrowLeftRight, ArrowRight, CheckCircle2, ChevronRight, Home, Plus, Save, Search, Trash2, X } from "lucide-react";
 import TextInput from "@/Components/TextInput";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";

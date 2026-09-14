@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, Save, Home, ChevronRight, AlertCircle, Plus, Trash2, Scale } from 'lucide-react';
+import { AlertCircle, ChevronRight, Home, Plus, Save, Scale, SlidersHorizontal, Trash2 } from "lucide-react";
 import PageHeader from '@/Components/PageHeader';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';

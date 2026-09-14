@@ -7,20 +7,7 @@ import SecondaryButton from "@/Components/SecondaryButton";
 import Modal from "@/Components/Modal";
 import SearchableSelect from "@/Components/SearchableSelect";
 import axios from "axios";
-import { 
-    Ticket, 
-    Plus, 
-    Printer, 
-    Search, 
-    CheckCircle2, 
-    AlertTriangle, 
-    User, 
-    FileText, 
-    Truck, 
-    Clock,
-    Calendar,
-    ArrowLeft
-} from "lucide-react";
+import { AlertTriangle, ArrowLeft, Calendar, CheckCircle2, Clock, FileText, Plus, Printer, Search, Ticket, Truck, User } from "lucide-react";
 
 export default function Index({ tickets, customers, drivers }) {
     const { lang } = useLang();

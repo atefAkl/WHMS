@@ -2,7 +2,7 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, Plus, Eye, Search, Home, ChevronRight, Scale, Edit, Trash2, RotateCcw } from 'lucide-react';
+import { ChevronRight, Edit, Eye, Home, Plus, RotateCcw, Scale, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import PageHeader from '@/Components/PageHeader';
 import Pagination from '@/Components/Pagination';
 

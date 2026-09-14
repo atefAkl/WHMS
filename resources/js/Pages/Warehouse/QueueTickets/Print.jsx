@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Head, Link } from "@inertiajs/react";
-import { Printer, ArrowRight, Zap, Plus, X } from "lucide-react";
+import { ArrowRight, Plus, Printer, X, Zap } from "lucide-react";
 import { printZplDirectly } from "@/Services/qzPrintService";
 
 /**

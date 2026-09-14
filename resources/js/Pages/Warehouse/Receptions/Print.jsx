@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Head, usePage, Link } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import { Printer, FileText, FileCheck, List, Plus, ArrowRight, X } from "lucide-react";
+import { ArrowRight, FileCheck, FileText, List, Plus, Printer, X } from "lucide-react";
 
 export default function Print({ reception, companySettings = {} }) {
     const { lang, __ } = useLang();

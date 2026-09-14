@@ -2,17 +2,7 @@ import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import {
-    Home,
-    ChevronRight,
-    Plus,
-    Edit,
-    Trash2,
-    Search,
-    Filter,
-    FileCheck,
-    RefreshCw
-} from "lucide-react";
+import { ChevronRight, Edit, FileCheck, Filter, Home, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import { useSecureDelete } from "@/Hooks/useSecureDelete";
 import TextInput from "@/Components/TextInput";

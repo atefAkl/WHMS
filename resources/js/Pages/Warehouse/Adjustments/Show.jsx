@@ -2,7 +2,7 @@ import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useLang } from '@/Contexts/LanguageContext';
-import { SlidersHorizontal, CheckCircle2, Printer, FileText, Home, ChevronRight, Download, RotateCcw, Edit, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Download, Edit, FileText, Home, Printer, RotateCcw, SlidersHorizontal, Trash2 } from "lucide-react";
 import PageHeader from '@/Components/PageHeader';
 
 export default function Show({ adjustment }) {
