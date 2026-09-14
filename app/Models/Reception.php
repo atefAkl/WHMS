@@ -90,7 +90,7 @@ class Reception extends Model
 
     public function inventoryEntries()
     {
-        return $this->morphMany(InventoryEntry::class, 'voucher');
+        return $this->morphMany(InventoryEntry::class, 'voucher')->orderBy('id', 'asc');
     }
 
     public function creator()

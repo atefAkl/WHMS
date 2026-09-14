@@ -92,7 +92,7 @@ class ExitAuthorization extends Model
 
     public function items()
     {
-        return $this->hasMany(ExitAuthorizationItem::class);
+        return $this->hasMany(ExitAuthorizationItem::class)->orderBy('id', 'asc');
     }
 
     public function creator()

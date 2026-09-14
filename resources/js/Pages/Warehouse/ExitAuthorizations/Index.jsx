@@ -73,32 +73,30 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
             <Home className="h-3.5 w-3.5" />
             <ChevronRight className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`} />
             <span className="text-primary font-medium">
-                {lang === "ar" ? "إدارة المخازن" : "Warehouse Management"}
+                {__("exit_authorizations.index.warehouse_management")}
             </span>
             <ChevronRight className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`} />
             <span className="text-primary font-medium">
-                {lang === "ar" ? "أذونات الخروج" : "Exit Authorizations"}
+                {__("exit_authorizations.index.exit_authorizations")}
             </span>
         </div>
     );
 
     return (
         <AuthenticatedLayout header={breadcrumbs}>
-            <Head title={lang === "ar" ? "أذونات خروج البضائع" : "Exit Authorizations"} />
+            <Head title={__("exit_authorizations.index.exit_authorizations")} />
 
-            <div className="max-w-7xl mx-auto pb-8 main-stack-y" dir={lang === "ar" ? "rtl" : "ltr"}>
+            <div className="max-w-7xl mx-auto pb-8 main-stack-y" dir={__("exit_authorizations.index.ltr")}>
                 <PageHeader
                     icon={FileCheck}
-                    title={lang === "ar" ? "أذونات خروج البضائع (المرخص)" : "Exit Authorizations"}
+                    title={__("exit_authorizations.index.exit_authorizations")}
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
-                            {lang === "ar"
-                                ? "إدارة أذونات سحب البضائع الصادرة عن مدير العقود لتمكين مسؤول التسليم من الصرف."
-                                : "Manage delivery authorization permits issued by Contract Manager to authorize deliveries."}
+                            {__("exit_authorizations.index.manage_delivery_authorization")}
                         </p>
                     }
                     actions={
-                        <Tooltip text={lang === "ar" ? "إنشاء إذن خروج جديد" : "Create New Exit Authorization"}>
+                        <Tooltip text={__("exit_authorizations.index.create_new_exit_authorization")}>
                             <Link
                                 href={route("exit-authorizations.create")}
                                 className="bg-primary text-white hover:bg-primary-hover rounded-none flex items-center justify-center transition-all h-[30px] w-[30px]"
@@ -115,11 +113,11 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                         {/* Row 1: Search & Date Range */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div>
-                                <InputLabel value={lang === "ar" ? "البحث بالرقم أو العميل" : "Search by Serial / Customer"} />
+                                <InputLabel value={__("exit_authorizations.index.search_by_serial_customer")} />
                                 <div className="relative mt-1">
                                     <TextInput
                                         className="w-full text-xs rounded-none border-border ps-8 h-[30px]"
-                                        placeholder={lang === "ar" ? "أدخل كلمة البحث..." : "Type keyword..."}
+                                        placeholder={__("exit_authorizations.index.type_keyword")}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
@@ -127,7 +125,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                 </div>
                             </div>
                             <div>
-                                <InputLabel value={lang === "ar" ? "التاريخ من" : "Date From"} />
+                                <InputLabel value={__("exit_authorizations.index.date_from")} />
                                 <input
                                     type="date"
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
@@ -136,7 +134,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                 />
                             </div>
                             <div>
-                                <InputLabel value={lang === "ar" ? "التاريخ إلى" : "Date To"} />
+                                <InputLabel value={__("exit_authorizations.index.date_to")} />
                                 <input
                                     type="date"
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
@@ -149,13 +147,13 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                         {/* Row 2: Common Filters */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                             <div>
-                                <InputLabel value={lang === "ar" ? "العميل" : "Customer"} />
+                                <InputLabel value={__("exit_authorizations.index.customer")} />
                                 <select
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
                                     value={selectedCustomer}
                                     onChange={(e) => setSelectedCustomer(e.target.value)}
                                 >
-                                    <option value="">{lang === "ar" ? "كل العملاء" : "All Customers"}</option>
+                                    <option value="">{__("exit_authorizations.index.all_customers")}</option>
                                     {customers.map((c) => (
                                         <option key={c.id} value={c.id}>
                                             {c.name}
@@ -165,13 +163,13 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                             </div>
 
                             <div>
-                                <InputLabel value={lang === "ar" ? "العقد" : "Contract"} />
+                                <InputLabel value={__("exit_authorizations.index.contract")} />
                                 <select
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
                                     value={selectedContract}
                                     onChange={(e) => setSelectedContract(e.target.value)}
                                 >
-                                    <option value="">{lang === "ar" ? "كل العقود" : "All Contracts"}</option>
+                                    <option value="">{__("exit_authorizations.index.all_contracts")}</option>
                                     {contracts.map((c) => (
                                         <option key={c.id} value={c.id}>
                                             {c.contract_number}
@@ -181,21 +179,21 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                             </div>
 
                             <div>
-                                <InputLabel value={lang === "ar" ? "الحالة" : "Status"} />
+                                <InputLabel value={__("exit_authorizations.index.status")} />
                                 <select
                                     className="mt-1 block w-full border-border bg-surface text-text text-xs focus:border-primary focus:ring-primary rounded-none h-[30px] px-2.5"
                                     value={selectedStatus}
                                     onChange={(e) => setSelectedStatus(e.target.value)}
                                 >
-                                    <option value="">{lang === "ar" ? "كل الحالات" : "All Statuses"}</option>
-                                    <option value="pending">{lang === "ar" ? "معلق" : "Pending"}</option>
-                                    <option value="completed">{lang === "ar" ? "مكتمل" : "Completed"}</option>
-                                    <option value="cancelled">{lang === "ar" ? "ملغي" : "Cancelled"}</option>
+                                    <option value="">{__("exit_authorizations.index.all_statuses")}</option>
+                                    <option value="pending">{__("exit_authorizations.index.pending")}</option>
+                                    <option value="completed">{__("exit_authorizations.index.completed")}</option>
+                                    <option value="cancelled">{__("exit_authorizations.index.cancelled")}</option>
                                 </select>
                             </div>
 
                             <div className="flex items-center gap-1.5 h-[30px]">
-                                <Tooltip text={lang === "ar" ? "تصفية" : "Filter"}>
+                                <Tooltip text={__("exit_authorizations.index.filter")}>
                                     <button 
                                         type="submit" 
                                         className="h-[30px] w-[30px] p-0 flex items-center justify-center rounded-none bg-primary text-white hover:bg-primary-hover shadow-sm transition duration-150 ease-in-out font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:opacity-90"
@@ -203,7 +201,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                         <Filter className="h-4 w-4 shrink-0" />
                                     </button>
                                 </Tooltip>
-                                <Tooltip text={lang === "ar" ? "إعادة تعيين" : "Reset"}>
+                                <Tooltip text={__("exit_authorizations.index.reset")}>
                                     <button 
                                         type="button" 
                                         onClick={handleReset} 
@@ -224,19 +222,19 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                             <thead>
                                 <tr className="bg-background border-b border-border text-text-muted font-bold">
                                     <th className="p-3 text-start w-12">#</th>
-                                    <th className="p-3 text-start">{lang === "ar" ? "المستند والمعرفات" : "Document & Identifiers"}</th>
-                                    <th className="p-3 text-start">{lang === "ar" ? "ملاحظات" : "Notes"}</th>
-                                    <th className="p-3 text-start">{lang === "ar" ? "تاريخ الإنشاء" : "Created At"}</th>
-                                    <th className="p-3 text-center">{lang === "ar" ? "إجمالي المرخص" : "Total Authorized"}</th>
-                                    <th className="p-3 text-center">{lang === "ar" ? "الحالة" : "Status"}</th>
-                                    <th className="p-3 text-center">{lang === "ar" ? "الخيارات" : "Actions"}</th>
+                                    <th className="p-3 text-start">{__("exit_authorizations.index.document_identifiers")}</th>
+                                    <th className="p-3 text-start">{__("exit_authorizations.index.notes")}</th>
+                                    <th className="p-3 text-start">{__("exit_authorizations.index.created_at")}</th>
+                                    <th className="p-3 text-center">{__("exit_authorizations.index.total_authorized")}</th>
+                                    <th className="p-3 text-center">{__("exit_authorizations.index.status")}</th>
+                                    <th className="p-3 text-center">{__("exit_authorizations.index.actions")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {authorizations.data.length === 0 ? (
                                     <tr>
                                         <td colSpan="7" className="p-8 text-center text-text-muted">
-                                            {lang === "ar" ? "لا توجد أذونات خروج مطابقة للبحث." : "No exit authorizations found."}
+                                            {__("exit_authorizations.index.no_exit_authorizations_found")}
                                         </td>
                                     </tr>
                                 ) : (
@@ -285,7 +283,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                                         <span className="text-[10px] text-text-muted/60">—</span>
                                                     )}
                                                 </td>
-                                                <td className="p-3 text-text-muted font-mono">{new Date(item.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}</td>
+                                                <td className="p-3 text-text-muted font-mono">{new Date(item.created_at).toLocaleDateString(__("exit_authorizations.index.en_us"))}</td>
                                                 <td className="p-3 text-center font-bold text-text">
                                                     {item.total_quantity ? parseFloat(item.total_quantity).toLocaleString() : 0}
                                                 </td>
@@ -297,16 +295,16 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                                             ? 'bg-danger/10 text-danger border border-danger/30'
                                                             : 'bg-warning/10 text-warning border border-warning/30'
                                                     }`}>
-                                                        {item.status === 'completed' && (lang === 'ar' ? 'مكتمل' : 'Completed')}
-                                                        {item.status === 'cancelled' && (lang === 'ar' ? 'ملغي' : 'Cancelled')}
-                                                        {item.status === 'pending' && (lang === 'ar' ? 'معلق' : 'Pending')}
+                                                        {item.status === 'completed' && (__("exit_authorizations.index.completed"))}
+                                                        {item.status === 'cancelled' && (__("exit_authorizations.index.cancelled"))}
+                                                        {item.status === 'pending' && (__("exit_authorizations.index.pending"))}
                                                     </span>
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     <div className="flex justify-center items-center gap-1.5">
                                                         {item.status === 'pending' && (
                                                             <>
-                                                                <Tooltip text={lang === "ar" ? "تعديل الإذن" : "Edit Authorization"}>
+                                                                <Tooltip text={__("exit_authorizations.index.edit_authorization")}>
                                                                     <Link
                                                                         href={route("exit-authorizations.edit", item.id)}
                                                                         className="p-1.5 text-primary hover:bg-primary/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] w-[30px]"
@@ -314,7 +312,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                                                         <Edit className="h-4 w-4" />
                                                                     </Link>
                                                                 </Tooltip>
-                                                                <Tooltip text={lang === "ar" ? "حذف الإذن" : "Delete Authorization"}>
+                                                                <Tooltip text={__("exit_authorizations.index.delete_authorization")}>
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => requestDelete(route("exit-authorizations.destroy", item.id), item)}
@@ -327,7 +325,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
                                                         )}
                                                         {item.status !== 'pending' && (
                                                             <span className="text-[11px] text-text-muted italic">
-                                                                {lang === "ar" ? "مغلق" : "Locked"}
+                                                                {__("exit_authorizations.index.locked")}
                                                             </span>
                                                         )}
                                                     </div>
@@ -373,7 +371,7 @@ export default function Index({ authorizations = { data: [] }, customers = [], c
 
             <ConfirmationModal
                 show={!!authToDelete}
-                title={lang === "ar" ? "تأكيد حذف إذن الخروج" : "Confirm Delete Authorization"}
+                title={__("exit_authorizations.index.confirm_delete_authorization")}
                 message={
                     lang === "ar"
                         ? `هل أنت متأكد من رغبتك في حذف إذن الخروج ${authToDelete?.serial_number}؟ لا يمكن التراجع عن هذا الإجراء.`

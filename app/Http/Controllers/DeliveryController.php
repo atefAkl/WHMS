@@ -231,14 +231,15 @@ class DeliveryController extends Controller
 
         try {
             DB::transaction(function () use ($request, $delivery) {
-                $reason = $request->modification_reason ?: 'تعديل وحفظ مسودة';
-
-                $history = $delivery->history ?: [];
-                $history[] = [
-                    'date' => now()->toDateTimeString(),
-                    'user' => auth()->user()->name,
-                    'reason' => $reason,
-                ];
+                if ($request->filled('modification_reason')) {
+                    $history = $delivery->history ?: [];
+                    $history[] = [
+                        'date' => now()->toDateTimeString(),
+                        'user' => auth()->user()->name,
+                        'reason' => $request->modification_reason,
+                    ];
+                    $delivery->history = $history;
+                }
 
                 $delivery->update([
                     'customer_id'            => $request->customer_id,

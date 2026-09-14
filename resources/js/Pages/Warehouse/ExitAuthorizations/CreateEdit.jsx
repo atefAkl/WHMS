@@ -325,20 +325,18 @@ export default function CreateEdit({
         setPosRowError("");
 
         if (!posItemId) {
-            setPosRowError(lang === "ar" ? "يجب اختيار الصنف المخزني." : "Select inventory item.");
+            setPosRowError(__("exit_authorizations.createedit.select_inventory_item"));
             return;
         }
         if (!posVariantId) {
-            setPosRowError(lang === "ar" ? "يجب اختيار الدرجة / العبوة." : "Select variant.");
+            setPosRowError(__("exit_authorizations.createedit.select_variant"));
             return;
         }
 
         const qty = parseFloat(posQuantity);
         if (isNaN(qty) || qty <= 0) {
             setPosRowError(
-                lang === "ar"
-                    ? "يجب إدخال كمية أكبر من الصفر."
-                    : "Quantity must be greater than zero."
+                __("exit_authorizations.createedit.quantity_must_be_greater_than")
             );
             return;
         }
@@ -403,9 +401,7 @@ export default function CreateEdit({
                     setDriverError(err.response.data.message);
                 } else {
                     setDriverError(
-                        lang === "ar"
-                            ? "تعذر إضافة السائق."
-                            : "Could not add driver.",
+                        __("exit_authorizations.createedit.could_not_add_driver"),
                     );
                 }
             });
@@ -469,7 +465,7 @@ export default function CreateEdit({
                 <div className="flex flex-col gap-1 items-start max-w-[320px]">
                     <span className="text-[10px] text-text-muted flex items-center gap-1">
                         <Play className="h-3 w-3" />{" "}
-                        {lang === "ar" ? "ملف فيديو:" : "Video:"}
+                        {__("exit_authorizations.createedit.video")}
                     </span>
                     <video
                         src={proofUrl}
@@ -484,7 +480,7 @@ export default function CreateEdit({
                 <div className="flex flex-col gap-1 items-start w-full">
                     <span className="text-[10px] text-text-muted flex items-center gap-1">
                         <Volume2 className="h-3 w-3" />{" "}
-                        {lang === "ar" ? "ملف صوتي:" : "Audio:"}
+                        {__("exit_authorizations.createedit.audio")}
                     </span>
                     <audio src={proofUrl} controls className="w-full" />
                 </div>
@@ -498,9 +494,7 @@ export default function CreateEdit({
             >
                 <Download className="h-4 w-4" />
                 <span>
-                    {lang === "ar"
-                        ? "تحميل مستند الإثبات الحالي"
-                        : "Download Request Proof"}
+                    {__("exit_authorizations.createedit.download_request_proof")}
                 </span>
             </a>
         );
@@ -522,7 +516,7 @@ export default function CreateEdit({
                 className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
             />
             <span className="text-primary font-medium">
-                {lang === "ar" ? "إدارة المخازن" : "Warehouse"}
+                {__("exit_authorizations.createedit.warehouse")}
             </span>
             <ChevronRight
                 className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
@@ -531,19 +525,15 @@ export default function CreateEdit({
                 href={route("exit-authorizations.index")}
                 className="text-primary font-medium hover:underline"
             >
-                {lang === "ar" ? "أذونات الخروج" : "Exit Authorizations"}
+                {__("exit_authorizations.createedit.exit_authorizations")}
             </Link>
             <ChevronRight
                 className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
             />
             <span className="text-primary font-medium">
                 {isEdit
-                    ? lang === "ar"
-                        ? "تعديل إذن"
-                        : "Edit Permit"
-                    : lang === "ar"
-                      ? "إنشاء إذن جديد"
-                      : "New Permit"}
+                    ? __("exit_authorizations.createedit.edit_permit")
+                    : __("exit_authorizations.createedit.new_permit")}
             </span>
         </div>
     );
@@ -553,18 +543,14 @@ export default function CreateEdit({
             <Head
                 title={
                     isEdit
-                        ? lang === "ar"
-                            ? "تعديل إذن خروج"
-                            : "Edit Exit Permit"
-                        : lang === "ar"
-                          ? "إنشاء إذن خروج جديد"
-                          : "New Exit Permit"
+                        ? __("exit_authorizations.createedit.edit_exit_permit")
+                        : __("exit_authorizations.createedit.new_exit_permit")
                 }
             />
 
             <div
                 className="max-w-7xl mx-auto pb-8 main-stack-y"
-                dir={lang === "ar" ? "rtl" : "ltr"}
+                dir={__("exit_authorizations.createedit.ltr")}
             >
                 <PageHeader
                     icon={FileCheck}
@@ -573,24 +559,18 @@ export default function CreateEdit({
                             ? lang === "ar"
                                 ? `تعديل إذن خروج: ${authorization.serial_number}`
                                 : `Edit Permit: ${authorization.serial_number}`
-                            : lang === "ar"
-                              ? "إنشاء إذن خروج جديد"
-                              : "Create Exit Authorization Permit"
+                            : __("exit_authorizations.createedit.create_exit_authorization_perm")
                     }
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
-                            {lang === "ar"
-                                ? "قم بتعبئة بيانات إذن الخروج وإضافة بنود الأصناف لحجزها وصرفها لاحقاً."
-                                : "Fill out customer and contract details and add authorized items for delivery."}
+                            {__("exit_authorizations.createedit.fill_out_customer_and_contract")}
                         </p>
                     }
                     actions={
                         <div className="flex items-center gap-2">
                             <Tooltip
                                 text={
-                                    lang === "ar"
-                                        ? "حفظ وإصدار الإذن"
-                                        : "Save & Issue Permit"
+                                    __("exit_authorizations.createedit.save_issue_permit")
                                 }
                             >
                                 <button
@@ -604,9 +584,7 @@ export default function CreateEdit({
                             </Tooltip>
                             <Tooltip
                                 text={
-                                    lang === "ar"
-                                        ? "إلغاء التغييرات"
-                                        : "Discard"
+                                    __("exit_authorizations.createedit.discard")
                                 }
                             >
                                 <Link
@@ -628,9 +606,7 @@ export default function CreateEdit({
                             <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-4">
                                 <h3 className="text-xs font-bold text-primary border-b border-border pb-2 uppercase tracking-wider flex items-center gap-1.5">
                                     <Layers className="h-4 w-4" />
-                                    {lang === "ar"
-                                        ? "معلومات المستند والتعاقد"
-                                        : "Permit & Contract Info"}
+                                    {__("exit_authorizations.createedit.permit_contract_info")}
                                 </h3>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -638,9 +614,7 @@ export default function CreateEdit({
                                     <div>
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "رقم الإذن"
-                                                    : "Permit Number"
+                                                __("exit_authorizations.createedit.permit_number")
                                             }
                                         />
                                         <TextInput
@@ -648,9 +622,7 @@ export default function CreateEdit({
                                             className="mt-1 w-full text-xs rounded-none border-border bg-slate-50 text-slate-500 font-mono font-bold"
                                             value={
                                                 authorization?.serial_number ||
-                                                (lang === "ar"
-                                                    ? "سيتم توليده تلقائياً"
-                                                    : "Auto-generated")
+                                                (__("exit_authorizations.createedit.auto_generated"))
                                             }
                                             disabled
                                             readOnly
@@ -661,9 +633,7 @@ export default function CreateEdit({
                                     <div className="relative">
                                         <SearchableSelect
                                             label={
-                                                lang === "ar"
-                                                    ? "العقد المعتمد *"
-                                                    : "Approved Contract *"
+                                                __("exit_authorizations.createedit.approved_contract")
                                             }
                                             items={allContracts}
                                             value={data.contract_id}
@@ -673,9 +643,7 @@ export default function CreateEdit({
                                                 )
                                             }
                                             placeholder={
-                                                lang === "ar"
-                                                    ? "ابحث برقم العقد أو اسم العميل..."
-                                                    : "Type contract number or customer..."
+                                                __("exit_authorizations.createedit.type_contract_number_or_custom")
                                             }
                                             searchKeys={[
                                                 "contract_number",
@@ -698,9 +666,7 @@ export default function CreateEdit({
                                     <div className="relative">
                                         <SearchableSelect
                                             label={
-                                                lang === "ar"
-                                                    ? "العميل *"
-                                                    : "Customer *"
+                                                __("exit_authorizations.createedit.customer")
                                             }
                                             items={customers}
                                             value={data.customer_id}
@@ -714,9 +680,7 @@ export default function CreateEdit({
                                                 }
                                             }}
                                             placeholder={
-                                                lang === "ar"
-                                                    ? "ابحث عن اسم العميل..."
-                                                    : "Type customer name..."
+                                                __("exit_authorizations.createedit.type_customer_name")
                                             }
                                             searchKeys={["name"]}
                                             displayFormat={(c) => c.name}
@@ -730,9 +694,7 @@ export default function CreateEdit({
                                     <div>
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "فترة التخزين النشطة *"
-                                                    : "Active Storage Period *"
+                                                __("exit_authorizations.createedit.active_storage_period")
                                             }
                                         />
                                         <select
@@ -748,15 +710,11 @@ export default function CreateEdit({
                                             disabled={!data.contract_id}
                                         >
                                             <option value="">
-                                                {lang === "ar"
-                                                    ? "اختر الفترة..."
-                                                    : "Select Period..."}
+                                                {__("exit_authorizations.createedit.select_period")}
                                             </option>
                                             {availablePeriods.map((p) => (
                                                 <option key={p.id} value={p.id}>
-                                                    {lang === "ar"
-                                                        ? "فترة"
-                                                        : "Period"}{" "}
+                                                    {__("exit_authorizations.createedit.period")}{" "}
                                                     {p.period_number} (
                                                     {p.start_date} -{" "}
                                                     {p.end_date})
@@ -775,9 +733,7 @@ export default function CreateEdit({
                             {/* Card 2: Requester Verification Proof */}
                             <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-4">
                                 <h3 className="text-xs font-bold text-primary border-b border-border pb-2 uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "تخويل وطالب الإخراج"
-                                        : "Exit Order & Authorization Details"}
+                                    {__("exit_authorizations.createedit.exit_order_authorization_det")}
                                 </h3>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
@@ -785,9 +741,7 @@ export default function CreateEdit({
                                     <div>
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "طريقة استلام طلب الإخراج *"
-                                                    : "Requester Type *"
+                                                __("exit_authorizations.createedit.requester_type")
                                             }
                                         />
                                         <select
@@ -802,19 +756,13 @@ export default function CreateEdit({
                                             required
                                         >
                                             <option value="whatsapp">
-                                                {lang === "ar"
-                                                    ? "رسالة واتس اب (مكتوب/صوت)"
-                                                    : "WhatsApp Message (Text/Voice)"}
+                                                {__("exit_authorizations.createedit.whatsapp_message_text_voice")}
                                             </option>
                                             <option value="written">
-                                                {lang === "ar"
-                                                    ? "أمر إخراج كتابي رسمي"
-                                                    : "Written/Official Exit Order"}
+                                                {__("exit_authorizations.createedit.written_official_exit_order")}
                                             </option>
                                             <option value="personal">
-                                                {lang === "ar"
-                                                    ? "مسؤولية شخصية ومقابلة"
-                                                    : "Personal Responsibility/Face-to-Face"}
+                                                {__("exit_authorizations.createedit.personal_responsibility_face_t")}
                                             </option>
                                         </select>
                                         {errors.requester_type && (
@@ -828,9 +776,7 @@ export default function CreateEdit({
                                     <div>
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "إرفاق مستند التخويل (دليل الطلب) *"
-                                                    : "Attach Request Proof *"
+                                                __("exit_authorizations.createedit.attach_request_proof")
                                             }
                                         />
                                         <input
@@ -859,9 +805,7 @@ export default function CreateEdit({
                                             authorization?.requester_proof && (
                                                 <div className="mt-3 p-3 bg-slate-50 border border-border rounded-none">
                                                     <h4 className="text-[10px] font-bold text-text-muted mb-2">
-                                                        {lang === "ar"
-                                                            ? "مستند الإثبات الحالي:"
-                                                            : "Current Request Attachment:"}
+                                                        {__("exit_authorizations.createedit.current_request_attachment")}
                                                     </h4>
                                                     {renderProofPreview(
                                                         authorization.requester_proof,
@@ -873,33 +817,25 @@ export default function CreateEdit({
 
                                 <div className="rounded-none border border-primary/20 bg-primary/5 p-4 text-xs text-text-muted">
                                     <div className="font-semibold text-primary text-sm mb-2">
-                                        {lang === "ar"
-                                            ? "صلاحية إذن الخروج"
-                                            : "Exit Authorization Validity"}
+                                        {__("exit_authorizations.createedit.exit_authorization_validity")}
                                     </div>
                                     {isEdit && authorizationExpiryDate ? (
                                         <div className="space-y-1">
                                             <div>
-                                                {lang === "ar"
-                                                    ? "تاريخ الإنشاء:"
-                                                    : "Created at:"}{" "}
+                                                {__("exit_authorizations.createedit.created_at")}{" "}
                                                 <span className="font-semibold text-text">
                                                     {authorizationCreatedAt?.toLocaleDateString()}
                                                 </span>
                                             </div>
                                             <div>
-                                                {lang === "ar"
-                                                    ? "تاريخ الانتهاء:"
-                                                    : "Expiry date:"}{" "}
+                                                {__("exit_authorizations.createedit.expiry_date")}{" "}
                                                 <span className="font-semibold text-text">
                                                     {authorizationExpiryDate?.toLocaleDateString()}
                                                 </span>
                                             </div>
                                             <div>
                                                 {authorizationIsExpired
-                                                    ? lang === "ar"
-                                                        ? "هذا الإذن منتهي الصلاحية ولا يمكن استخدامه في سندات التسليم الجديدة."
-                                                        : "This authorization has expired and cannot be used for new delivery vouchers."
+                                                    ? __("exit_authorizations.createedit.this_authorization_has_expired")
                                                     : lang === "ar"
                                                       ? `صلاحية هذا الإذن تصل إلى ${authorizationExpiryDate?.toLocaleDateString()}.`
                                                       : `This authorization is valid until ${authorizationExpiryDate?.toLocaleDateString()}.`}
@@ -918,9 +854,7 @@ export default function CreateEdit({
                             {/* Card 3: Recipient Information */}
                             <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-4">
                                 <h3 className="text-xs font-bold text-primary border-b border-border pb-2 uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "تفاصيل مستلم البضاعة الفعلي"
-                                        : "Recipient Information (Delivery Person)"}
+                                    {__("exit_authorizations.createedit.recipient_information_deliver")}
                                 </h3>
 
                                 <div className="space-y-4">
@@ -938,9 +872,7 @@ export default function CreateEdit({
                                             }
                                         />
                                         <span className="text-xs font-semibold text-text">
-                                            {lang === "ar"
-                                                ? "تسليم البضاعة للعميل نفسه (صاحب العقد)"
-                                                : "Deliver goods directly to the customer himself"}
+                                            {__("exit_authorizations.createedit.deliver_goods_directly_to_the")}
                                         </span>
                                     </label>
                                     {errors.deliver_to_self && (
@@ -955,9 +887,7 @@ export default function CreateEdit({
                                             <div className="flex justify-between items-center">
                                                 <InputLabel
                                                     value={
-                                                        lang === "ar"
-                                                            ? "السائق الناقل المستلم"
-                                                            : "Carrier Driver"
+                                                        __("exit_authorizations.createedit.carrier_driver")
                                                     }
                                                 />
                                                 <button
@@ -968,9 +898,7 @@ export default function CreateEdit({
                                                     className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
                                                 >
                                                     <UserPlus className="h-3 w-3" />
-                                                    {lang === "ar"
-                                                        ? "إضافة سائق سريع"
-                                                        : "Add Driver"}
+                                                    {__("exit_authorizations.createedit.add_driver")}
                                                 </button>
                                             </div>
                                             <select
@@ -985,9 +913,7 @@ export default function CreateEdit({
                                                 disabled={data.deliver_to_self}
                                             >
                                                 <option value="">
-                                                    {lang === "ar"
-                                                        ? "-- اختر سائق شاحنة --"
-                                                        : "-- Select Carrier Driver --"}
+                                                    {__("exit_authorizations.createedit.select_carrier_driver")}
                                                 </option>
                                                 {driverList.map((d) => (
                                                     <option
@@ -1011,9 +937,7 @@ export default function CreateEdit({
                                         <div>
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "المندوب المفوض (المستلم)"
-                                                        : "Authorized Representative"
+                                                    __("exit_authorizations.createedit.authorized_representative")
                                                 }
                                             />
                                             <select
@@ -1031,9 +955,7 @@ export default function CreateEdit({
                                                 }
                                             >
                                                 <option value="">
-                                                    {lang === "ar"
-                                                        ? "-- اختر مندوباً مفوضاً للعميل --"
-                                                        : "-- Select Authorized Rep --"}
+                                                    {__("exit_authorizations.createedit.select_authorized_rep")}
                                                 </option>
                                                 {availableRepresentatives.map(
                                                     (rep) => (
@@ -1063,18 +985,14 @@ export default function CreateEdit({
                             <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-2">
                                 <InputLabel
                                     value={
-                                        lang === "ar"
-                                            ? "توجيهات وملاحظات إخراج البضاعة"
-                                            : "Exit Directives & Remarks"
+                                        __("exit_authorizations.createedit.exit_directives_remarks")
                                     }
                                 />
                                 <textarea
                                     rows="3"
                                     className="w-full text-xs rounded-none border-border mt-1 bg-surface text-text focus:border-primary focus:ring-primary p-2.5"
                                     placeholder={
-                                        lang === "ar"
-                                            ? "اكتب أي تعليمات لمسؤول المخزن كشروط أو تفاصيل إضافية..."
-                                            : "Write any remarks for the storekeeper..."
+                                        __("exit_authorizations.createedit.write_any_remarks_for_the_stor")
                                     }
                                     value={data.notes}
                                     onChange={(e) =>
@@ -1092,9 +1010,7 @@ export default function CreateEdit({
                             <div className="bg-surface border border-primary/20 p-5 shadow-sm rounded-none space-y-4">
                                 <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider flex items-center gap-1.5">
                                     <Layers className="h-4 w-4 text-primary" />
-                                    {lang === "ar"
-                                        ? "شريط حجز وإخراج البنود الفوري (POS Bar)"
-                                        : "Quick POS Item Entry Bar"}
+                                    {__("exit_authorizations.createedit.quick_pos_item_entry_bar")}
                                 </h3>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
@@ -1102,9 +1018,7 @@ export default function CreateEdit({
                                     <div className="sm:col-span-3">
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "الصنف المخزني للعقد *"
-                                                    : "Contract Item *"
+                                                __("exit_authorizations.createedit.contract_item")
                                             }
                                         />
                                         <select
@@ -1119,9 +1033,7 @@ export default function CreateEdit({
                                             disabled={!data.contract_id}
                                         >
                                             <option value="">
-                                                {lang === "ar"
-                                                    ? "-- اختر صنف --"
-                                                    : "-- Select Item --"}
+                                                {__("exit_authorizations.createedit.select_item")}
                                             </option>
                                             {availableItemsForContract.map((inv) => (
                                                 <option
@@ -1138,9 +1050,7 @@ export default function CreateEdit({
                                     <div className="sm:col-span-3">
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "الدرجة / العبوة *"
-                                                    : "Variant / Grade *"
+                                                __("exit_authorizations.createedit.variant_grade")
                                             }
                                         />
                                         <select
@@ -1153,9 +1063,7 @@ export default function CreateEdit({
                                             disabled={!posItemId}
                                         >
                                             <option value="">
-                                                {lang === "ar"
-                                                    ? "-- اختر الدرجة --"
-                                                    : "-- Select Grade --"}
+                                                {__("exit_authorizations.createedit.select_grade")}
                                             </option>
                                             {availableVariantsForPosItem.map((v) => (
                                                 <option key={v.id} value={v.id}>
@@ -1172,9 +1080,7 @@ export default function CreateEdit({
                                     <div className="sm:col-span-3">
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "الطبلية المتاحة (رصيدها) *"
-                                                    : "Available Pallet *"
+                                                __("exit_authorizations.createedit.available_pallet")
                                             }
                                         />
                                         <select
@@ -1184,9 +1090,7 @@ export default function CreateEdit({
                                             disabled={!posVariantId}
                                         >
                                             <option value="">
-                                                {lang === "ar"
-                                                    ? "-- اختر الطبلية --"
-                                                    : "-- Select Pallet --"}
+                                                {__("exit_authorizations.createedit.select_pallet")}
                                             </option>
                                             {availablePalletsForPosVariant.map((p, idx) => {
                                                 const pNum = p.pallet?.pallet_number || p.pallet?.code || p.pallet_id;
@@ -1204,9 +1108,7 @@ export default function CreateEdit({
                                         <div className="flex justify-between items-center">
                                             <InputLabel
                                                 value={
-                                                    lang === "ar"
-                                                        ? "الكمية المطلوبة *"
-                                                        : "Quantity *"
+                                                    __("exit_authorizations.createedit.quantity")
                                                 }
                                             />
                                             {selectedPalletObj && (
@@ -1238,9 +1140,7 @@ export default function CreateEdit({
                                     <div className="sm:col-span-2">
                                         <InputLabel
                                             value={
-                                                lang === "ar"
-                                                    ? "الكمية *"
-                                                    : "Quantity *"
+                                                __("exit_authorizations.createedit.quantity")
                                             }
                                         />
                                         <TextInput
@@ -1269,9 +1169,7 @@ export default function CreateEdit({
                                             onClick={handleAddPOSRow}
                                             className="w-full bg-primary hover:bg-primary/95 text-white text-xs font-bold h-[38px] flex items-center justify-center rounded-none transition-all"
                                         >
-                                            {lang === "ar"
-                                                ? "إدراج البند"
-                                                : "Insert"}
+                                            {__("exit_authorizations.createedit.insert")}
                                         </button>
                                     </div>
                                 </div>
@@ -1287,9 +1185,7 @@ export default function CreateEdit({
                             {/* Card 6: Table list of added items */}
                             <div className="bg-surface border border-border p-5 shadow-sm rounded-none space-y-4">
                                 <h3 className="font-bold text-xs text-primary border-b border-border pb-2 uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "جدول البنود والكميات المرخص بخروجها"
-                                        : "Authorized Items List"}
+                                    {__("exit_authorizations.createedit.authorized_items_list")}
                                 </h3>
 
                                 {errors.items && (
@@ -1307,29 +1203,19 @@ export default function CreateEdit({
                                                     #
                                                 </th>
                                                 <th className="px-3 py-2 text-start">
-                                                    {lang === "ar"
-                                                        ? "الصنف المخزني"
-                                                        : "Inventory Item"}
+                                                    {__("exit_authorizations.createedit.inventory_item")}
                                                 </th>
                                                 <th className="px-3 py-2 text-start">
-                                                    {lang === "ar"
-                                                        ? "العبوة"
-                                                        : "Variant"}
+                                                    {__("exit_authorizations.createedit.variant")}
                                                 </th>
                                                 <th className="px-3 py-2 text-start">
-                                                    {lang === "ar"
-                                                        ? "رقم الطبلية"
-                                                        : "Pallet Number"}
+                                                    {__("exit_authorizations.createedit.pallet_number")}
                                                 </th>
                                                 <th className="px-3 py-2 text-end text-danger">
-                                                    {lang === "ar"
-                                                        ? "الكمية المرخصة"
-                                                        : "Authorized Qty"}
+                                                    {__("exit_authorizations.createedit.authorized_qty")}
                                                 </th>
                                                 <th className="px-3 py-2 text-center w-16">
-                                                    {lang === "ar"
-                                                        ? "إجراء"
-                                                        : "Action"}
+                                                    {__("exit_authorizations.createedit.action")}
                                                 </th>
                                             </tr>
                                         </thead>
@@ -1340,9 +1226,7 @@ export default function CreateEdit({
                                                         colSpan="6"
                                                         className="px-3 py-6 text-center text-text-muted font-bold italic"
                                                     >
-                                                        {lang === "ar"
-                                                            ? "لا توجد أي بنود مدرجة بعد. استخدم الشريط السريع بالأعلى لإضافة بنود الإخراج."
-                                                            : "No exit items added yet. Use the POS bar to insert items."}
+                                                        {__("exit_authorizations.createedit.no_exit_items_added_yet_use_t")}
                                                     </td>
                                                 </tr>
                                             ) : (
@@ -1413,9 +1297,7 @@ export default function CreateEdit({
                                                         colSpan="4"
                                                         className="px-3 py-2.5 text-end text-text"
                                                     >
-                                                        {lang === "ar"
-                                                            ? "الإجمالي الكلي للكميات:"
-                                                            : "Total Quantity:"}
+                                                        {__("exit_authorizations.createedit.total_quantity")}
                                                     </td>
                                                     <td className="px-3 py-2.5 text-end text-danger font-mono font-black text-xs">
                                                         {totalQuantity.toFixed(
@@ -1440,9 +1322,7 @@ export default function CreateEdit({
                                 <div className="flex items-center gap-2">
                                     <Calculator className="h-4 w-4 text-primary" />
                                     <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                        {lang === "ar"
-                                            ? "تفاصيل إشغال العقد"
-                                            : "Contract Occupancy"}
+                                        {__("exit_authorizations.createedit.contract_occupancy")}
                                     </h3>
                                 </div>
                                 <button
@@ -1464,70 +1344,52 @@ export default function CreateEdit({
                                 <div className="space-y-3 pt-1 text-xs">
                                     {loadingStats ? (
                                         <p className="text-text-muted">
-                                            {lang === "ar"
-                                                ? "جاري تحميل الإحصائيات..."
-                                                : "Loading stats..."}
+                                            {__("exit_authorizations.createedit.loading_stats")}
                                         </p>
                                     ) : contractStats ? (
                                         <>
                                             <div className="flex justify-between border-b border-border/40 pb-1.5">
                                                 <span className="text-text-muted">
-                                                    {lang === "ar"
-                                                        ? "المحجوز من الطبالي:"
-                                                        : "Booked Pallets:"}
+                                                    {__("exit_authorizations.createedit.booked_pallets")}
                                                 </span>
                                                 <span className="font-bold font-mono text-primary">
                                                     {contractStats.booked_pallets ||
                                                         "0"}{" "}
-                                                    {lang === "ar"
-                                                        ? "طبلية"
-                                                        : "pallets"}
+                                                    {__("exit_authorizations.createedit.pallets")}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between border-b border-border/40 pb-1.5">
                                                 <span className="text-text-muted">
-                                                    {lang === "ar"
-                                                        ? "المستخدم من الطبالي:"
-                                                        : "Utilized Pallets:"}
+                                                    {__("exit_authorizations.createedit.utilized_pallets")}
                                                 </span>
                                                 <span className="font-bold font-mono text-amber-600">
                                                     {contractStats.utilized_pallets ||
                                                         "0"}{" "}
-                                                    {lang === "ar"
-                                                        ? "طبلية"
-                                                        : "pallets"}
+                                                    {__("exit_authorizations.createedit.pallets")}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between border-b border-border/40 pb-1.5">
                                                 <span className="text-text-muted">
-                                                    {lang === "ar"
-                                                        ? "المتاح للاستخدام:"
-                                                        : "Available Pallets:"}
+                                                    {__("exit_authorizations.createedit.available_pallets")}
                                                 </span>
                                                 <span
                                                     className={`font-bold font-mono ${contractStats.available_pallets > 0 ? "text-emerald-600" : "text-danger"}`}
                                                 >
                                                     {contractStats.available_pallets ||
                                                         "0"}{" "}
-                                                    {lang === "ar"
-                                                        ? "طبلية"
-                                                        : "pallets"}
+                                                    {__("exit_authorizations.createedit.pallets")}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between border-b border-border/40 pb-1.5">
                                                 <span className="text-text-muted">
-                                                    {lang === "ar"
-                                                        ? "تاريخ انتهاء العقد:"
-                                                        : "Expiry Date:"}
+                                                    {__("exit_authorizations.createedit.expiry_date")}
                                                 </span>
                                                 <span className="font-bold font-mono">
                                                     {contractStats.end_date
                                                         ? new Date(
                                                               contractStats.end_date,
                                                           ).toLocaleDateString(
-                                                              lang === "ar"
-                                                                  ? "ar-EG"
-                                                                  : "en-US",
+                                                              __("exit_authorizations.createedit.en_us"),
                                                           )
                                                         : "—"}
                                                 </span>
@@ -1535,9 +1397,7 @@ export default function CreateEdit({
                                         </>
                                     ) : (
                                         <p className="text-text-muted italic">
-                                            {lang === "ar"
-                                                ? "يرجى تحديد عقد لعرض الإشغال."
-                                                : "Please select contract to load details."}
+                                            {__("exit_authorizations.createedit.please_select_contract_to_load")}
                                         </p>
                                     )}
                                 </div>
@@ -1551,9 +1411,7 @@ export default function CreateEdit({
                                     <div className="flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-primary" />
                                         <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                            {lang === "ar"
-                                                ? "الموقف المالي للمتعاقد"
-                                                : "Financial Status"}
+                                            {__("exit_authorizations.createedit.financial_status")}
                                         </h3>
                                     </div>
                                     <button
@@ -1577,18 +1435,14 @@ export default function CreateEdit({
                                     <div className="space-y-4 pt-1 text-xs">
                                         {loadingStats ? (
                                             <p className="text-text-muted">
-                                                {lang === "ar"
-                                                    ? "جاري تحميل البيانات المالية..."
-                                                    : "Loading financials..."}
+                                                {__("exit_authorizations.createedit.loading_financials")}
                                             </p>
                                         ) : contractStats?.financial ? (
                                             <>
                                                 <div className="grid grid-cols-1 gap-2 bg-slate-50 border border-border p-3">
                                                     <div className="flex justify-between border-b border-border/40 pb-1.5">
                                                         <span className="text-text-muted font-medium">
-                                                            {lang === "ar"
-                                                                ? "إجمالي المفوتر:"
-                                                                : "Total Invoiced:"}
+                                                            {__("exit_authorizations.createedit.total_invoiced")}
                                                         </span>
                                                         <span className="font-bold font-mono text-text text-sm">
                                                             {parseFloat(
@@ -1596,16 +1450,12 @@ export default function CreateEdit({
                                                                     .financial
                                                                     .total_invoiced,
                                                             ).toLocaleString()}{" "}
-                                                            {lang === "ar"
-                                                                ? "ريال"
-                                                                : "SAR"}
+                                                            {__("exit_authorizations.createedit.sar")}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between border-b border-border/40 pb-1.5">
                                                         <span className="text-text-muted font-medium">
-                                                            {lang === "ar"
-                                                                ? "إجمالي المدفوع:"
-                                                                : "Total Paid:"}
+                                                            {__("exit_authorizations.createedit.total_paid")}
                                                         </span>
                                                         <span className="font-bold font-mono text-emerald-600 text-sm">
                                                             {parseFloat(
@@ -1613,16 +1463,12 @@ export default function CreateEdit({
                                                                     .financial
                                                                     .total_paid,
                                                             ).toLocaleString()}{" "}
-                                                            {lang === "ar"
-                                                                ? "ريال"
-                                                                : "SAR"}
+                                                            {__("exit_authorizations.createedit.sar")}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center pt-0.5">
                                                         <span className="text-text-muted font-bold">
-                                                            {lang === "ar"
-                                                                ? "المستحقات المتبقية:"
-                                                                : "Remaining Dues:"}
+                                                            {__("exit_authorizations.createedit.remaining_dues")}
                                                         </span>
                                                         <span
                                                             className={`font-black font-mono text-sm ${contractStats.financial.total_dues > 0 ? "text-danger" : "text-emerald-600"}`}
@@ -1632,9 +1478,7 @@ export default function CreateEdit({
                                                                     .financial
                                                                     .total_dues,
                                                             ).toLocaleString()}{" "}
-                                                            {lang === "ar"
-                                                                ? "ريال"
-                                                                : "SAR"}
+                                                            {__("exit_authorizations.createedit.sar")}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1642,16 +1486,12 @@ export default function CreateEdit({
                                                 {/* Invoices List */}
                                                 <div className="space-y-2">
                                                     <h4 className="font-bold text-text-muted border-b border-border pb-1">
-                                                        {lang === "ar"
-                                                            ? "فواتير العقد المستحقة:"
-                                                            : "Contract Invoices:"}
+                                                        {__("exit_authorizations.createedit.contract_invoices")}
                                                     </h4>
                                                     {contractStats.financial
                                                         .invoices?.length === 0 ? (
                                                         <p className="text-text-muted italic">
-                                                            {lang === "ar"
-                                                                ? "لا توجد فواتير مسجلة."
-                                                                : "No invoices recorded."}
+                                                            {__("exit_authorizations.createedit.no_invoices_recorded")}
                                                         </p>
                                                     ) : (
                                                         <div className="max-h-[220px] overflow-y-auto space-y-2">
@@ -1680,53 +1520,32 @@ export default function CreateEdit({
                                                                             >
                                                                                 {inv.status ===
                                                                                 "paid"
-                                                                                    ? lang ===
-                                                                                      "ar"
-                                                                                        ? "مدفوعة"
-                                                                                        : "Paid"
+                                                                                    ? __("exit_authorizations.createedit.paid")
                                                                                     : inv.status ===
                                                                                         "partial"
-                                                                                      ? lang ===
-                                                                                        "ar"
-                                                                                          ? "جزئية"
-                                                                                          : "Partial"
-                                                                                      : lang ===
-                                                                                          "ar"
-                                                                                        ? "غير مدفوعة"
-                                                                                        : "Unpaid"}
+                                                                                      ? __("exit_authorizations.createedit.partial")
+                                                                                      : __("exit_authorizations.createedit.unpaid")}
                                                                             </span>
                                                                         </div>
                                                                         <div className="flex justify-between text-text-muted">
                                                                             <span>
-                                                                                {lang ===
-                                                                                "ar"
-                                                                                    ? "المبلغ:"
-                                                                                    : "Amount:"}
+                                                                                {__("exit_authorizations.createedit.amount")}
                                                                             </span>
                                                                             <span className="font-bold font-mono">
                                                                                 {inv.amount.toLocaleString()}{" "}
-                                                                                {lang ===
-                                                                                "ar"
-                                                                                    ? "ريال"
-                                                                                    : "SAR"}
+                                                                                {__("exit_authorizations.createedit.sar")}
                                                                             </span>
                                                                         </div>
                                                                         {inv.due_date && (
                                                                             <div className="flex justify-between text-[9px] text-text-muted">
                                                                                 <span>
-                                                                                    {lang ===
-                                                                                    "ar"
-                                                                                        ? "الاستحقاق:"
-                                                                                        : "Due date:"}
+                                                                                    {__("exit_authorizations.createedit.due_date")}
                                                                                 </span>
                                                                                 <span className="font-mono">
                                                                                     {new Date(
                                                                                         inv.due_date,
                                                                                     ).toLocaleDateString(
-                                                                                        lang ===
-                                                                                            "ar"
-                                                                                            ? "ar-EG"
-                                                                                            : "en-US",
+                                                                                        __("exit_authorizations.createedit.en_us"),
                                                                                     )}
                                                                                 </span>
                                                                             </div>
@@ -1740,9 +1559,7 @@ export default function CreateEdit({
                                             </>
                                         ) : (
                                             <p className="text-text-muted italic">
-                                                {lang === "ar"
-                                                    ? "يرجى تحديد عقد لعرض البيانات المالية."
-                                                    : "Please select contract to load details."}
+                                                {__("exit_authorizations.createedit.please_select_contract_to_load")}
                                             </p>
                                         )}
                                     </div>
@@ -1760,12 +1577,10 @@ export default function CreateEdit({
             >
                 <div
                     className="p-6 font-main"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("exit_authorizations.createedit.ltr")}
                 >
                     <h3 className="text-sm font-bold text-primary mb-4">
-                        {lang === "ar"
-                            ? "إضافة سائق ناقل جديد سريع"
-                            : "Add Quick Carrier Driver"}
+                        {__("exit_authorizations.createedit.add_quick_carrier_driver")}
                     </h3>
 
                     {driverError && (
@@ -1783,18 +1598,14 @@ export default function CreateEdit({
                             <div>
                                 <InputLabel
                                     value={
-                                        lang === "ar"
-                                            ? "اسم السائق كامل *"
-                                            : "Driver Name *"
+                                        __("exit_authorizations.createedit.driver_name")
                                     }
                                 />
                                 <TextInput
                                     type="text"
                                     className="w-full text-xs mt-1"
                                     placeholder={
-                                        lang === "ar"
-                                            ? "أحمد محمد..."
-                                            : "Driver full name..."
+                                        __("exit_authorizations.createedit.driver_full_name")
                                     }
                                     value={newDriverData.name}
                                     onChange={(e) =>
@@ -1809,9 +1620,7 @@ export default function CreateEdit({
                             <div>
                                 <InputLabel
                                     value={
-                                        lang === "ar"
-                                            ? "رقم الهاتف *"
-                                            : "Phone Number *"
+                                        __("exit_authorizations.createedit.phone_number")
                                     }
                                 />
                                 <TextInput
@@ -1834,9 +1643,7 @@ export default function CreateEdit({
                             <div>
                                 <InputLabel
                                     value={
-                                        lang === "ar"
-                                            ? "لوحة السيارة *"
-                                            : "Vehicle Plate *"
+                                        __("exit_authorizations.createedit.vehicle_plate")
                                     }
                                 />
                                 <TextInput
@@ -1856,9 +1663,7 @@ export default function CreateEdit({
                             <div>
                                 <InputLabel
                                     value={
-                                        lang === "ar"
-                                            ? "نوع السيارة"
-                                            : "Vehicle Type"
+                                        __("exit_authorizations.createedit.vehicle_type")
                                     }
                                 />
                                 <TextInput
@@ -1880,19 +1685,15 @@ export default function CreateEdit({
                             <SecondaryButton
                                 onClick={() => setDriverModalOpen(false)}
                             >
-                                {lang === "ar" ? "إلغاء" : "Cancel"}
+                                {__("exit_authorizations.createedit.cancel")}
                             </SecondaryButton>
                             <PrimaryButton
                                 type="submit"
                                 disabled={addingDriver}
                             >
                                 {addingDriver
-                                    ? lang === "ar"
-                                        ? "جاري الإضافة..."
-                                        : "Adding..."
-                                    : lang === "ar"
-                                      ? "إدراج السائق"
-                                      : "Save Driver"}
+                                    ? __("exit_authorizations.createedit.adding")
+                                    : __("exit_authorizations.createedit.save_driver")}
                             </PrimaryButton>
                         </div>
                     </form>

@@ -46,11 +46,11 @@ export default function Show({ delivery }) {
     const getPalletSizeDisplay = (pallet) => {
         if (!pallet || !pallet.size) return "";
         const sizeMap = {
-            كبيرة: lang === "ar" ? "كبيرة" : "Large",
-            وسط: lang === "ar" ? "وسط" : "Medium",
-            صغيرة: lang === "ar" ? "صغيرة" : "Small",
-            خشب: lang === "ar" ? "خشب" : "Wood",
-            بلاستيك: lang === "ar" ? "بلاستيك" : "Plastic",
+            كبيرة: __("deliveries.show.large"),
+            وسط: __("deliveries.show.medium"),
+            صغيرة: __("deliveries.show.small"),
+            خشب: __("deliveries.show.wood"),
+            بلاستيك: __("deliveries.show.plastic"),
         };
         return sizeMap[pallet.size] || pallet.size;
     };
@@ -85,9 +85,7 @@ export default function Show({ delivery }) {
                     setProcessingAction(false);
                     setErrorMsg(
                         errs.error ||
-                            (lang === "ar"
-                                ? "تعذر اعتماد السند."
-                                : "Failed to approve."),
+                            (__("deliveries.show.failed_to_approve")),
                     );
                 },
             },
@@ -133,9 +131,7 @@ export default function Show({ delivery }) {
                         setErrorMsg(errs.reason);
                     } else {
                         setErrorMsg(
-                            lang === "ar"
-                                ? "تعذر إلغاء الاعتماد."
-                                : "Failed to reopen.",
+                            __("deliveries.show.failed_to_reopen"),
                         );
                     }
                 },
@@ -168,9 +164,7 @@ export default function Show({ delivery }) {
                         setErrorMsg(errs.password);
                     } else {
                         setErrorMsg(
-                            lang === "ar"
-                                ? "تعذر حذف السند."
-                                : "Failed to delete.",
+                            __("deliveries.show.failed_to_delete"),
                         );
                     }
                 },
@@ -188,7 +182,7 @@ export default function Show({ delivery }) {
                 href={route("deliveries.index")}
                 className="hover:text-primary transition-colors"
             >
-                {lang === "ar" ? "سندات التسليم" : "Goods Delivery Notes"}
+                {__("deliveries.show.goods_delivery_notes")}
             </Link>
             <ChevronRight
                 className={`h-3.5 w-3.5 ${lang === "ar" ? "rotate-180" : ""}`}
@@ -211,7 +205,7 @@ export default function Show({ delivery }) {
 
             <div
                 className="max-w-6xl mx-auto pb-12 main-stack-y"
-                dir={lang === "ar" ? "rtl" : "ltr"}
+                dir={__("deliveries.show.ltr")}
             >
                 {/* Session Alerts */}
                 {flash?.success && (
@@ -247,14 +241,12 @@ export default function Show({ delivery }) {
                                 {delivery.status === "approved" ? (
                                     <span className="flex items-center gap-0.5">
                                         <Lock className="h-2.5 w-2.5" />
-                                        {lang === "ar"
-                                            ? "معتمد ومغلق"
-                                            : "Approved & Locked"}
+                                        {__("deliveries.show.approved_locked")}
                                     </span>
                                 ) : (
                                     <span className="flex items-center gap-0.5">
                                         <Unlock className="h-2.5 w-2.5" />
-                                        {lang === "ar" ? "مسودة" : "Draft"}
+                                        {__("deliveries.show.draft")}
                                     </span>
                                 )}
                             </span>
@@ -273,9 +265,7 @@ export default function Show({ delivery }) {
                                 <>
                                     <Tooltip
                                         text={
-                                            lang === "ar"
-                                                ? "تعديل السند"
-                                                : "Edit Note"
+                                            __("deliveries.show.edit_note")
                                         }
                                     >
                                         <Link
@@ -288,18 +278,14 @@ export default function Show({ delivery }) {
                                             <Edit className="h-4 w-4" />
                                             {showButtonText && (
                                                 <span>
-                                                    {lang === "ar"
-                                                        ? "تعديل"
-                                                        : "Edit"}
+                                                    {__("deliveries.show.edit")}
                                                 </span>
                                             )}
                                         </Link>
                                     </Tooltip>
                                     <Tooltip
                                         text={
-                                            lang === "ar"
-                                                ? "اعتماد السند"
-                                                : "Approve Note"
+                                            __("deliveries.show.approve_note")
                                         }
                                     >
                                         <button
@@ -313,9 +299,7 @@ export default function Show({ delivery }) {
                                             <CheckCircle2 className="h-4 w-4" />
                                             {showButtonText && (
                                                 <span>
-                                                    {lang === "ar"
-                                                        ? "اعتماد"
-                                                        : "Approve"}
+                                                    {__("deliveries.show.approve")}
                                                 </span>
                                             )}
                                         </button>
@@ -326,9 +310,7 @@ export default function Show({ delivery }) {
                             {delivery.status === "approved" && (
                                 <Tooltip
                                     text={
-                                        lang === "ar"
-                                            ? "إعادة فتح السند"
-                                            : "Reopen Note"
+                                        __("deliveries.show.reopen_note")
                                     }
                                 >
                                     <button
@@ -343,16 +325,14 @@ export default function Show({ delivery }) {
                                         <Unlock className="h-4 w-4" />
                                         {showButtonText && (
                                             <span>
-                                                {lang === "ar"
-                                                    ? "إعادة فتح"
-                                                    : "Reopen"}
+                                                {__("deliveries.show.reopen")}
                                             </span>
                                         )}
                                     </button>
                                 </Tooltip>
                             )}
 
-                            <Tooltip text={lang === "ar" ? "طباعة" : "Print"}>
+                            <Tooltip text={__("deliveries.show.print")}>
                                 <a
                                     href={route(
                                         "deliveries.print",
@@ -365,7 +345,7 @@ export default function Show({ delivery }) {
                                     <Printer className="h-4 w-4" />
                                     {showButtonText && (
                                         <span>
-                                            {lang === "ar" ? "طباعة" : "Print"}
+                                            {__("deliveries.show.print")}
                                         </span>
                                     )}
                                 </a>
@@ -374,18 +354,18 @@ export default function Show({ delivery }) {
                             <Tooltip 
                                 text={
                                     delivery.status === "approved" || (delivery.inventory_entries?.length || 0) > 0
-                                        ? (lang === "ar" ? "محظور أمنياً: لا يمكن حذف سند معتمد أو يحتوي على مدخلات مخزنية" : "Blocked: Cannot delete approved voucher or voucher with items")
-                                        : (lang === "ar" ? "حذف السند" : "Delete Voucher")
+                                        ? (__("deliveries.show.blocked_cannot_delete_approve"))
+                                        : (__("deliveries.show.delete_voucher"))
                                 }
                             >
                                 <button
                                     onClick={() => {
                                         if (delivery.status === "approved") {
-                                            setErrorMsg(lang === "ar" ? "إجراء محظور أمنياً: لا يمكن حذف سند معتمد نهائياً! يجب إلغاء اعتماده أولاً." : "Security Error: Cannot delete an approved voucher.");
+                                            setErrorMsg(__("deliveries.show.security_error_cannot_delete"));
                                             return;
                                         }
                                         if ((delivery.inventory_entries?.length || 0) > 0) {
-                                            setErrorMsg(lang === "ar" ? "إجراء محظور أمنياً: لا يمكن حذف سند يحتوي على مدخلات أو أصناف مخزنية! يجب تفريغ الأصناف أولاً." : "Security Error: Cannot delete a voucher containing inventory items.");
+                                            setErrorMsg(__("deliveries.show.security_error_cannot_delete"));
                                             return;
                                         }
                                         setErrorMsg("");
@@ -402,7 +382,7 @@ export default function Show({ delivery }) {
                                     <Trash2 className="h-4 w-4" />
                                     {showButtonText && (
                                         <span>
-                                            {lang === "ar" ? "حذف" : "Delete"}
+                                            {__("deliveries.show.delete")}
                                         </span>
                                     )}
                                 </button>
@@ -412,9 +392,7 @@ export default function Show({ delivery }) {
 
                             <Tooltip
                                 text={
-                                    lang === "ar"
-                                        ? "رجوع للقائمة"
-                                        : "Back to List"
+                                    __("deliveries.show.back_to_list")
                                 }
                             >
                                 <Link
@@ -426,7 +404,7 @@ export default function Show({ delivery }) {
                                     />
                                     {showButtonText && (
                                         <span>
-                                            {lang === "ar" ? "العودة" : "Back"}
+                                            {__("deliveries.show.back")}
                                         </span>
                                     )}
                                 </Link>
@@ -443,18 +421,14 @@ export default function Show({ delivery }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Briefcase className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "بيانات السند والعميل"
-                                        : "Voucher & Customer Information"}
+                                    {__("deliveries.show.voucher_customer_information")}
                                 </h3>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs">
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "العميل المستلم:"
-                                            : "Customer:"}
+                                        {__("deliveries.show.customer")}
                                     </span>
                                     <span className="text-text font-bold text-sm">
                                         {delivery.customer?.name}
@@ -463,9 +437,7 @@ export default function Show({ delivery }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "العقد المرتبط:"
-                                            : "Linked Contract:"}
+                                        {__("deliveries.show.linked_contract")}
                                     </span>
                                     {delivery.contract ? (
                                         <Link
@@ -486,16 +458,14 @@ export default function Show({ delivery }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "فترة الفوترة النشطة:"
-                                            : "Billing Period:"}
+                                        {__("deliveries.show.billing_period")}
                                     </span>
                                     <span className="text-text font-semibold">
-                                        {lang === "ar" ? "الفترة" : "Period"}{" "}
+                                        {__("deliveries.show.period")}{" "}
                                         {delivery.period?.period_number}{" "}
                                         <span className="text-text-muted font-mono font-normal">
                                             ({delivery.period?.start_date}{" "}
-                                            {lang === "ar" ? "إلى" : "to"}{" "}
+                                            {__("deliveries.show.to")}{" "}
                                             {delivery.period?.end_date})
                                         </span>
                                     </span>
@@ -503,18 +473,14 @@ export default function Show({ delivery }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "تاريخ التسليم الفعلي:"
-                                            : "Delivery Date:"}
+                                        {__("deliveries.show.delivery_date")}
                                     </span>
                                     <span className="text-text font-bold font-mono text-sm">
                                         {delivery.delivery_date
                                             ? new Date(
                                                   delivery.delivery_date,
                                               ).toLocaleDateString(
-                                                  lang === "ar"
-                                                      ? "ar-EG"
-                                                      : "en-US",
+                                                  __("deliveries.show.en_us"),
                                               )
                                             : "—"}
                                     </span>
@@ -522,9 +488,7 @@ export default function Show({ delivery }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "المرجع / إذن الخروج:"
-                                            : "Exit Permit / Reference:"}
+                                        {__("deliveries.show.exit_permit_reference")}
                                     </span>
                                     {delivery.exit_authorization ? (
                                         <span className="text-text font-bold text-primary flex items-center gap-1">
@@ -543,9 +507,7 @@ export default function Show({ delivery }) {
 
                                 <div>
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "مندوب الاستلام:"
-                                            : "Representative:"}
+                                        {__("deliveries.show.representative")}
                                     </span>
                                     {delivery.representative ? (
                                         <span className="text-text font-semibold">
@@ -561,24 +523,18 @@ export default function Show({ delivery }) {
                                         </span>
                                     ) : (
                                         <span className="text-text-muted font-semibold">
-                                            {lang === "ar"
-                                                ? "لا يوجد مندوب مسجل"
-                                                : "None"}
+                                            {__("deliveries.show.none")}
                                         </span>
                                     )}
                                 </div>
 
                                 <div className="md:col-span-2">
                                     <span className="text-text-muted block font-medium mb-0.5">
-                                        {lang === "ar"
-                                            ? "ملاحظات إضافية:"
-                                            : "Notes / Remarks:"}
+                                        {__("deliveries.show.notes_remarks")}
                                     </span>
                                     <p className="text-text bg-background border border-border p-3 font-semibold text-xs leading-relaxed min-h-[45px]">
                                         {delivery.notes ||
-                                            (lang === "ar"
-                                                ? "لا توجد ملاحظات."
-                                                : "No notes recorded.")}
+                                            (__("deliveries.show.no_notes_recorded"))}
                                     </p>
                                 </div>
                             </div>
@@ -589,9 +545,7 @@ export default function Show({ delivery }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Activity className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "البضائع والكميات المنصرفة"
-                                        : "Delivered Items & Pallets List"}
+                                    {__("deliveries.show.delivered_items_pallets_list")}
                                 </h3>
                             </div>
 
@@ -600,29 +554,19 @@ export default function Show({ delivery }) {
                                     <thead className="bg-surface-muted/50 text-text-muted font-bold border-b border-border">
                                         <tr>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "رقم البند"
-                                                    : "Row #"}
+                                                {__("deliveries.show.row")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "الصنف المخزني"
-                                                    : "Inventory Item"}
+                                                {__("deliveries.show.inventory_item")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "الشكل/البديل"
-                                                    : "Variant"}
+                                                {__("deliveries.show.variant")}
                                             </th>
                                             <th className="px-3 py-2 text-start">
-                                                {lang === "ar"
-                                                    ? "رقم الطبلية"
-                                                    : "Pallet Number"}
+                                                {__("deliveries.show.pallet_number")}
                                             </th>
                                             <th className="px-3 py-2 text-end text-danger">
-                                                {lang === "ar"
-                                                    ? "الكمية المنصرفة"
-                                                    : "Qty Delivered"}
+                                                {__("deliveries.show.qty_delivered")}
                                             </th>
                                         </tr>
                                     </thead>
@@ -671,18 +615,14 @@ export default function Show({ delivery }) {
                             </div>
                             <div className="mt-4 flex flex-col items-end gap-2 text-xs text-text-muted">
                                 <div className="font-semibold text-sm text-text">
-                                    {lang === "ar"
-                                        ? "إجمالي الوارد:"
-                                        : "Total In:"}{" "}
+                                    {__("deliveries.show.total_in")}{" "}
                                     {Math.round(
                                         totalReception,
                                     ).toLocaleString()}
                                 </div>
                                 {totalDispatch > 0 && (
                                     <div className="font-semibold text-sm text-text">
-                                        {lang === "ar"
-                                            ? "إجمالي الصادر:"
-                                            : "Total Out:"}{" "}
+                                        {__("deliveries.show.total_out")}{" "}
                                         {Math.round(
                                             totalDispatch,
                                         ).toLocaleString()}
@@ -699,9 +639,7 @@ export default function Show({ delivery }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Truck className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "بيانات السائق الناقل"
-                                        : "Carrier Driver Info"}
+                                    {__("deliveries.show.carrier_driver_info")}
                                 </h3>
                             </div>
 
@@ -709,9 +647,7 @@ export default function Show({ delivery }) {
                                 <div className="space-y-3 text-xs">
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "اسم السائق:"
-                                                : "Driver Name:"}
+                                            {__("deliveries.show.driver_name")}
                                         </span>
                                         <span className="text-text font-bold">
                                             {delivery.driver.name}
@@ -719,9 +655,7 @@ export default function Show({ delivery }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "رقم الجوال:"
-                                                : "Phone Number:"}
+                                            {__("deliveries.show.phone_number")}
                                         </span>
                                         <span className="text-text font-mono font-bold">
                                             {delivery.driver.phone_number ||
@@ -730,9 +664,7 @@ export default function Show({ delivery }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "رقم الهوية / الإقامة:"
-                                                : "ID / Iqama No.:"}
+                                            {__("deliveries.show.id_iqama_no")}
                                         </span>
                                         <span className="text-text font-mono font-bold">
                                             {delivery.driver.id_number || "—"}
@@ -740,9 +672,7 @@ export default function Show({ delivery }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "رقم اللوحة:"
-                                                : "Plate Number:"}
+                                            {__("deliveries.show.plate_number")}
                                         </span>
                                         <span className="text-text font-bold font-mono">
                                             {delivery.driver.vehicle_plate ||
@@ -751,9 +681,7 @@ export default function Show({ delivery }) {
                                     </div>
                                     <div>
                                         <span className="text-text-muted block font-medium">
-                                            {lang === "ar"
-                                                ? "نوع السيارة:"
-                                                : "Vehicle Type:"}
+                                            {__("deliveries.show.vehicle_type")}
                                         </span>
                                         <span className="text-text font-semibold">
                                             {delivery.driver.vehicle_type ||
@@ -763,9 +691,7 @@ export default function Show({ delivery }) {
                                 </div>
                             ) : (
                                 <div className="py-4 text-center text-xs text-text-muted">
-                                    {lang === "ar"
-                                        ? "لم يتم تحديد بيانات سائق."
-                                        : "No carrier driver assigned."}
+                                    {__("deliveries.show.no_carrier_driver_assigned")}
                                 </div>
                             )}
                         </div>
@@ -775,9 +701,7 @@ export default function Show({ delivery }) {
                             <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
                                 <Clock className="h-4 w-4 text-primary" />
                                 <h3 className="font-bold text-xs text-primary uppercase tracking-wider">
-                                    {lang === "ar"
-                                        ? "سجل التعديلات والعمليات"
-                                        : "Modification Log"}
+                                    {__("deliveries.show.modification_log")}
                                 </h3>
                             </div>
 
@@ -790,9 +714,7 @@ export default function Show({ delivery }) {
                                                 {new Date(
                                                     log.date,
                                                 ).toLocaleString(
-                                                    lang === "ar"
-                                                        ? "ar-EG"
-                                                        : "en-US",
+                                                    __("deliveries.show.en_us"),
                                                 )}
                                             </div>
                                             <div className="font-bold text-text mt-0.5">
@@ -806,9 +728,7 @@ export default function Show({ delivery }) {
                                 </div>
                             ) : (
                                 <div className="py-4 text-center text-xs text-text-muted">
-                                    {lang === "ar"
-                                        ? "لا توجد تعديلات سابقة مسجلة."
-                                        : "No previous adjustments recorded."}
+                                    {__("deliveries.show.no_previous_adjustments_record")}
                                 </div>
                             )}
                         </div>
@@ -825,29 +745,23 @@ export default function Show({ delivery }) {
                 <form
                     onSubmit={handleDelete}
                     className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("deliveries.show.ltr")}
                 >
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <ShieldAlert className="h-6 w-6 text-danger animate-bounce" />
                         <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "تأكيد حذف سند التسليم"
-                                : "Confirm Voucher Deletion"}
+                            {__("deliveries.show.confirm_voucher_deletion")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {lang === "ar"
-                            ? "أنت على وشك حذف هذا السند وحركات المخزن التابعة له بشكل نهائي. هذا الإجراء غير قابل للتراجع."
-                            : "You are about to permanently delete this delivery voucher and all associated inventory entries. This action cannot be undone."}
+                        {__("deliveries.show.you_are_about_to_permanently_d")}
                     </p>
 
                     <div className="bg-surface-muted/50 p-3 border border-border text-xs font-mono rounded-none">
                         <div>
                             <span className="font-bold text-text-muted">
-                                {lang === "ar"
-                                    ? "رقم السند: "
-                                    : "Voucher Serial: "}
+                                {__("deliveries.show.voucher_serial")}
                             </span>
                             <span className="text-text font-bold">
                                 {delivery.serial_number}
@@ -855,7 +769,7 @@ export default function Show({ delivery }) {
                         </div>
                         <div className="mt-1">
                             <span className="font-bold text-text-muted">
-                                {lang === "ar" ? "العميل: " : "Customer: "}
+                                {__("deliveries.show.customer")}
                             </span>
                             <span className="text-text font-bold">
                                 {delivery.customer?.name}
@@ -867,9 +781,7 @@ export default function Show({ delivery }) {
                         <InputLabel
                             htmlFor="delete_password"
                             value={
-                                lang === "ar"
-                                    ? "كلمة مرور العمليات الآمنة *"
-                                    : "Secure Operations Password *"
+                                __("deliveries.show.secure_operations_password")
                             }
                         />
                         <TextInput
@@ -889,7 +801,7 @@ export default function Show({ delivery }) {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
+                        <Tooltip text={__("deliveries.show.cancel")}>
                             <button
                                 type="button"
                                 onClick={() => setDeleteModalOpen(false)}
@@ -898,14 +810,14 @@ export default function Show({ delivery }) {
                                 <X className="h-4 w-4" />
                                 {showButtonText && (
                                     <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                                        {__("deliveries.show.cancel")}
                                     </span>
                                 )}
                             </button>
                         </Tooltip>
                         <Tooltip
                             text={
-                                lang === "ar" ? "تأكيد الحذف" : "Confirm Delete"
+                                __("deliveries.show.confirm_delete")
                             }
                         >
                             <button
@@ -917,12 +829,8 @@ export default function Show({ delivery }) {
                                 {showButtonText && (
                                     <span>
                                         {processingAction
-                                            ? lang === "ar"
-                                                ? "جاري الحذف..."
-                                                : "Deleting..."
-                                            : lang === "ar"
-                                              ? "تأكيد الحذف"
-                                              : "Confirm Delete"}
+                                            ? __("deliveries.show.deleting")
+                                            : __("deliveries.show.confirm_delete")}
                                     </span>
                                 )}
                             </button>
@@ -940,30 +848,24 @@ export default function Show({ delivery }) {
                 <form
                     onSubmit={handleReopen}
                     className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("deliveries.show.ltr")}
                 >
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <Unlock className="h-6 w-6 text-amber-500 animate-pulse" />
                         <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "إعادة فتح السند (إلغاء الاعتماد)"
-                                : "Reopen Approved Voucher"}
+                            {__("deliveries.show.reopen_approved_voucher")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {lang === "ar"
-                            ? "بإعادة فتح السند، سيعود لحالة المسودة (Draft) لتتمكن من تعديله. يتطلب هذا الإجراء كلمة مرور العمليات وتوثيق السبب."
-                            : "Reopening will return the voucher to Draft status, allowing modifications. This requires the secure password and a documented reason."}
+                        {__("deliveries.show.reopening_will_return_the_vouc")}
                     </p>
 
                     <div>
                         <InputLabel
                             htmlFor="reopen_reason"
                             value={
-                                lang === "ar"
-                                    ? "سبب إلغاء الاعتماد وإعادة الفتح *"
-                                    : "Reason for Reopening *"
+                                __("deliveries.show.reason_for_reopening")
                             }
                         />
                         <TextInput
@@ -973,9 +875,7 @@ export default function Show({ delivery }) {
                             value={reopenReason}
                             onChange={(e) => setReopenReason(e.target.value)}
                             placeholder={
-                                lang === "ar"
-                                    ? "مثال: تعديل خطأ في كمية الصرف..."
-                                    : "e.g., correcting delivery quantity..."
+                                __("deliveries.show.e_g_correcting_delivery_quan")
                             }
                             required
                         />
@@ -985,9 +885,7 @@ export default function Show({ delivery }) {
                         <InputLabel
                             htmlFor="reopen_password"
                             value={
-                                lang === "ar"
-                                    ? "كلمة مرور العمليات الآمنة *"
-                                    : "Secure Operations Password *"
+                                __("deliveries.show.secure_operations_password")
                             }
                         />
                         <TextInput
@@ -1007,7 +905,7 @@ export default function Show({ delivery }) {
                     </div>
 
                     <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
+                        <Tooltip text={__("deliveries.show.cancel")}>
                             <button
                                 type="button"
                                 onClick={() => setReopenModalOpen(false)}
@@ -1016,16 +914,14 @@ export default function Show({ delivery }) {
                                 <X className="h-4 w-4" />
                                 {showButtonText && (
                                     <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                                        {__("deliveries.show.cancel")}
                                     </span>
                                 )}
                             </button>
                         </Tooltip>
                         <Tooltip
                             text={
-                                lang === "ar"
-                                    ? "تأكيد إعادة الفتح"
-                                    : "Confirm Reopen"
+                                __("deliveries.show.confirm_reopen")
                             }
                         >
                             <button
@@ -1037,12 +933,8 @@ export default function Show({ delivery }) {
                                 {showButtonText && (
                                     <span>
                                         {processingAction
-                                            ? lang === "ar"
-                                                ? "جاري المعالجة..."
-                                                : "Processing..."
-                                            : lang === "ar"
-                                              ? "تأكيد إعادة الفتح"
-                                              : "Confirm Reopen"}
+                                            ? __("deliveries.show.processing")
+                                            : __("deliveries.show.confirm_reopen")}
                                     </span>
                                 )}
                             </button>
@@ -1058,21 +950,17 @@ export default function Show({ delivery }) {
             >
                 <div
                     className="p-6 space-y-4 text-start"
-                    dir={lang === "ar" ? "rtl" : "ltr"}
+                    dir={__("deliveries.show.ltr")}
                 >
                     <div className="flex items-center gap-2 border-b border-border pb-3">
                         <Lock className="h-6 w-6 text-emerald-500" />
                         <h3 className="font-bold text-lg text-text">
-                            {lang === "ar"
-                                ? "اعتماد وإغلاق سند التسليم"
-                                : "Approve & Lock Voucher"}
+                            {__("deliveries.show.approve_lock_voucher")}
                         </h3>
                     </div>
 
                     <p className="text-xs text-text-muted">
-                        {lang === "ar"
-                            ? "أنت على وشك اعتماد سند تسليم البضاعة هذا. سيتم خصم الكميات المنصرفة من الطبالي بشكل رسمي، ولا يمكن تعديل السند لاحقاً إلا بكلمة مرور العمليات الآمنة."
-                            : "You are about to approve this delivery voucher. Items will be officially deducted from pallet stock and the voucher will be locked."}
+                        {__("deliveries.show.you_are_about_to_approve_this")}
                     </p>
 
                     {errorMsg && (
@@ -1082,7 +970,7 @@ export default function Show({ delivery }) {
                     )}
 
                     <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                        <Tooltip text={lang === "ar" ? "إلغاء" : "Cancel"}>
+                        <Tooltip text={__("deliveries.show.cancel")}>
                             <button
                                 type="button"
                                 disabled={processingAction}
@@ -1092,7 +980,7 @@ export default function Show({ delivery }) {
                                 <X className="h-4 w-4" />
                                 {showButtonText && (
                                     <span>
-                                        {lang === "ar" ? "إلغاء" : "Cancel"}
+                                        {__("deliveries.show.cancel")}
                                     </span>
                                 )}
                             </button>
@@ -1101,9 +989,7 @@ export default function Show({ delivery }) {
                         {/* Approve → Print */}
                         <Tooltip
                             text={
-                                lang === "ar"
-                                    ? "اعتماد وطباعة"
-                                    : "Approve & Print"
+                                __("deliveries.show.approve_print")
                             }
                         >
                             <button
@@ -1117,9 +1003,7 @@ export default function Show({ delivery }) {
                                     <span>
                                         {processingAction
                                             ? "..."
-                                            : lang === "ar"
-                                              ? "اعتماد وطباعة"
-                                              : "Approve & Print"}
+                                            : __("deliveries.show.approve_print")}
                                     </span>
                                 )}
                             </button>
@@ -1128,9 +1012,7 @@ export default function Show({ delivery }) {
                         {/* Approve → Index */}
                         <Tooltip
                             text={
-                                lang === "ar"
-                                    ? "تأكيد الاعتماد"
-                                    : "Confirm Approve"
+                                __("deliveries.show.confirm_approve")
                             }
                         >
                             <button
@@ -1143,12 +1025,8 @@ export default function Show({ delivery }) {
                                 {showButtonText && (
                                     <span>
                                         {processingAction
-                                            ? lang === "ar"
-                                                ? "جاري الاعتماد..."
-                                                : "Approving..."
-                                            : lang === "ar"
-                                              ? "تأكيد الاعتماد"
-                                              : "Confirm Approve"}
+                                            ? __("deliveries.show.approving")
+                                            : __("deliveries.show.confirm_approve")}
                                     </span>
                                 )}
                             </button>

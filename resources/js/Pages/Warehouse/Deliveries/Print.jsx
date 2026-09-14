@@ -133,7 +133,7 @@ export default function Print({ delivery, companySettings = {} }) {
     return (
         <div
             className="min-h-screen bg-white text-black p-4 sm:p-6 font-sans text-xs print:p-0 print:m-0"
-            dir={lang === "ar" ? "rtl" : "ltr"}
+            dir={__("deliveries.print.ltr")}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
             <Head title={lang === "ar" ? `طباعة سند تسليم وخروج: ${delivery.serial_number}` : `Print Delivery: ${delivery.serial_number}`} />
@@ -143,7 +143,7 @@ export default function Print({ delivery, companySettings = {} }) {
                 <div className="flex items-center gap-3">
                     <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                         <FileText className="h-4 w-4 text-primary" />
-                        {lang === "ar" ? "معاينة طباعة سند تسليم وخروج البضائع" : "Goods Delivery Voucher Print Preview"}
+                        {__("deliveries.print.goods_delivery_voucher_print_p")}
                     </span>
 
                     <div className="flex items-center gap-2 border-s border-gray-300 ps-3 ms-1">
@@ -152,7 +152,7 @@ export default function Print({ delivery, companySettings = {} }) {
                             className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-all"
                         >
                             <List className="h-3.5 w-3.5" />
-                            <span>{lang === "ar" ? "العودة إلى السندات" : "Back to Deliveries"}</span>
+                            <span>{__("deliveries.print.back_to_deliveries")}</span>
                         </Link>
 
                         {delivery.contract_id && (
@@ -161,7 +161,7 @@ export default function Print({ delivery, companySettings = {} }) {
                                 className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-all"
                             >
                                 <FileCheck className="h-3.5 w-3.5 text-blue-600" />
-                                <span>{lang === "ar" ? "عرض العقد" : "View Contract"}</span>
+                                <span>{__("deliveries.print.view_contract")}</span>
                             </Link>
                         )}
                     </div>
@@ -173,14 +173,14 @@ export default function Print({ delivery, companySettings = {} }) {
                         className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
                     >
                         <Plus className="h-4 w-4" />
-                        <span>{lang === "ar" ? "إضافة سند تسليم جديد" : "New Delivery"}</span>
+                        <span>{__("deliveries.print.new_delivery")}</span>
                     </Link>
                     <button
                         onClick={handlePrint}
                         className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
                     >
                         <Printer className="h-4 w-4" />
-                        <span>{lang === "ar" ? "طباعة السند" : "Print Voucher"}</span>
+                        <span>{__("deliveries.print.print_voucher")}</span>
                     </button>
                     <button
                         onClick={handleCloseOrBack}
@@ -188,13 +188,13 @@ export default function Print({ delivery, companySettings = {} }) {
                     >
                         {hasReferrer ? (
                             <>
-                                <ArrowRight className={`h-4 w-4 ${lang === "ar" ? "rotate-0" : "rotate-180"}`} />
-                                <span>{lang === "ar" ? "العودة للخلف" : "Go Back"}</span>
+                                <ArrowRight className={`h-4 w-4 ${__("deliveries.print.rotate_180")}`} />
+                                <span>{__("deliveries.print.go_back")}</span>
                             </>
                         ) : (
                             <>
                                 <X className="h-4 w-4" />
-                                <span>{lang === "ar" ? "إغلاق النافذة" : "Close Window"}</span>
+                                <span>{__("deliveries.print.close_window")}</span>
                             </>
                         )}
                     </button>
@@ -235,7 +235,7 @@ export default function Print({ delivery, companySettings = {} }) {
 
                                 <div className="text-end space-y-0.5">
                                     <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
-                                        {lang === "ar" ? "سند تسليم وخروج بضائع" : "Goods Delivery Note"}
+                                        {__("deliveries.print.goods_delivery_note")}
                                     </h1>
                                     <div className="text-xs font-black font-mono text-gray-900">
                                         No: {delivery.serial_number}
@@ -247,26 +247,32 @@ export default function Print({ delivery, companySettings = {} }) {
                             <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-[11px] border-b border-gray-300 pb-2">
                                 <div className="space-y-1">
                                     <div className="flex gap-2">
-                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العميل:" : "Client:"}</span>
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.client")}</span>
                                         <span className="font-bold text-black">{delivery.customer?.name}</span>
                                     </div>
                                     <div className="flex gap-4">
                                         <div className="flex gap-2 flex-1">
-                                            <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "العقد:" : "Contract:"}</span>
+                                            <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.contract")}</span>
                                             <span className="font-mono font-bold text-black">{delivery.contract?.contract_number}</span>
                                         </div>
                                         <div className="flex gap-1 shrink-0">
-                                            <span className="font-bold text-gray-600">{lang === "ar" ? "الفترة:" : "P.No:"}</span>
+                                            <span className="font-bold text-gray-600">{__("deliveries.print.p_no")}</span>
                                             <span className="font-mono font-bold text-black">{delivery.period?.period_number ? String(delivery.period.period_number).padStart(2, '0') : '01'}</span>
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المستلم / المندوب:" : "Recipient:"}</span>
-                                        <span className="font-medium text-gray-900">{delivery.representative?.name || delivery.driver?.name || delivery.recipient_name || "—"}</span>
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.recipient")}</span>
+                                        <span className="font-medium text-gray-900">{delivery.representative?.name || delivery.recipient_name || "—"}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "السائق الناقل:" : "Carrier Driver:"}</span>
+                                        <span className="font-bold text-gray-900">
+                                            {delivery.driver ? `${delivery.driver.name} ${delivery.driver.vehicle_plate ? `(${delivery.driver.vehicle_plate})` : ''} ${delivery.driver.phone ? `- ${delivery.driver.phone}` : ''}` : "—"}
+                                        </span>
                                     </div>
                                     {delivery.exit_authorization && (
                                         <div className="flex gap-2">
-                                            <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "إذن الخروج:" : "Exit Permit:"}</span>
+                                            <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.exit_permit")}</span>
                                             <span className="font-mono font-bold text-blue-800">{delivery.exit_authorization.serial_number}</span>
                                         </div>
                                     )}
@@ -274,21 +280,21 @@ export default function Print({ delivery, companySettings = {} }) {
 
                                 <div className="space-y-1">
                                     <div className="flex gap-2">
-                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "المشرف / المسلم:" : "Issuer:"}</span>
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.issuer")}</span>
                                         <span className="font-bold text-black">{delivery.created_by_user?.name || user?.name || "أمين المستودع"}</span>
                                     </div>
                                     <div className="flex gap-4">
                                         <div className="flex gap-2 flex-1">
-                                            <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "تاريخ الخروج:" : "Date:"}</span>
-                                            <span className="font-mono font-bold text-black">{delivery.delivery_date ? new Date(delivery.delivery_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}</span>
+                                            <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.date")}</span>
+                                            <span className="font-mono font-bold text-black">{delivery.delivery_date ? new Date(delivery.delivery_date).toLocaleDateString(__("deliveries.print.en_us")) : "—"}</span>
                                         </div>
                                         <div className="flex gap-1 shrink-0">
-                                            <span className="font-bold text-gray-600">{lang === "ar" ? "الوردية:" : "Shift:"}</span>
+                                            <span className="font-bold text-gray-600">{__("deliveries.print.shift")}</span>
                                             <span className="font-mono font-bold text-black">{delivery.shift || "م / M"}</span>
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "ملاحظات:" : "Note:"}</span>
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.note")}</span>
                                         <span className="text-[10px] text-gray-800 leading-tight">{delivery.notes || "—"}</span>
                                     </div>
                                 </div>
@@ -300,11 +306,11 @@ export default function Print({ delivery, companySettings = {} }) {
                                     <thead>
                                         <tr className="border-b border-black text-black font-bold">
                                             <th className="py-1.5 text-start w-10">#</th>
-                                            <th className="py-1.5 text-start">{lang === "ar" ? "الصنف (Items)" : "Items"}</th>
-                                            <th className="py-1.5 w-32">{lang === "ar" ? "الدرجة (Grade)" : "Grade"}</th>
-                                            <th className="py-1.5 w-36">{lang === "ar" ? "الطبلية (Table)" : "Table"}</th>
-                                            <th className="py-1.5 w-32">{lang === "ar" ? "العبوة (Box)" : "Box"}</th>
-                                            <th className="py-1.5 w-24">{lang === "ar" ? "الكمية المخرجة (Total)" : "Total"}</th>
+                                            <th className="py-1.5 text-start">{__("deliveries.print.items")}</th>
+                                            <th className="py-1.5 w-32">{__("deliveries.print.grade")}</th>
+                                            <th className="py-1.5 w-36">{__("deliveries.print.table")}</th>
+                                            <th className="py-1.5 w-32">{__("deliveries.print.box")}</th>
+                                            <th className="py-1.5 w-24">{__("deliveries.print.total")}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
@@ -341,11 +347,11 @@ export default function Print({ delivery, companySettings = {} }) {
                                         {chunk.isLastPage && (
                                             <tr className="border-t-2 border-black font-extrabold text-black">
                                                 <td colSpan="3" className="py-2 px-4 text-start font-bold">
-                                                    <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الطبالي / Total Tables:" : "Total Tables:"}</span>
+                                                    <span className="text-gray-700 me-2">{__("deliveries.print.total_tables")}</span>
                                                     <span className="font-mono text-sm font-black text-black">{totalPallets}</span>
                                                 </td>
                                                 <td colSpan="3" className="py-2 px-4 text-end font-bold">
-                                                    <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي العبوات المخرجة / Total Packs Out:" : "Total Packs Out:"}</span>
+                                                    <span className="text-gray-700 me-2">{__("deliveries.print.total_packs_out")}</span>
                                                     <span className="font-mono text-sm font-black text-black">{Math.round(totalQty).toLocaleString()}</span>
                                                 </td>
                                             </tr>
@@ -366,9 +372,9 @@ export default function Print({ delivery, companySettings = {} }) {
                                         </p>
                                         <div className="text-start text-[11px] space-y-0.5">
                                             <p className="text-gray-800 font-semibold truncate">
-                                                {lang === "ar" ? "الاسم: " : "Name: "}{delivery.representative?.name || delivery.driver?.name || delivery.recipient_name || delivery.customer?.name || "________________"}
+                                                {__("deliveries.print.name")}{delivery.representative?.name || delivery.driver?.name || delivery.recipient_name || delivery.customer?.name || "________________"}
                                             </p>
-                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                            <p className="text-gray-400 font-mono">{__("deliveries.print.signature")}</p>
                                         </div>
                                     </div>
 
@@ -377,8 +383,8 @@ export default function Print({ delivery, companySettings = {} }) {
                                             Stores Manager
                                         </p>
                                         <div className="text-start text-[11px] space-y-0.5">
-                                            <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: ________________" : "Name: ________________"}</p>
-                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                            <p className="text-gray-800 font-semibold">{__("deliveries.print.name")}</p>
+                                            <p className="text-gray-400 font-mono">{__("deliveries.print.signature")}</p>
                                         </div>
                                     </div>
 
@@ -387,14 +393,14 @@ export default function Print({ delivery, companySettings = {} }) {
                                             Stores Admin
                                         </p>
                                         <div className="text-start text-[11px] space-y-0.5">
-                                            <p className="text-gray-800 font-semibold">{lang === "ar" ? "الاسم: " : "Name: "}{delivery.created_by_user?.name || user?.name || "________________"}</p>
-                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                            <p className="text-gray-800 font-semibold">{__("deliveries.print.name")}{delivery.created_by_user?.name || user?.name || "________________"}</p>
+                                            <p className="text-gray-400 font-mono">{__("deliveries.print.signature")}</p>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="text-center text-[10px] text-gray-500 italic">
-                                    {lang === "ar" ? "يتبع السند بالتوقيعات والإجمالي في الصفحة التالية..." : "Continued on next page..."}
+                                    {__("deliveries.print.continued_on_next_page")}
                                 </div>
                             )}
 
