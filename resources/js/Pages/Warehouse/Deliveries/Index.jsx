@@ -463,16 +463,12 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                 <td className="p-3 text-text-muted font-mono">{rowNum}</td>
                                                 <td className="p-3">
                                                     <div className="flex flex-col gap-0.5">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setQuickViewDelivery(item);
-                                                                setIsQuickViewModalOpen(true);
-                                                            }}
+                                                        <Link
+                                                            href={route("deliveries.show", item.id)}
                                                             className="font-bold text-primary hover:underline text-xs text-start"
                                                         >
                                                             {item.serial_number}
-                                                        </button>
+                                                        </Link>
                                                         <div className="text-[10px] text-text-muted flex items-center gap-1.5 flex-wrap">
                                                             {item.customer && (
                                                                 <Link
@@ -524,6 +520,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     <div className="flex justify-center items-center gap-1.5">
+                                                        {/* Quick View Icon (Eye) */}
                                                         <Tooltip text={t("deliveries.quick_view", "معاينة سريعة للسند", "Quick View")}>
                                                             <button
                                                                 type="button"
@@ -536,6 +533,17 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                                 <Eye className="h-4 w-4" />
                                                                 {showButtonText && <span>{t("common.preview", "معاينة", "Preview")}</span>}
                                                             </button>
+                                                        </Tooltip>
+
+                                                        {/* Full Screen Show Page Icon (Monitor) */}
+                                                        <Tooltip text={t("deliveries.full_view", "فتح الشاشة الكاملة للسند", "Open full voucher view")}>
+                                                            <Link
+                                                                href={route("deliveries.show", item.id)}
+                                                                className={`p-1.5 text-primary hover:bg-primary/10 rounded-none border border-border flex items-center justify-center transition-all h-[30px] gap-1.5 ${showButtonText ? 'px-2.5' : 'w-[30px]'}`}
+                                                            >
+                                                                <Monitor className="h-4 w-4" />
+                                                                {showButtonText && <span>{t("common.show", "عرض", "Show")}</span>}
+                                                            </Link>
                                                         </Tooltip>
 
                                                         {item.status === 'draft' ? (
