@@ -731,7 +731,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                             </div>
                             <div>
                                 <span className="text-text-muted block">{__("receptions.reception_date")}:</span>
-                                <span className="font-mono font-semibold">{quickViewReception.reception_date || "—"}</span>
+                                <span className="font-mono font-semibold">{quickViewReception.reception_date ? String(quickViewReception.reception_date).substring(0, 10) : "—"}</span>
                             </div>
                             <div>
                                 <span className="text-text-muted block">{__("receptions.driver")}:</span>
@@ -766,6 +766,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                             <th className="p-2 text-start w-10">#</th>
                                             <th className="p-2 text-start">{__("receptions.col_item")}</th>
                                             <th className="p-2 text-start">{__("receptions.col_variant")}</th>
+                                            <th className="p-2 text-start">{t("receptions.quality", "الدرجة", "Grade")}</th>
                                             <th className="p-2 text-start">{__("receptions.col_pallet")}</th>
                                             <th className="p-2 text-end">{__("receptions.col_qty")}</th>
                                         </tr>
@@ -781,6 +782,9 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                                     <td className="p-2 text-text-muted">
                                                         {displayBilingual(entry.variant?.name || entry.inventory_item_variant_id)}
                                                     </td>
+                                                    <td className="p-2 text-text-muted">
+                                                        {displayBilingual(entry.variant?.quality) || entry.variant?.size || entry.pallet?.size || "—"}
+                                                    </td>
                                                     <td className="p-2 font-mono font-bold text-primary">
                                                         {entry.pallet?.pallet_number ? `${entry.pallet.pallet_number} / ${getPalletSizeDisplay(entry.pallet)}` : "—"}
                                                     </td>
@@ -791,7 +795,7 @@ export default function Index({ receptions = { data: [] }, customers = [], contr
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="5" className="p-4 text-center text-text-muted">
+                                                <td colSpan="6" className="p-4 text-center text-text-muted">
                                                     {__("receptions.no_entries_quick")}
                                                 </td>
                                             </tr>

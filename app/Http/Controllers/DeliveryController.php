@@ -23,10 +23,30 @@ class DeliveryController extends Controller
 
     public function index(Request $request)
     {
-        $query = Delivery::with(['customer', 'contract', 'driver', 'representative', 'period', 'exitAuthorization'])
+        $query = Delivery::with(['customer', 'contract', 'driver', 'representative', 'period', 'exitAuthorization', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant', 'inventoryEntries.pallet'])
             ->withSum('inventoryEntries as total_quantity', 'quantity_out');
 
         // Filters
+        if ($request->filled('serial_number')) {
+            $query->where('serial_number', 'like', "%{$request->serial_number}%");
+        }
+        if ($request->filled('written_reference')) {
+            $query->where('written_reference', 'like', "%{$request->written_reference}%");
+        }
+        if ($request->filled('customer_or_contract')) {
+            $term = $request->customer_or_contract;
+            $query->where(function ($q) use ($term) {
+                $q->whereHas('customer', function ($c) use ($term) {
+                    $c->where('name', 'like', "%{$term}%")
+                     ->orWhere('foreign_name', 'like', "%{$term}%");
+                })->orWhereHas('contract', function ($cn) use ($term) {
+                    $cn->where('contract_number', 'like', "%{$term}%");
+                });
+            });
+        }
+        if ($request->filled('notes')) {
+            $query->where('notes', 'like', "%{$request->notes}%");
+        }
         if ($request->filled('customer_id')) {
             $query->where('customer_id', $request->customer_id);
         }
@@ -85,7 +105,7 @@ class DeliveryController extends Controller
             'customers' => $customers,
             'contracts' => $contracts,
             'drivers' => $drivers,
-            'filters' => $request->only(['customer_id', 'contract_id', 'driver_id', 'status', 'search', 'date_from', 'date_to', 'qty_operator', 'qty_value'])
+            'filters' => $request->only(['serial_number', 'written_reference', 'customer_or_contract', 'customer_id', 'contract_id', 'driver_id', 'status', 'search', 'date_from', 'date_to', 'qty_operator', 'qty_value', 'notes'])
         ]);
     }
 
