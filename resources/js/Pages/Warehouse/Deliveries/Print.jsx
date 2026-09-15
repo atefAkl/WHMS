@@ -4,7 +4,16 @@ import { useLang } from "@/Contexts/LanguageContext";
 import { ArrowRight, FileCheck, FileText, List, Plus, Printer, X } from "lucide-react";
 
 export default function Print({ delivery, companySettings = {} }) {
-    const { lang } = useLang();
+    const { lang, __ } = useLang();
+    const t = (key, fallbackAr = "", fallbackEn = "") => {
+        if (key && __) {
+            const translated = __(key);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return lang === "en" ? (fallbackEn || fallbackAr || key) : (fallbackAr || fallbackEn || key);
+    };
     const user = usePage().props.auth.user;
 
     const [hasReferrer, setHasReferrer] = useState(false);
@@ -136,7 +145,7 @@ export default function Print({ delivery, companySettings = {} }) {
             dir={__("deliveries.print.ltr")}
             style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
         >
-            <Head title={lang === "ar" ? `طباعة سند تسليم وخروج: ${delivery.serial_number}` : `Print Delivery: ${delivery.serial_number}`} />
+            <Head title={t("deliveries.print.head_title", `طباعة سند تسليم وخروج: ${delivery.serial_number}`, `Print Delivery: ${delivery.serial_number}`)} />
 
             {/* Print Control Bar - Hidden when printing */}
             <div className="print:hidden mb-6 flex flex-wrap justify-between items-center bg-gray-50 p-3 border border-gray-200 rounded-xl gap-3">
@@ -265,7 +274,7 @@ export default function Print({ delivery, companySettings = {} }) {
                                         <span className="font-medium text-gray-900">{delivery.representative?.name || delivery.recipient_name || "—"}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                        <span className="font-bold text-gray-600 w-24 shrink-0">{lang === "ar" ? "السائق الناقل:" : "Carrier Driver:"}</span>
+                                        <span className="font-bold text-gray-600 w-24 shrink-0">{__("deliveries.print.carrier_driver")}</span>
                                         <span className="font-bold text-gray-900">
                                             {delivery.driver ? `${delivery.driver.name} ${delivery.driver.vehicle_plate ? `(${delivery.driver.vehicle_plate})` : ''} ${delivery.driver.phone ? `- ${delivery.driver.phone}` : ''}` : "—"}
                                         </span>
@@ -410,7 +419,7 @@ export default function Print({ delivery, companySettings = {} }) {
                                     {compAddress} – Phone: <span className="font-mono font-bold">{compPhone}</span> | Email: <span className="font-mono">{compEmail}</span>
                                 </div>
                                 <div className="font-mono font-bold text-gray-700">
-                                    {lang === "ar" ? `صفحة ${chunk.pageIndex} من ${chunk.totalPages}` : `Page ${chunk.pageIndex} of ${chunk.totalPages}`}
+                                    {t("deliveries.print.page_x_of_y", `صفحة ${chunk.pageIndex} من ${chunk.totalPages}`, `Page ${chunk.pageIndex} of ${chunk.totalPages}`)}
                                 </div>
                             </div>
                         </div>

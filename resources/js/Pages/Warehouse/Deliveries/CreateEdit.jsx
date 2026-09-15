@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, Link, router, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import {  AlertCircle, ArrowRight, Calculator, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Edit, FolderSync, Home, Layers, Plus, Printer, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
+import { AlertCircle, ArrowRight, Calculator, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Edit, FolderSync, Home, Layers, Plus, Printer, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
 import Modal from "@/Components/Modal";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import { useSecureDelete } from "@/Hooks/useSecureDelete";
@@ -26,7 +26,18 @@ export default function CreateEdit({
     exitAuthorizations = [],
     inventoryItems = [],
 }) {
-    const { lang } = useLang();
+    const { lang, __ } = useLang();
+
+    // Translation Helper
+    const t = (key, fallbackAr = "", fallbackEn = "") => {
+        if (key && __) {
+            const translated = __(key);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return lang === "en" ? (fallbackEn || fallbackAr || key) : (fallbackAr || fallbackEn || key);
+    };
     const { auth } = usePage().props;
     const user = auth.user;
     const showButtonText = user?.preferences?.show_button_text ?? false;
@@ -130,13 +141,13 @@ export default function CreateEdit({
         status: delivery?.status || "draft",
         items: delivery?.inventory_entries
             ? delivery.inventory_entries.map((e) => ({
-                  id: e.id,
-                  inventory_item_id: e.inventory_item_id,
-                  inventory_item_variant_id: e.inventory_item_variant_id,
-                  pallet_number: e.pallet?.pallet_number || "",
-                  pallet_size: e.pallet?.size || "وسط",
-                  quantity_out: parseInt(e.quantity_out, 10),
-              }))
+                id: e.id,
+                inventory_item_id: e.inventory_item_id,
+                inventory_item_variant_id: e.inventory_item_variant_id,
+                pallet_number: e.pallet?.pallet_number || "",
+                pallet_size: e.pallet?.size || "وسط",
+                quantity_out: parseInt(e.quantity_out, 10),
+            }))
             : [],
     });
 
@@ -1122,10 +1133,9 @@ export default function CreateEdit({
                                                     "customer_name",
                                                 ]}
                                                 displayFormat={(c) =>
-                                                    `${c.contract_number} ${
-                                                        c.customer_name
-                                                            ? `(${c.customer_name})`
-                                                            : ""
+                                                    `${c.contract_number} ${c.customer_name
+                                                        ? `(${c.customer_name})`
+                                                        : ""
                                                     }`
                                                 }
                                                 valueKey="id"
@@ -1486,12 +1496,11 @@ export default function CreateEdit({
                                                     (p, index) => (
                                                         <div
                                                             key={p.id}
-                                                            className={`p-2 text-xs font-semibold cursor-pointer transition-colors ${
-                                                                index ===
-                                                                palletActiveIndex
+                                                            className={`p-2 text-xs font-semibold cursor-pointer transition-colors ${index ===
+                                                                    palletActiveIndex
                                                                     ? "bg-primary text-white font-bold"
                                                                     : "text-text hover:bg-slate-100"
-                                                            }`}
+                                                                }`}
                                                             onMouseDown={() => {
                                                                 setPosPalletId(
                                                                     p.id.toString(),
@@ -1928,10 +1937,10 @@ export default function CreateEdit({
                                                 <span className="font-bold font-mono">
                                                     {contractStats.end_date
                                                         ? new Date(
-                                                              contractStats.end_date,
-                                                          ).toLocaleDateString(
-                                                              __("deliveries.createedit.en_us"),
-                                                          )
+                                                            contractStats.end_date,
+                                                        ).toLocaleDateString(
+                                                            __("deliveries.createedit.en_us"),
+                                                        )
                                                         : "—"}
                                                 </span>
                                             </div>

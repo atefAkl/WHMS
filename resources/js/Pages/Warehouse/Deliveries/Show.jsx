@@ -13,7 +13,16 @@ import Tooltip from "@/Components/Tooltip";
 import PageHeader from "@/Components/PageHeader";
 
 export default function Show({ delivery }) {
-    const { lang } = useLang();
+    const { lang, __ } = useLang();
+    const t = (key, fallbackAr = "", fallbackEn = "") => {
+        if (key && __) {
+            const translated = __(key);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return lang === "en" ? (fallbackEn || fallbackAr || key) : (fallbackAr || fallbackEn || key);
+    };
     const displayBilingual = (rawText) => {
         if (!rawText) return "";
         const parts = rawText.split("|").map((s) => s.trim());
@@ -175,11 +184,7 @@ export default function Show({ delivery }) {
     return (
         <AuthenticatedLayout header={breadcrumbs}>
             <Head
-                title={
-                    lang === "ar"
-                        ? `تفاصيل سند الخروج: ${delivery.serial_number}`
-                        : `Delivery Voucher Details: ${delivery.serial_number}`
-                }
+                title={t("deliveries.show.title_details", `تفاصيل سند الخروج: ${delivery.serial_number}`, `Delivery Voucher Details: ${delivery.serial_number}`)}
             />
 
             <div
@@ -206,9 +211,7 @@ export default function Show({ delivery }) {
                     title={
                         <div className="flex items-center gap-3">
                             <span className="font-extrabold text-lg text-text">
-                                {lang === "ar"
-                                    ? `سند تسليم خروج بضاعة: ${delivery.serial_number}`
-                                    : `Delivery Voucher: ${delivery.serial_number}`}
+                                {t("deliveries.show.voucher_title", `سند تسليم خروج بضاعة: ${delivery.serial_number}`, `Delivery Voucher: ${delivery.serial_number}`)}
                             </span>
                             <span
                                 className={`text-[10px] px-2 py-0.5 rounded-none font-bold border ${
@@ -233,9 +236,7 @@ export default function Show({ delivery }) {
                     }
                     description={
                         <p className="text-xs text-text-muted mt-0.5">
-                            {lang === "ar"
-                                ? `تم الإنشاء بواسطة: ${delivery.creator?.name || "النظام"} في ${new Date(delivery.created_at).toLocaleString("ar-EG")}`
-                                : `Created by: ${delivery.creator?.name || "System"} on ${new Date(delivery.created_at).toLocaleString()}`}
+                            {t("deliveries.show.created_by_info", `تم الإنشاء بواسطة: ${delivery.creator?.name || (lang === "ar" ? "النظام" : "System")} في ${new Date(delivery.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}`, `Created by: ${delivery.creator?.name || "System"} on ${new Date(delivery.created_at).toLocaleString("en-US")}`)}
                         </p>
                     }
                     actions={

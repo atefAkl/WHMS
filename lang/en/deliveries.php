@@ -228,6 +228,7 @@ return [
         'contract' => 'Contract:',
         'p_no' => 'P.No:',
         'recipient' => 'Recipient:',
+        'carrier_driver' => 'Carrier Driver:',
         'exit_permit' => 'Exit Permit:',
         'issuer' => 'Issuer:',
         'date' => 'Date:',

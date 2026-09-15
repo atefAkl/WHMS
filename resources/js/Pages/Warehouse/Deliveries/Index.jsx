@@ -15,7 +15,18 @@ import ConfirmationModal from "@/Components/ConfirmationModal";
 import { useSecureDelete } from "@/Hooks/useSecureDelete";
 
 export default function Index({ deliveries = { data: [] }, customers = [], contracts = [], drivers = [], filters = {} }) {
-    const { lang } = useLang();
+    const { lang, __ } = useLang();
+
+    // Translation Helper
+    const t = (key, fallbackAr = "", fallbackEn = "") => {
+        if (key && __) {
+            const translated = __(key);
+            if (translated && translated !== key) {
+                return translated;
+            }
+        }
+        return lang === "en" ? (fallbackEn || fallbackAr || key) : (fallbackAr || fallbackEn || key);
+    };
     const { auth } = usePage().props;
     const user = auth.user;
     const showButtonText = user?.preferences?.show_button_text ?? false;
@@ -28,7 +39,7 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
     const [dateTo, setDateTo] = useState(filters.date_to || "");
     const [qtyOperator, setQtyOperator] = useState(filters.qty_operator || "gte");
     const [qtyValue, setQtyValue] = useState(filters.qty_value || "");
-    
+
     // Action security credentials modal (approve/reopen)
     const [actionTarget, setActionTarget] = useState(null); // { type: 'approve'|'reopen', item }
     const [securePassword, setSecurePassword] = useState("");
@@ -298,8 +309,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
 
                             <div className="flex items-center gap-1.5 h-[30px]">
                                 <Tooltip text={__("deliveries.index.filter")}>
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         className={`h-[30px] flex items-center justify-center rounded-none bg-primary text-white hover:bg-primary-hover shadow-sm transition duration-150 ease-in-out font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:opacity-90 gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'}`}
                                     >
                                         <Filter className="h-4 w-4 shrink-0" />
@@ -307,9 +318,9 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                     </button>
                                 </Tooltip>
                                 <Tooltip text={__("deliveries.index.reset")}>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleReset} 
+                                    <button
+                                        type="button"
+                                        onClick={handleReset}
                                         className={`h-[30px] flex items-center justify-center rounded-none bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 shadow-sm transition duration-150 ease-in-out font-semibold text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:opacity-90 gap-1.5 ${showButtonText ? 'px-3' : 'w-[30px] p-0'}`}
                                     >
                                         <RefreshCw className="h-4 w-4 shrink-0" />
@@ -353,16 +364,16 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                 <td className="p-3 text-text-muted font-mono">{rowNum}</td>
                                                 <td className="p-3">
                                                     <div className="flex flex-col gap-0.5">
-                                                        <Link 
-                                                            href={route("deliveries.show", item.id)} 
+                                                        <Link
+                                                            href={route("deliveries.show", item.id)}
                                                             className="font-bold text-primary hover:underline text-xs"
                                                         >
                                                             {item.serial_number}
                                                         </Link>
                                                         <div className="text-[10px] text-text-muted flex items-center gap-1.5 flex-wrap">
                                                             {item.customer && (
-                                                                <Link 
-                                                                    href={route("customers.show", item.customer.id)} 
+                                                                <Link
+                                                                    href={route("customers.show", item.customer.id)}
                                                                     className="hover:underline text-text hover:text-primary font-medium"
                                                                 >
                                                                     {item.customer.name}
@@ -370,8 +381,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                             )}
                                                             <span>|</span>
                                                             {item.contract && (
-                                                                <Link 
-                                                                    href={route("contracts.show", item.contract.id)} 
+                                                                <Link
+                                                                    href={route("contracts.show", item.contract.id)}
                                                                     className="hover:underline font-mono"
                                                                 >
                                                                     {item.contract.contract_number}
@@ -401,11 +412,10 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                                     {item.total_quantity ? parseFloat(item.total_quantity).toLocaleString() : 0}
                                                 </td>
                                                 <td className="p-3 text-center">
-                                                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-none ${
-                                                        item.status === 'approved' 
-                                                            ? 'bg-success/10 text-success border border-success/30' 
+                                                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-none ${item.status === 'approved'
+                                                            ? 'bg-success/10 text-success border border-success/30'
                                                             : 'bg-warning/10 text-warning border border-warning/30'
-                                                    }`}>
+                                                        }`}>
                                                         {item.status === 'approved' ? (__("deliveries.index.approved")) : (__("deliveries.index.draft"))}
                                                     </span>
                                                 </td>
@@ -506,11 +516,10 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                 <Link
                                     key={idx}
                                     href={link.url}
-                                    className={`px-3 py-1.5 border text-xs transition-all ${
-                                        link.active
+                                    className={`px-3 py-1.5 border text-xs transition-all ${link.active
                                             ? "bg-primary text-white border-primary font-bold"
                                             : "border-border hover:bg-hover text-text"
-                                    }`}
+                                        }`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />
                             );
@@ -571,11 +580,10 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                 <button
                                     type="submit"
                                     disabled={processingAction}
-                                    className={`rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${
-                                        actionTarget?.type === "approve"
+                                    className={`rounded-none flex items-center justify-center font-bold text-xs transition-all h-[30px] gap-1.5 ${actionTarget?.type === "approve"
                                             ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                                             : "bg-amber-600 hover:bg-amber-700 text-white"
-                                    } ${showButtonText ? 'px-3' : 'w-[30px] p-0'} disabled:opacity-50`}
+                                        } ${showButtonText ? 'px-3' : 'w-[30px] p-0'} disabled:opacity-50`}
                                 >
                                     {actionTarget?.type === "approve" && <CheckCircle2 className="h-4 w-4" />}
                                     {actionTarget?.type === "reopen" && <Unlock className="h-4 w-4" />}
@@ -585,8 +593,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
                                             {processingAction
                                                 ? (__("deliveries.index.processing"))
                                                 : actionTarget?.type === "approve"
-                                                ? (__("deliveries.index.confirm_approve"))
-                                                : (__("deliveries.index.confirm_reopen"))}
+                                                    ? (__("deliveries.index.confirm_approve"))
+                                                    : (__("deliveries.index.confirm_reopen"))}
                                         </span>
                                     )}
                                 </button>
@@ -600,8 +608,8 @@ export default function Index({ deliveries = { data: [] }, customers = [], contr
             <ConfirmationModal
                 show={!!itemToDelete}
                 title={__("deliveries.index.confirm_delete")}
-                message={lang === "ar" 
-                    ? `هل أنت متأكد من رغبتك في حذف السند ${itemToDelete?.serial_number}؟ هذا الإجراء يتطلب كلمة مرور العمليات.` 
+                message={lang === "ar"
+                    ? `هل أنت متأكد من رغبتك في حذف السند ${itemToDelete?.serial_number}؟ هذا الإجراء يتطلب كلمة مرور العمليات.`
                     : `Are you sure you want to delete delivery note ${itemToDelete?.serial_number}? This requires secure operations password.`}
                 confirmLabel={__("deliveries.index.confirm_delete")}
                 cancelLabel={__("deliveries.index.cancel")}

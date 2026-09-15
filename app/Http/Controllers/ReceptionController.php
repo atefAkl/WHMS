@@ -332,14 +332,13 @@ class ReceptionController extends Controller
         }
 
         DB::transaction(function () use ($request, $reception) {
+            $history = $reception->history ?: [];
             if ($request->filled('modification_reason')) {
-                $history = $reception->history ?: [];
                 $history[] = [
                     'date' => now()->toDateTimeString(),
                     'user' => auth()->user()->name,
                     'reason' => $request->modification_reason,
                 ];
-                $reception->history = $history;
             }
 
             $reception->update([
