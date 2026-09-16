@@ -1122,19 +1122,38 @@ class ContractController extends Controller
 
         // Calculate card content metrics dynamically
         foreach ($vouchers as $voucher) {
-            $entries = $voucher->inventoryEntries->where('contract_id', $contract->id);
+            $allEntries = $voucher->inventoryEntries ?? collect();
+
+            // Filter entries matching contract_id (or entries with null contract_id)
+            $entries = $allEntries->filter(function ($e) use ($contract) {
+                return empty($e->contract_id) || (int) $e->contract_id === (int) $contract->id;
+            });
+
+            // Fallback 1: If filtering by contract_id yielded 0 entries but voucher has inventoryEntries, use all entries of this voucher
+            if ($entries->isEmpty() && !$allEntries->isEmpty()) {
+                $entries = $allEntries;
+            }
+
             if ($entries->count() > 0) {
                 $voucher->pallet_count = $entries->pluck('pallet_id')->filter()->unique()->count();
                 $voucher->item_count = $entries->pluck('inventory_item_id')->filter()->unique()->count();
                 $voucher->variant_count = $entries->pluck('inventory_item_variant_id')->filter()->unique()->count();
                 
-                if ($voucher->voucher_type === 'reception' || $voucher->voucher_type === 'transfer_in') {
-                    $voucher->package_count = (float) $entries->sum('quantity_in');
+                if (in_array($voucher->voucher_type, ['reception', 'transfer_in'])) {
+                    $pkg = (float) $entries->sum('quantity_in');
+                    if ($pkg == 0) {
+                        $pkg = (float) $entries->sum(fn($e) => (float) ($e->quantity_out > 0 ? $e->quantity_out : ($e->quantity ?? 0)));
+                    }
+                    $voucher->package_count = $pkg;
                 } else {
-                    $voucher->package_count = (float) $entries->sum('quantity_out');
+                    $pkg = (float) $entries->sum('quantity_out');
+                    if ($pkg == 0) {
+                        $pkg = (float) $entries->sum(fn($e) => (float) ($e->quantity_in > 0 ? $e->quantity_in : ($e->quantity ?? 0)));
+                    }
+                    $voucher->package_count = $pkg;
                 }
             } else {
-                // Fallback for draft vouchers before inventory entries are posted upon approval
+                // Fallback 2 for draft vouchers or vouchers with direct items relation (e.g. ContractTransfer items)
                 $draftItems = $voucher->items ?? collect();
                 $voucher->pallet_count = $draftItems->pluck('pallet_id')->filter()->unique()->count();
                 $voucher->item_count = $draftItems->pluck('inventory_item_id')->filter()->unique()->count();
