@@ -5,17 +5,27 @@
  * Bypasses domain scoping and route caching.
  */
 
-require dirname(__DIR__) . '/vendor/autoload.php';
-$app = require_once dirname(__DIR__) . '/bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-$kernel->bootstrap();
+try {
+    if (!function_exists('app') || !app()) {
+        require dirname(__DIR__) . '/vendor/autoload.php';
+        $app = require dirname(__DIR__) . '/bootstrap/app.php';
+        if (is_object($app) && method_exists($app, 'make')) {
+            $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+            $kernel->bootstrap();
+        }
+    }
+} catch (\Throwable $e) {
+    // If already booted in web request lifecycle, continue
+}
 
 try {
-    $tenantId = $_GET['tenant'] ?? null;
+    $tenantId = $_GET['tenant'] ?? request()->query('tenant') ?? null;
     $tenant = $tenantId ? \App\Models\Tenant::find($tenantId) : \App\Models\Tenant::first();
 
     if (!$tenant) {
-        http_response_code(404);
+        if (function_exists('http_response_code')) {
+            http_response_code(404);
+        }
         die("Error: No tenant found in central database.\n");
     }
 
@@ -79,11 +89,16 @@ try {
 
     tenancy()->end();
 
-    header('Content-Type: text/plain; charset=UTF-8');
-    header('Content-Disposition: attachment; filename="tenant_' . $tenantId . '_dump.sql"');
+    if (!headers_sent()) {
+        header('Content-Type: text/plain; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="tenant_' . $tenantId . '_dump.sql"');
+    }
     echo $sql;
     exit;
-} catch (\Exception $e) {
-    http_response_code(500);
+} catch (\Throwable $e) {
+    if (function_exists('http_response_code')) {
+        http_response_code(500);
+    }
     echo "Error generating dump: " . $e->getMessage();
+    exit;
 }
