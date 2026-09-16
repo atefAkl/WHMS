@@ -1776,15 +1776,13 @@ export default function CreateEdit({
                                                 const inventoryItem =
                                                     inventoryItems.find(
                                                         (i) =>
-                                                            i.id ===
-                                                            item.inventory_item_id,
-                                                    );
+                                                            parseInt(i.id) === parseInt(item.inventory_item_id),
+                                                    ) || item.inventory_item || item.inventoryItem;
                                                 const variant =
                                                     inventoryItem?.variants?.find(
                                                         (v) =>
-                                                            v.id ===
-                                                            item.inventory_item_variant_id,
-                                                    );
+                                                            parseInt(v.id) === parseInt(item.inventory_item_variant_id),
+                                                    ) || item.variant || item.inventory_item_variant || item.inventoryItemVariant;
 
                                                 return (
                                                     <tr
@@ -1802,17 +1800,17 @@ export default function CreateEdit({
                                                         </td>
                                                         <td className="px-3 py-2.5 font-bold text-text">
                                                             {displayBilingual(
-                                                                inventoryItem?.name,
+                                                                inventoryItem?.name || item.item_name,
                                                             )}
                                                         </td>
                                                         <td className="px-3 py-2.5 text-text-muted font-semibold">
                                                             {displayBilingual(
-                                                                variant?.name,
-                                                            )}
+                                                                variant?.name || item.variant_name,
+                                                            ) || "—"}
                                                         </td>
                                                         <td className="px-3 py-2.5 text-text-muted">
                                                             {displayBilingual(
-                                                                variant?.quality,
+                                                                variant?.quality || item.quality,
                                                             ) || "—"}
                                                         </td>
                                                         <td className="px-3 py-2.5 font-mono font-extrabold text-end text-danger-600">
