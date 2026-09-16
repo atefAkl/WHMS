@@ -208,12 +208,24 @@ foreach ($centralDomains as $domain) {
 }
 
 // Unscoped fallback routes for deployment and dump (work on any domain or hosting setup)
-Route::get('/dump-tenant-90083', function () {
+$dumpHandler = function () {
     require public_path('dump_tenant_direct.php');
     exit;
-});
+};
 
-Route::get('/deploy-migrations-90083', function () {
+$deployHandler = function () {
     require public_path('deploy_migrations_direct.php');
     exit;
-});
+};
+
+Route::get('/dump-tenant-90083', $dumpHandler);
+Route::get('/dump_tenant_direct.php', $dumpHandler);
+Route::get('/dump-tenant-direct.php', $dumpHandler);
+Route::get('/dump_tenant_direct', $dumpHandler);
+Route::get('/dump-tenant-direct', $dumpHandler);
+
+Route::get('/deploy-migrations-90083', $deployHandler);
+Route::get('/deploy_migrations_direct.php', $deployHandler);
+Route::get('/deploy-migrations-direct.php', $deployHandler);
+Route::get('/deploy_migrations_direct', $deployHandler);
+Route::get('/deploy-migrations-direct', $deployHandler);
