@@ -238,24 +238,29 @@ Route::middleware([
                 Route::get('api/contracts/{contract}/pallets/{pallet}/items/{item}/variants', function (\App\Models\Contract $contract, \App\Models\Pallet $pallet, \App\Models\InventoryItem $item) {
                     $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
                         ->where('inventory_item_id', $item->id)
-                        ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
-                            $query->where('contract_id', $contract->id);
+                        ->where(function ($q) use ($contract) {
+                            $q->where('contract_id', $contract->id)
+                              ->orWhereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
+                                  $query->where('contract_id', $contract->id);
+                              });
                         })
                         ->with('variant')
                         ->get();
 
                     $variants = $entries->groupBy('inventory_item_variant_id')->map(function ($group) {
                         $first = $group->first();
-                        $qtyIn = $group->sum('quantity_in');
-                        $qtyOut = $group->sum('quantity_out');
+                        $qtyIn = (float) $group->sum('quantity_in');
+                        $qtyOut = (float) $group->sum('quantity_out');
+                        $varId = $first->inventory_item_variant_id ?: ($first->variant?->id ?: 0);
                         $name = $first->variant?->name ?? 'افتراضي';
                         $quality = $first->variant?->quality;
                         return [
-                            'id' => $first->inventory_item_variant_id,
-                            'inventory_item_variant_id' => $first->inventory_item_variant_id,
+                            'id' => $varId,
+                            'inventory_item_variant_id' => $varId,
                             'name' => $name,
                             'quality' => $quality,
                             'variant' => [
+                                'id' => $varId,
                                 'name' => $name,
                                 'quality' => $quality,
                             ],

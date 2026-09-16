@@ -144,6 +144,9 @@ export default function CreateEdit({
                 id: e.id,
                 inventory_item_id: e.inventory_item_id,
                 inventory_item_variant_id: e.inventory_item_variant_id,
+                item_name: e.inventory_item?.name || e.inventoryItem?.name || "",
+                variant_name: e.variant?.name || "",
+                quality: e.variant?.quality || "",
                 pallet_number: e.pallet?.pallet_number || "",
                 pallet_size: e.pallet?.size || "وسط",
                 quantity_out: parseInt(e.quantity_out, 10),
@@ -157,22 +160,24 @@ export default function CreateEdit({
             0,
         ) || 0;
 
-    // Sync items with delivery.inventory_entries when updated on the server
+    // Sync items when delivery prop updates from server
     useEffect(() => {
         if (delivery?.inventory_entries) {
-            setData(
-                "items",
-                delivery.inventory_entries.map((e) => ({
-                    id: e.id,
-                    inventory_item_id: e.inventory_item_id,
-                    inventory_item_variant_id: e.inventory_item_variant_id,
-                    pallet_number: e.pallet?.pallet_number || "",
-                    pallet_size: e.pallet?.size || "وسط",
-                    quantity_out: parseInt(e.quantity_out, 10),
-                })),
-            );
+            setData("items", delivery.inventory_entries.map((e) => ({
+                id: e.id,
+                inventory_item_id: e.inventory_item_id,
+                inventory_item_variant_id: e.inventory_item_variant_id,
+                item_name: e.inventory_item?.name || e.inventoryItem?.name || "",
+                variant_name: e.variant?.name || "",
+                quality: e.variant?.quality || "",
+                pallet_number: e.pallet?.pallet_number || "",
+                pallet_size: e.pallet?.size || "وسط",
+                quantity_out: parseInt(e.quantity_out, 10),
+            })));
         }
-    }, [delivery.inventory_entries]);
+    }, [delivery]);
+
+
 
     // Auto-expand general section when validation errors exist (so user sees what's missing)
     useEffect(() => {
@@ -669,12 +674,22 @@ export default function CreateEdit({
             return;
         }
 
+        const selectedItemObj = posItems.find((i) => parseInt(i.id) === parseInt(posItemId));
+        const selectedVarObj = posVariants.find((v) => parseInt(v.inventory_item_variant_id || v.id) === parseInt(posVariantId));
+
+        const rowItemName = displayBilingual(selectedItemObj?.name) || "";
+        const rowVariantName = displayBilingual(selectedVarObj?.variant?.name || selectedVarObj?.name) || "";
+        const rowQuality = displayBilingual(selectedVarObj?.variant?.quality || selectedVarObj?.quality) || posQuality || "";
+
         let newItems = [...data.items];
         if (editingRowIndex !== null) {
             newItems[editingRowIndex] = {
                 ...newItems[editingRowIndex],
                 inventory_item_id: parseInt(posItemId),
-                inventory_item_variant_id: parseInt(posVariantId),
+                inventory_item_variant_id: parseInt(posVariantId) || 0,
+                item_name: rowItemName,
+                variant_name: rowVariantName,
+                quality: rowQuality,
                 pallet_number: posPalletNumber,
                 pallet_size: posPalletSize,
                 quantity_out: qty,
@@ -683,7 +698,10 @@ export default function CreateEdit({
             newItems.push({
                 id: null,
                 inventory_item_id: parseInt(posItemId),
-                inventory_item_variant_id: parseInt(posVariantId),
+                inventory_item_variant_id: parseInt(posVariantId) || 0,
+                item_name: rowItemName,
+                variant_name: rowVariantName,
+                quality: rowQuality,
                 pallet_number: posPalletNumber,
                 pallet_size: posPalletSize,
                 quantity_out: qty,
