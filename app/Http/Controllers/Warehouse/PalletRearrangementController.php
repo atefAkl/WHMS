@@ -305,6 +305,7 @@ class PalletRearrangementController extends Controller
 
                 if ($qtyIn > 0 || $qtyOut > 0) {
                     InventoryEntry::create([
+                        'contract_id'               => $palletRearrangement->contract_id,
                         'inventory_item_id'         => $item->inventory_item_id,
                         'inventory_item_variant_id' => $item->inventory_item_variant_id,
                         'pallet_id'                 => $item->pallet_id,

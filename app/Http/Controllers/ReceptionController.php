@@ -364,6 +364,7 @@ class ReceptionController extends Controller
                     $pallet = Pallet::findOrCreateFromCode($itemData['pallet_number']);
 
                     $reception->inventoryEntries()->create([
+                        'contract_id'               => $reception->contract_id,
                         'inventory_item_id'         => $itemData['inventory_item_id'],
                         'inventory_item_variant_id' => $itemData['inventory_item_variant_id'],
                         'pallet_id'                 => $pallet->id,

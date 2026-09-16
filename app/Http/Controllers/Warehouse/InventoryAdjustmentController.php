@@ -314,6 +314,7 @@ class InventoryAdjustmentController extends Controller
 
                 if ($variance > 0) {
                     InventoryEntry::create([
+                        'contract_id'               => $inventoryAdjustment->contract_id,
                         'inventory_item_id'         => $item->inventory_item_id,
                         'inventory_item_variant_id' => $item->inventory_item_variant_id,
                         'pallet_id'                 => $item->pallet_id,
@@ -325,6 +326,7 @@ class InventoryAdjustmentController extends Controller
                     ]);
                 } else {
                     InventoryEntry::create([
+                        'contract_id'               => $inventoryAdjustment->contract_id,
                         'inventory_item_id'         => $item->inventory_item_id,
                         'inventory_item_variant_id' => $item->inventory_item_variant_id,
                         'pallet_id'                 => $item->pallet_id,
