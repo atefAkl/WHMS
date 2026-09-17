@@ -17,6 +17,28 @@ import Tooltip from "@/Components/Tooltip";
 import SearchableSelect from "@/Components/SearchableSelect";
 import axios from "axios";
 
+const formatDateForInput = (rawDate) => {
+    if (!rawDate) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+    if (typeof rawDate === "string") {
+        const clean = rawDate.split("T")[0].split(" ")[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+            return clean;
+        }
+    }
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return "";
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
 export default function CreateEdit({
     customers = [],
     drivers = [],
@@ -134,9 +156,7 @@ export default function CreateEdit({
         driver_id: delivery?.driver_id || "",
         representative_id: delivery?.representative_id || "",
         notes: delivery?.notes || "",
-        delivery_date: delivery?.delivery_date
-            ? new Date(delivery.delivery_date).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
+        delivery_date: formatDateForInput(delivery?.delivery_date),
         modification_reason: "",
         status: delivery?.status || "draft",
         items: delivery?.inventory_entries
