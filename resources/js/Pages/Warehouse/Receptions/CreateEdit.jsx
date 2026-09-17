@@ -1395,27 +1395,19 @@ export default function CreateEdit({
                                             {__("receptions.create_edit.current_stored_contents_on_pal")}
                                         </span>
                                         {palletLookupData.contents && palletLookupData.contents.length > 0 ? (
-                                            <div className="space-y-2">
-                                                <div className="flex flex-wrap gap-2">
-                                                    {palletLookupData.contents.map((c, idx) => (
-                                                        <div key={idx} className="bg-surface border border-border px-2.5 py-1 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs">
-                                                            <span className="text-text">{c.item_name}</span>
-                                                            {c.variant_name && <span className="text-text-muted">({c.variant_name})</span>}
-                                                            {c.quality && (
-                                                                <span className="bg-amber-100 text-amber-800 px-1 py-0.2 text-[10px] rounded">
-                                                                    {c.quality}
-                                                                </span>
-                                                            )}
-                                                            <span className="text-primary font-mono">{c.quantity} {__("receptions.create_edit.packs")}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <div className="text-[11px] font-bold text-amber-800 bg-amber-500/10 border border-amber-500/20 p-2 rounded-none flex items-center gap-2">
-                                                    <span>{__("receptions.create_edit.previous_qty") || "الكمية السابقة على الطبلية:"} <strong className="font-mono">{previousPalletQty}</strong></span>
-                                                    {posQuantity && parseFloat(posQuantity) > 0 && (
-                                                        <span>| {__("receptions.create_edit.total_after_addition") || "الإجمالي بعد الإضافة:"} <strong className="text-emerald-700 font-mono text-xs">{previousPalletQty + parseFloat(posQuantity)}</strong></span>
-                                                    )}
-                                                </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {palletLookupData.contents.map((c, idx) => (
+                                                    <div key={idx} className="bg-surface border border-border px-2.5 py-1 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs">
+                                                        <span className="text-text">{c.item_name}</span>
+                                                        {c.variant_name && <span className="text-text-muted">({c.variant_name})</span>}
+                                                        {c.quality && (
+                                                            <span className="bg-amber-100 text-amber-800 px-1 py-0.2 text-[10px] rounded">
+                                                                {c.quality}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-primary font-mono">{c.quantity} {__("receptions.create_edit.packs")}</span>
+                                                    </div>
+                                                ))}
                                             </div>
                                         ) : (
                                             <p className="text-[11px] text-text-muted italic">
@@ -1537,8 +1529,8 @@ export default function CreateEdit({
                                                                 ).toFixed(2)}
                                                             </div>
                                                             {item.previous_pallet_qty !== undefined && item.previous_pallet_qty > 0 && (
-                                                                <div className="text-[10px] text-text-muted font-mono font-normal">
-                                                                    ({__("receptions.create_edit.prev") || "سابقاً"}: {item.previous_pallet_qty} | {__("receptions.create_edit.total") || "الإجمالي"}: {(item.previous_pallet_qty + parseFloat(item.quantity_in)).toFixed(2)})
+                                                                <div className="text-xs font-bold text-emerald-600 font-mono mt-0.5">
+                                                                    ({(parseFloat(item.previous_pallet_qty) + parseFloat(item.quantity_in)).toFixed(2)})
                                                                 </div>
                                                             )}
                                                         </td>
