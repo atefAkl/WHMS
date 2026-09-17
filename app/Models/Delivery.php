@@ -27,7 +27,7 @@ class Delivery extends Model
     ];
 
     protected $casts = [
-        'delivery_date' => 'datetime',
+        'delivery_date' => 'date:Y-m-d',
         'history' => 'array',
     ];
 

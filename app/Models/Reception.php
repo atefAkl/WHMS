@@ -26,7 +26,7 @@ class Reception extends Model
     ];
 
     protected $casts = [
-        'reception_date' => 'datetime',
+        'reception_date' => 'date:Y-m-d',
         'history'        => 'array',
     ];
 
