@@ -642,15 +642,15 @@ export default function CreateEdit({
                     icon={Layers}
                     title={
                         isEdit
-                            ? `${__("receptions.create_edit.edit_receipt_reception_serial_")} ${reception?.serial_number || ''}`
-                            : __("receptions.create_edit.create_new_reception_receipt")
+                            ? `تعديل إيصال استلام: ${reception?.serial_number || ''}`
+                            : "إنشاء إيصال استلام جديد"
                     }
                     description={
                         <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-text-muted">
-                            <span>{__("receptions.create_edit.fill_out_the_reception_header_")}</span>
+                            <span>قم بتعبئة رويسة السند، ثم أضف الأصناف باستخدام واجهة الإدخال السريع.</span>
                             {selectedCustomerObj && (
                                 <span className="inline-flex items-center gap-1 font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-none">
-                                    {__("receptions.create_edit.for_customer") || "لصالح:"} {selectedCustomerObj.name}
+                                    لصالح: {selectedCustomerObj.name}
                                 </span>
                             )}
                         </div>
@@ -793,32 +793,45 @@ export default function CreateEdit({
                             {/* Render general info fields conditionally if not collapsed */}
                             {!isGeneralCollapsed && (
                                 <>
+                                    <input type="hidden" name="customer_id" value={data.customer_id || ""} />
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {/* Serial Number */}
+                                        {/* 1. Date Input (تاريخ الاستلام) - Right (1st) */}
                                         <div>
-                                            <InputLabel
-                                                value={
-                                                    __("receptions.create_edit.serial_number")
-                                                }
-                                            />
+                                            <div className="h-5 flex items-center">
+                                                <InputLabel
+                                                    value={
+                                                        __("receptions.create_edit.reception_date")
+                                                    }
+                                                />
+                                            </div>
                                             <TextInput
-                                                type="text"
-                                                className="mt-1 w-full text-sm rounded-none border-border bg-slate-50 text-slate-500 font-mono font-bold"
-                                                value={
-                                                    reception?.serial_number ||
-                                                    (__("receptions.create_edit.auto_generated"))
+                                                type="date"
+                                                className="mt-1 w-full text-sm rounded-none border-border h-[42px]"
+                                                value={data.reception_date}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        "reception_date",
+                                                        e.target.value,
+                                                    )
                                                 }
-                                                disabled
-                                                readOnly
+                                                required
+                                            />
+                                            <InputError
+                                                message={errors.reception_date}
+                                                className="mt-1"
                                             />
                                         </div>
 
-                                        {/* 2. Contract SearchableSelect Field (Immediately after Serial Number) */}
+                                        {/* 2. Contract SearchableSelect Field (رقم العقد) - Middle (2nd) */}
                                         <div className="relative">
+                                            <div className="h-5 flex items-center">
+                                                <InputLabel
+                                                    value={
+                                                        __("receptions.create_edit.linked_contract")
+                                                    }
+                                                />
+                                            </div>
                                             <SearchableSelect
-                                                label={
-                                                    __("receptions.create_edit.linked_contract")
-                                                }
                                                 items={allContracts}
                                                 value={data.contract_id}
                                                 onChange={(selected) =>
@@ -846,60 +859,46 @@ export default function CreateEdit({
                                                     "approved"
                                                 }
                                             />
-                                            {selectedCustomerObj && (
-                                                <div className="mt-1 flex items-center gap-1 text-[11px]">
-                                                    <span className="text-text-muted">{__("receptions.create_edit.for_customer") || "لصالح:"}</span>
-                                                    <a
-                                                        href={route("customers.show", selectedCustomerObj.id)}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-primary font-bold hover:underline inline-flex items-center gap-1"
-                                                    >
-                                                        {selectedCustomerObj.name}
-                                                        <ExternalLink className="h-3 w-3" />
-                                                    </a>
-                                                </div>
-                                            )}
                                         </div>
 
-                                        {/* 3. Customer Autocomplete Field */}
-                                        <div className="relative">
-                                            <SearchableSelect
-                                                label={
-                                                    __("receptions.create_edit.customer")
-                                                }
-                                                items={customers}
-                                                value={data.customer_id}
-                                                onChange={(selected) => {
-                                                    const custId = selected
-                                                        ? selected.id
-                                                        : "";
-                                                    setData("customer_id", custId);
-                                                    if (!selected) {
-                                                        handleContractSelect("");
-                                                    }
-                                                }}
-                                                placeholder={
-                                                    __("receptions.create_edit.type_customer_name")
-                                                }
-                                                searchKeys={["name"]}
-                                                displayFormat={(c) => c.name}
-                                                valueKey="id"
-                                                error={errors.customer_id}
-                                                disabled={
-                                                    reception?.status ===
-                                                    "approved"
-                                                }
-                                            />
-                                        </div>
-
-                                        {/* Period Select */}
+                                        {/* 3. Farm / Source Text Input (مصدر المزرعة/المورد) - Left (3rd) */}
                                         <div>
-                                            <InputLabel
-                                                value={
-                                                    __("receptions.create_edit.linked_period")
+                                            <div className="h-5 flex items-center">
+                                                <InputLabel
+                                                    value={
+                                                        __("receptions.create_edit.farm_source")
+                                                    }
+                                                />
+                                            </div>
+                                            <TextInput
+                                                type="text"
+                                                className="mt-1 w-full text-sm rounded-none border-border h-[42px]"
+                                                placeholder={
+                                                    __("receptions.create_edit.e_g_al_qassim_farm")
+                                                }
+                                                value={data.farm_source}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        "farm_source",
+                                                        e.target.value,
+                                                    )
                                                 }
                                             />
+                                            <InputError
+                                                message={errors.farm_source}
+                                                className="mt-1"
+                                            />
+                                        </div>
+
+                                        {/* 4. Period Select (الفترة التخزينية) - Right (1st) */}
+                                        <div>
+                                            <div className="h-5 flex items-center">
+                                                <InputLabel
+                                                    value={
+                                                        __("receptions.create_edit.linked_period")
+                                                    }
+                                                />
+                                            </div>
                                             <select
                                                 className="mt-1 block w-full border-border bg-surface text-text text-sm focus:border-primary focus:ring-primary rounded-none h-[42px] px-3"
                                                 value={data.period_id}
@@ -933,9 +932,9 @@ export default function CreateEdit({
                                             />
                                         </div>
 
-                                        {/* Driver Select */}
+                                        {/* 5. Driver Select (السائق الناقل) - Middle (2nd) */}
                                         <div>
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex justify-between items-center h-5">
                                                 <InputLabel
                                                     value={
                                                         __("receptions.create_edit.carrier_driver")
@@ -982,13 +981,15 @@ export default function CreateEdit({
                                             />
                                         </div>
 
-                                        {/* Representative Select */}
+                                        {/* 6. Representative Select (مندوب العميل) - Left (3rd) */}
                                         <div>
-                                            <InputLabel
-                                                value={
-                                                    __("receptions.create_edit.customer_agent")
-                                                }
-                                            />
+                                            <div className="h-5 flex items-center">
+                                                <InputLabel
+                                                    value={
+                                                        __("receptions.create_edit.customer_agent")
+                                                    }
+                                                />
+                                            </div>
                                             <select
                                                 className="mt-1 block w-full border-border bg-surface text-text text-sm focus:border-primary focus:ring-primary rounded-none h-[42px] px-3"
                                                 value={data.representative_id}
@@ -1019,58 +1020,6 @@ export default function CreateEdit({
                                                 message={
                                                     errors.representative_id
                                                 }
-                                                className="mt-1"
-                                            />
-                                        </div>
-
-                                        {/* Farm / Source Text Input */}
-                                        <div>
-                                            <InputLabel
-                                                value={
-                                                    __("receptions.create_edit.farm_source")
-                                                }
-                                            />
-                                            <TextInput
-                                                type="text"
-                                                className="mt-1 w-full text-sm rounded-none border-border"
-                                                placeholder={
-                                                    __("receptions.create_edit.e_g_al_qassim_farm")
-                                                }
-                                                value={data.farm_source}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "farm_source",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.farm_source}
-                                                className="mt-1"
-                                            />
-                                        </div>
-
-                                        {/* Date Input */}
-                                        <div>
-                                            <InputLabel
-                                                value={
-                                                    __("receptions.create_edit.reception_date")
-                                                }
-                                            />
-                                            <TextInput
-                                                type="date"
-                                                className="mt-1 w-full text-sm rounded-none border-border"
-                                                value={data.reception_date}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "reception_date",
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                required
-                                            />
-                                            <InputError
-                                                message={errors.reception_date}
                                                 className="mt-1"
                                             />
                                         </div>
