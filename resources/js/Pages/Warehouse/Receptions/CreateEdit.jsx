@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, Link, router, usePage } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import {  AlertCircle, ArrowRight, Box, Calculator, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Edit, FolderSync, Home, Layers, Plus, Printer, RefreshCw, Save, Search, Trash2, Unlock, UserPlus, X } from "lucide-react";
+import {  AlertCircle, ArrowRight, Box, Calculator, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Edit, ExternalLink, FolderSync, Home, Layers, Plus, Printer, RefreshCw, Save, Search, Trash2, Unlock, UserPlus, X } from "lucide-react";
 import Modal from "@/Components/Modal";
 import ConfirmationModal from "@/Components/ConfirmationModal";
 import { useSecureDelete } from "@/Hooks/useSecureDelete";
@@ -216,6 +216,19 @@ export default function CreateEdit({
         });
         return list;
     }, [customers]);
+
+    const selectedCustomerObj = useMemo(() => {
+        if (!data.customer_id) return null;
+        return customers.find((c) => c.id === parseInt(data.customer_id)) || null;
+    }, [data.customer_id, customers]);
+
+    const previousPalletQty = useMemo(() => {
+        if (!palletLookupData?.contents) return 0;
+        return palletLookupData.contents.reduce(
+            (sum, item) => sum + parseFloat(item.quantity || 0),
+            0,
+        );
+    }, [palletLookupData]);
 
     // Populate initial customer autocomplete search field if editing
     useEffect(() => {
@@ -507,6 +520,7 @@ export default function CreateEdit({
             pallet_number: posPalletNumber.trim(),
             pallet_size: posPalletSize,
             quantity_in: parseFloat(posQuantity),
+            previous_pallet_qty: previousPalletQty > 0 ? previousPalletQty : (editingRowIndex !== null ? data.items[editingRowIndex]?.previous_pallet_qty : undefined),
         };
 
         if (editingRowIndex !== null) {
@@ -517,6 +531,9 @@ export default function CreateEdit({
         } else {
             setData("items", [...data.items, newItem]);
         }
+
+        // Auto-collapse header section to give focus and space to POS items table
+        setIsGeneralCollapsed(true);
 
         palletInputRef.current?.focus();
         palletInputRef.current?.select();
@@ -611,7 +628,7 @@ export default function CreateEdit({
             <Head
                 title={
                     isEdit
-                        ? __("receptions.create_edit.edit_reception_voucher")
+                        ? `${__("receptions.create_edit.edit_reception_voucher")}${reception?.serial_number ? `: ${reception.serial_number}` : ''}`
                         : __("receptions.create_edit.new_reception_voucher")
                 }
             />
@@ -625,13 +642,18 @@ export default function CreateEdit({
                     icon={Layers}
                     title={
                         isEdit
-                            ? __("receptions.create_edit.edit_receipt_reception_serial_")
+                            ? `${__("receptions.create_edit.edit_receipt_reception_serial_")} ${reception?.serial_number || ''}`
                             : __("receptions.create_edit.create_new_reception_receipt")
                     }
                     description={
-                        <p className="text-xs text-text-muted mt-0.5">
-                            {__("receptions.create_edit.fill_out_the_reception_header_")}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-text-muted">
+                            <span>{__("receptions.create_edit.fill_out_the_reception_header_")}</span>
+                            {selectedCustomerObj && (
+                                <span className="inline-flex items-center gap-1 font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-none">
+                                    {__("receptions.create_edit.for_customer") || "لصالح:"} {selectedCustomerObj.name}
+                                </span>
+                            )}
+                        </div>
                     }
                     actions={
                         <div className="flex items-center gap-2">
@@ -824,6 +846,20 @@ export default function CreateEdit({
                                                     "approved"
                                                 }
                                             />
+                                            {selectedCustomerObj && (
+                                                <div className="mt-1 flex items-center gap-1 text-[11px]">
+                                                    <span className="text-text-muted">{__("receptions.create_edit.for_customer") || "لصالح:"}</span>
+                                                    <a
+                                                        href={route("customers.show", selectedCustomerObj.id)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-primary font-bold hover:underline inline-flex items-center gap-1"
+                                                    >
+                                                        {selectedCustomerObj.name}
+                                                        <ExternalLink className="h-3 w-3" />
+                                                    </a>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* 3. Customer Autocomplete Field */}
@@ -1063,8 +1099,8 @@ export default function CreateEdit({
                                         />
                                     </div>
 
-                                    {/* Modification Reason (OPTIONAL in Edit mode) */}
-                                    {isEdit && (
+                                     {/* Modification Reason (Only shown when editing an approved voucher) */}
+                                     {isEdit && reception?.status === "approved" && (
                                         <div className="pt-2">
                                             <InputLabel
                                                 value={
@@ -1410,19 +1446,27 @@ export default function CreateEdit({
                                             {__("receptions.create_edit.current_stored_contents_on_pal")}
                                         </span>
                                         {palletLookupData.contents && palletLookupData.contents.length > 0 ? (
-                                            <div className="flex flex-wrap gap-2">
-                                                {palletLookupData.contents.map((c, idx) => (
-                                                    <div key={idx} className="bg-surface border border-border px-2.5 py-1 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs">
-                                                        <span className="text-text">{c.item_name}</span>
-                                                        {c.variant_name && <span className="text-text-muted">({c.variant_name})</span>}
-                                                        {c.quality && (
-                                                            <span className="bg-amber-100 text-amber-800 px-1 py-0.2 text-[10px] rounded">
-                                                                {c.quality}
-                                                            </span>
-                                                        )}
-                                                        <span className="text-primary font-mono">{c.quantity} {__("receptions.create_edit.packs")}</span>
-                                                    </div>
-                                                ))}
+                                            <div className="space-y-2">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {palletLookupData.contents.map((c, idx) => (
+                                                        <div key={idx} className="bg-surface border border-border px-2.5 py-1 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs">
+                                                            <span className="text-text">{c.item_name}</span>
+                                                            {c.variant_name && <span className="text-text-muted">({c.variant_name})</span>}
+                                                            {c.quality && (
+                                                                <span className="bg-amber-100 text-amber-800 px-1 py-0.2 text-[10px] rounded">
+                                                                    {c.quality}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-primary font-mono">{c.quantity} {__("receptions.create_edit.packs")}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="text-[11px] font-bold text-amber-800 bg-amber-500/10 border border-amber-500/20 p-2 rounded-none flex items-center gap-2">
+                                                    <span>{__("receptions.create_edit.previous_qty") || "الكمية السابقة على الطبلية:"} <strong className="font-mono">{previousPalletQty}</strong></span>
+                                                    {posQuantity && parseFloat(posQuantity) > 0 && (
+                                                        <span>| {__("receptions.create_edit.total_after_addition") || "الإجمالي بعد الإضافة:"} <strong className="text-emerald-700 font-mono text-xs">{previousPalletQty + parseFloat(posQuantity)}</strong></span>
+                                                    )}
+                                                </div>
                                             </div>
                                         ) : (
                                             <p className="text-[11px] text-text-muted italic">
@@ -1537,10 +1581,17 @@ export default function CreateEdit({
                                                                 variant?.quality,
                                                             ) || "—"}
                                                         </td>
-                                                        <td className="px-3 py-2.5 font-mono font-extrabold text-end text-emerald-600">
-                                                            {parseFloat(
-                                                                item.quantity_in,
-                                                            ).toFixed(2)}
+                                                        <td className="px-3 py-2.5 font-mono text-end">
+                                                            <div className="font-extrabold text-emerald-600">
+                                                                {parseFloat(
+                                                                    item.quantity_in,
+                                                                ).toFixed(2)}
+                                                            </div>
+                                                            {item.previous_pallet_qty !== undefined && item.previous_pallet_qty > 0 && (
+                                                                <div className="text-[10px] text-text-muted font-mono font-normal">
+                                                                    ({__("receptions.create_edit.prev") || "سابقاً"}: {item.previous_pallet_qty} | {__("receptions.create_edit.total") || "الإجمالي"}: {(item.previous_pallet_qty + parseFloat(item.quantity_in)).toFixed(2)})
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td className="px-3 py-2.5 text-center space-x-1 rtl:space-x-reverse">
                                                             <button
