@@ -84,6 +84,11 @@ class InventoryAdjustment extends Model
         return $this->hasMany(InventoryAdjustmentItem::class);
     }
 
+    public function inventoryEntries()
+    {
+        return $this->morphMany(InventoryEntry::class, 'voucher');
+    }
+
     public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by');

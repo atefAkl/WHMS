@@ -83,6 +83,11 @@ class PalletRearrangement extends Model
         return $this->hasMany(PalletRearrangementItem::class);
     }
 
+    public function inventoryEntries()
+    {
+        return $this->morphMany(InventoryEntry::class, 'voucher');
+    }
+
     public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by');

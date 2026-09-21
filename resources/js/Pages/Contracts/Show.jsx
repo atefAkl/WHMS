@@ -6473,27 +6473,29 @@ export default function Show({
                                                                           )
                                                                         : "—"}
                                                                 </td>
-                                                                <td className="px-3 py-2">
-                                                                    <span
-                                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                                            mov.type ===
-                                                                            "reception"
-                                                                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                                                : "bg-rose-50 text-rose-700 border border-rose-200"
-                                                                        }`}
-                                                                    >
-                                                                        {mov.type ===
-                                                                        "reception"
-                                                                            ? lang ===
-                                                                              "ar"
-                                                                                ? "استقبال"
-                                                                                : "Reception"
-                                                                            : lang ===
-                                                                                "ar"
-                                                                              ? "إخراج"
-                                                                              : "Delivery"}
-                                                                    </span>
-                                                                </td>
+                                                                 <td className="px-3 py-2">
+                                                                    {(() => {
+                                                                        const isIn = mov.quantity_in > 0;
+                                                                        let label = isIn ? (lang === "ar" ? "إدخال" : "In") : (lang === "ar" ? "إخراج" : "Out");
+                                                                        if (mov.type === "reception") label = lang === "ar" ? "استقبال" : "Reception";
+                                                                        else if (mov.type === "delivery") label = lang === "ar" ? "إخراج" : "Delivery";
+                                                                        else if (mov.type === "rearrangement") label = isIn ? (lang === "ar" ? "ترتيب (إدخال)" : "Rearrange (In)") : (lang === "ar" ? "ترتيب (إخراج)" : "Rearrange (Out)");
+                                                                        else if (mov.type === "transfer" || mov.type === "transfer_in" || mov.type === "transfer_out") label = isIn ? (lang === "ar" ? "تحويل (إدخال)" : "Transfer (In)") : (lang === "ar" ? "تحويل (إخراج)" : "Transfer (Out)");
+                                                                        else if (mov.type === "adjustment") label = isIn ? (lang === "ar" ? "تسوية (إدخال)" : "Adjustment (In)") : (lang === "ar" ? "تسوية (إخراج)" : "Adjustment (Out)");
+
+                                                                        return (
+                                                                            <span
+                                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                                    isIn
+                                                                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                                                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                                                                                }`}
+                                                                            >
+                                                                                {label}
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                 </td>
                                                                 <td className="px-3 py-2 text-center font-mono font-bold text-emerald-600">
                                                                     {mov.quantity_in >
                                                                     0

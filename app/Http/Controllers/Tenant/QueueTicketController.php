@@ -84,16 +84,7 @@ class QueueTicketController extends Controller
         }
 
         // Calculate utilized per size
-        $receptionIds = Reception::where('contract_id', $contract->id)->pluck('id');
-        $deliveryIds = Delivery::where('contract_id', $contract->id)->pluck('id');
-
-        $entries = InventoryEntry::where(function ($q) use ($receptionIds, $deliveryIds) {
-            $q->where(function ($q1) use ($receptionIds) {
-                $q1->where('voucher_type', Reception::class)->whereIn('voucher_id', $receptionIds);
-            })->orWhere(function ($q2) use ($deliveryIds) {
-                $q2->where('voucher_type', Delivery::class)->whereIn('voucher_id', $deliveryIds);
-            });
-        })->with('pallet')->get();
+        $entries = InventoryEntry::where('contract_id', $contract->id)->with('pallet')->get();
 
         $smallUtilized = 0;
         $largeUtilized = 0;
@@ -142,15 +133,7 @@ class QueueTicketController extends Controller
         // Calculate occupancy / empty pallet balance
         $bookedPallets = $contract->total_capacity ?: 0;
 
-        $utilizedPallets = InventoryEntry::where(function ($q) use ($contract) {
-            $q->where(function ($q1) use ($contract) {
-                $q1->where('voucher_type', Reception::class)
-                    ->whereIn('voucher_id', Reception::where('contract_id', $contract->id)->pluck('id'));
-            })->orWhere(function ($q2) use ($contract) {
-                $q2->where('voucher_type', Delivery::class)
-                    ->whereIn('voucher_id', Delivery::where('contract_id', $contract->id)->pluck('id'));
-            });
-        })
+        $utilizedPallets = InventoryEntry::where('contract_id', $contract->id)
             ->select('pallet_id')
             ->groupBy('pallet_id')
             ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
@@ -225,15 +208,7 @@ class QueueTicketController extends Controller
 
         // 2. Verify Remaining Pallets Balance
         $bookedPallets = $contract->total_capacity ?: 0;
-        $utilizedPallets = InventoryEntry::where(function ($q) use ($contract) {
-            $q->where(function ($q1) use ($contract) {
-                $q1->where('voucher_type', Reception::class)
-                    ->whereIn('voucher_id', Reception::where('contract_id', $contract->id)->pluck('id'));
-            })->orWhere(function ($q2) use ($contract) {
-                $q2->where('voucher_type', Delivery::class)
-                    ->whereIn('voucher_id', Delivery::where('contract_id', $contract->id)->pluck('id'));
-            });
-        })
+        $utilizedPallets = InventoryEntry::where('contract_id', $contract->id)
             ->select('pallet_id')
             ->groupBy('pallet_id')
             ->having(DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)

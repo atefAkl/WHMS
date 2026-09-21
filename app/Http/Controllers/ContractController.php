@@ -1000,6 +1000,14 @@ class ContractController extends Controller
             })
             ->with(['period', 'items', 'sourceContract.customer', 'destinationContract.customer', 'sourceCustomer', 'destinationCustomer', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
 
+        $rearrangementsQuery = \App\Models\PalletRearrangement::query()
+            ->where('contract_id', $contract->id)
+            ->with(['period', 'items', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+
+        $adjustmentsQuery = \App\Models\InventoryAdjustment::query()
+            ->where('contract_id', $contract->id)
+            ->with(['period', 'items', 'inventoryEntries.pallet', 'inventoryEntries.inventoryItem', 'inventoryEntries.variant']);
+
         // Filters:
         // 1. Search serial
         if ($request->filled('search_serial')) {
@@ -1007,6 +1015,8 @@ class ContractController extends Controller
             $receptionsQuery->where('serial_number', 'like', "%{$serial}%");
             $deliveriesQuery->where('serial_number', 'like', "%{$serial}%");
             $transfersQuery->where('serial_number', 'like', "%{$serial}%");
+            $rearrangementsQuery->where('serial_number', 'like', "%{$serial}%");
+            $adjustmentsQuery->where('serial_number', 'like', "%{$serial}%");
         }
 
         // 2. Billing Period
@@ -1015,6 +1025,8 @@ class ContractController extends Controller
             $receptionsQuery->where('period_id', $periodId);
             $deliveriesQuery->where('period_id', $periodId);
             $transfersQuery->where('period_id', $periodId);
+            $rearrangementsQuery->where('period_id', $periodId);
+            $adjustmentsQuery->where('period_id', $periodId);
         }
 
         // 3. Date range
@@ -1023,12 +1035,16 @@ class ContractController extends Controller
             $receptionsQuery->where('reception_date', '>=', $startDate);
             $deliveriesQuery->where('delivery_date', '>=', $startDate);
             $transfersQuery->where('transfer_date', '>=', $startDate);
+            $rearrangementsQuery->where('rearrangement_date', '>=', $startDate);
+            $adjustmentsQuery->where('adjustment_date', '>=', $startDate);
         }
         if ($request->filled('end_date')) {
             $endDate = \Carbon\Carbon::parse($request->input('end_date'))->endOfDay();
             $receptionsQuery->where('reception_date', '<=', $endDate);
             $deliveriesQuery->where('delivery_date', '<=', $endDate);
             $transfersQuery->where('transfer_date', '<=', $endDate);
+            $rearrangementsQuery->where('rearrangement_date', '<=', $endDate);
+            $adjustmentsQuery->where('adjustment_date', '<=', $endDate);
         }
 
         // 4. Pallet Number
@@ -1046,6 +1062,14 @@ class ContractController extends Controller
                 $q->where('pallet_number', 'like', "%{$pallet}%")
                     ->orWhere('pallet_code', 'like', "%{$pallet}%");
             });
+            $rearrangementsQuery->whereHas('inventoryEntries.pallet', function ($q) use ($pallet) {
+                $q->where('pallet_number', 'like', "%{$pallet}%")
+                    ->orWhere('pallet_code', 'like', "%{$pallet}%");
+            });
+            $adjustmentsQuery->whereHas('inventoryEntries.pallet', function ($q) use ($pallet) {
+                $q->where('pallet_number', 'like', "%{$pallet}%")
+                    ->orWhere('pallet_code', 'like', "%{$pallet}%");
+            });
         }
 
         // 5. Status
@@ -1054,6 +1078,8 @@ class ContractController extends Controller
             $receptionsQuery->where('status', $status);
             $deliveriesQuery->where('status', $status);
             $transfersQuery->where('status', $status);
+            $rearrangementsQuery->where('status', $status);
+            $adjustmentsQuery->where('status', $status);
         }
 
         // 6. Goods Type (Item)
@@ -1066,6 +1092,12 @@ class ContractController extends Controller
                 $q->where('inventory_item_id', $goodsType);
             });
             $transfersQuery->whereHas('inventoryEntries', function ($q) use ($goodsType) {
+                $q->where('inventory_item_id', $goodsType);
+            });
+            $rearrangementsQuery->whereHas('inventoryEntries', function ($q) use ($goodsType) {
+                $q->where('inventory_item_id', $goodsType);
+            });
+            $adjustmentsQuery->whereHas('inventoryEntries', function ($q) use ($goodsType) {
                 $q->where('inventory_item_id', $goodsType);
             });
         }
@@ -1115,6 +1147,24 @@ class ContractController extends Controller
             }
 
             $vouchers = $vouchers->concat($transfers);
+        }
+
+        if (empty($typeFilter) || $typeFilter === 'rearrangement') {
+            $rearrangements = $rearrangementsQuery->get()->map(function ($item) {
+                $item->voucher_type = 'rearrangement';
+                $item->date = $item->rearrangement_date;
+                return $item;
+            });
+            $vouchers = $vouchers->concat($rearrangements);
+        }
+
+        if (empty($typeFilter) || $typeFilter === 'adjustment') {
+            $adjustments = $adjustmentsQuery->get()->map(function ($item) {
+                $item->voucher_type = 'adjustment';
+                $item->date = $item->adjustment_date;
+                return $item;
+            });
+            $vouchers = $vouchers->concat($adjustments);
         }
 
         // Sort descending by date

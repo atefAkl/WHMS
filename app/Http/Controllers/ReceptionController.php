@@ -536,15 +536,7 @@ class ReceptionController extends Controller
             $bookedPallets = $contract->total_capacity ?: 0;
 
             // 2. Utilized pallets (pallets under contract with balance > 0)
-            $utilizedPallets = \App\Models\InventoryEntry::where(function ($q) use ($contract) {
-                $q->where(function ($q1) use ($contract) {
-                    $q1->where('voucher_type', \App\Models\Reception::class)
-                        ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contract->id)->pluck('id'));
-                })->orWhere(function ($q2) use ($contract) {
-                    $q2->where('voucher_type', \App\Models\Delivery::class)
-                        ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contract->id)->pluck('id'));
-                });
-            })
+            $utilizedPallets = \App\Models\InventoryEntry::where('contract_id', $contract->id)
                 ->select('pallet_id')
                 ->groupBy('pallet_id')
                 ->having(\Illuminate\Support\Facades\DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
@@ -555,15 +547,7 @@ class ReceptionController extends Controller
             $availablePallets = max(0, $bookedPallets - $utilizedPallets);
 
             // 4. Breakdown by Item Short Name / Size
-            $activePalletIds = \App\Models\InventoryEntry::where(function ($q) use ($contract) {
-                $q->where(function ($q1) use ($contract) {
-                    $q1->where('voucher_type', \App\Models\Reception::class)
-                        ->whereIn('voucher_id', \App\Models\Reception::where('contract_id', $contract->id)->pluck('id'));
-                })->orWhere(function ($q2) use ($contract) {
-                    $q2->where('voucher_type', \App\Models\Delivery::class)
-                        ->whereIn('voucher_id', \App\Models\Delivery::where('contract_id', $contract->id)->pluck('id'));
-                });
-            })
+            $activePalletIds = \App\Models\InventoryEntry::where('contract_id', $contract->id)
                 ->select('pallet_id')
                 ->groupBy('pallet_id')
                 ->having(\Illuminate\Support\Facades\DB::raw('SUM(quantity_in) - SUM(quantity_out)'), '>', 0)
