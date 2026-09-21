@@ -56,20 +56,11 @@ class ContractPalletStatsController extends Controller
 
         $contracts = $query->get();
 
-        // Helper voucher morph classes for contract matching
-        $voucherMorphClasses = [
-            Reception::class,
-            Delivery::class,
-            InventoryAdjustment::class,
-            PalletRearrangement::class,
-            \App\Models\ContractTransfer::class,
-        ];
-
         // Global list of unique pallet size categories found across active/selected contracts
         $allSizesSet = collect(['كبيرة', 'صغيرة']);
 
         // Calculate detailed stats per contract
-        $reportData = $contracts->map(function ($contract) use ($voucherMorphClasses, &$allSizesSet) {
+        $reportData = $contracts->map(function ($contract) use (&$allSizesSet) {
             // Determine active period or contract items
             $activePeriod = $contract->periods->where('status', 'active')->first()
                 ?? $contract->periods->sortByDesc('start_date')->first();
@@ -79,14 +70,12 @@ class ContractPalletStatsController extends Controller
                 : $contract->items;
 
             // Fetch pallet IDs that have active stock balances for this contract
-            $occupiedPalletIds = InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($vQuery) use ($contract) {
-                $vQuery->where('contract_id', $contract->id);
-            })
-            ->whereNotNull('pallet_id')
-            ->select('pallet_id')
-            ->groupBy('pallet_id')
-            ->havingRaw('SUM(quantity_in - quantity_out) > 0')
-            ->pluck('pallet_id');
+            $occupiedPalletIds = InventoryEntry::where('contract_id', $contract->id)
+                ->whereNotNull('pallet_id')
+                ->select('pallet_id')
+                ->groupBy('pallet_id')
+                ->havingRaw('SUM(quantity_in - quantity_out) > 0')
+                ->pluck('pallet_id');
 
             $totalOccupiedPalletsCount = $occupiedPalletIds->count();
 

@@ -1166,9 +1166,7 @@ class ContractController extends Controller
 
         // Goods types list for dropdown (distinct items)
         $goodsTypes = \App\Models\InventoryItem::whereHas('inventoryEntries', function ($q) use ($contract) {
-            $q->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
-                $query->where('contract_id', $contract->id);
-            });
+            $q->where('contract_id', $contract->id);
         })->get(['id', 'name']);
 
         // Drivers list for dropdown
@@ -1378,17 +1376,8 @@ class ContractController extends Controller
 
     public function getPallets(Request $request, Contract $contract)
     {
-        $voucherMorphClasses = [
-            Reception::class,
-            Delivery::class,
-            InventoryAdjustment::class,
-            PalletRearrangement::class,
-        ];
-
         // Direct query starting from the contract's inventory entries to get all pallet IDs
-        $contractPalletIds = InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($query) use ($contract) {
-            $query->where('contract_id', $contract->id);
-        })
+        $contractPalletIds = InventoryEntry::where('contract_id', $contract->id)
             ->whereNotNull('pallet_id')
             ->pluck('pallet_id')
             ->unique();
@@ -1414,9 +1403,7 @@ class ContractController extends Controller
 
         // Calculate contents for all of them
         $entries = \App\Models\InventoryEntry::whereIn('pallet_id', $allPallets->pluck('id'))
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class], function ($query) use ($contract) {
-                $query->where('contract_id', $contract->id);
-            })
+            ->where('contract_id', $contract->id)
             ->with(['inventoryItem', 'variant'])
             ->get();
 
@@ -1655,21 +1642,11 @@ class ContractController extends Controller
      */
     public function getPalletsForDelivery(Request $request, Contract $contract)
     {
-        $voucherMorphClasses = [
-            \App\Models\Reception::class,
-            \App\Models\Delivery::class,
-            \App\Models\InventoryAdjustment::class,
-            \App\Models\PalletRearrangement::class,
-            \App\Models\ContractTransfer::class,
-        ];
-
-        // 1. Query inventory entries associated with vouchers of this contract_id
-        $entries = \App\Models\InventoryEntry::whereHasMorph('voucher', $voucherMorphClasses, function ($q) use ($contract) {
-            $q->where('contract_id', $contract->id);
-        })
-        ->whereNotNull('pallet_id')
-        ->with(['pallet', 'inventoryItem', 'variant'])
-        ->get();
+        // 1. Query inventory entries associated with this contract_id
+        $entries = \App\Models\InventoryEntry::where('contract_id', $contract->id)
+            ->whereNotNull('pallet_id')
+            ->with(['pallet', 'inventoryItem', 'variant'])
+            ->get();
 
         // 2. Group entries by pallet_id
         $groupedByPallet = $entries->groupBy('pallet_id');
@@ -1742,9 +1719,7 @@ class ContractController extends Controller
     {
         // Fetch distinct items and variants stored under the contract
         $entriesQuery = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
-                $query->where('contract_id', $contract->id);
-            });
+            ->where('contract_id', $contract->id);
 
         // Search: item name or code
         if ($request->filled('search')) {
@@ -1815,9 +1790,7 @@ class ContractController extends Controller
         $variantId = (int) $request->input('variant_id');
 
         $entries = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
-                $query->where('contract_id', $contract->id);
-            })
+            ->where('contract_id', $contract->id)
             ->where('inventory_item_id', $itemId)
             ->where('inventory_item_variant_id', $variantId)
             ->with(['voucher', 'inventoryItem', 'variant'])
@@ -1878,9 +1851,7 @@ class ContractController extends Controller
         $pallet = \App\Models\Pallet::findOrFail($palletId);
 
         $entries = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [\App\Models\Reception::class, \App\Models\Delivery::class, \App\Models\InventoryAdjustment::class, \App\Models\PalletRearrangement::class, \App\Models\ContractTransfer::class], function ($query) use ($contract) {
-                $query->where('contract_id', $contract->id);
-            })
+            ->where('contract_id', $contract->id)
             ->where('pallet_id', $palletId)
             ->with(['voucher', 'inventoryItem', 'variant'])
             ->orderBy('operation_date', 'asc')
@@ -1949,15 +1920,7 @@ class ContractController extends Controller
         $contract->load(['customer', 'periods']);
 
         $entries = \App\Models\InventoryEntry::query()
-            ->whereHasMorph('voucher', [
-                \App\Models\Reception::class,
-                \App\Models\Delivery::class,
-                \App\Models\InventoryAdjustment::class,
-                \App\Models\PalletRearrangement::class,
-                \App\Models\ContractTransfer::class,
-            ], function ($query) use ($contract) {
-                $query->where('contract_id', $contract->id);
-            })
+            ->where('contract_id', $contract->id)
             ->with(['pallet', 'inventoryItem', 'variant', 'voucher.driver', 'voucher.representative'])
             ->orderBy('created_at', 'desc')
             ->get();

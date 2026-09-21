@@ -277,21 +277,12 @@ class PalletController extends Controller
             })
             ->first();
 
-        $voucherMorphClasses = [
-            \App\Models\Reception::class,
-            \App\Models\Delivery::class,
-            \App\Models\InventoryAdjustment::class,
-            \App\Models\PalletRearrangement::class,
-        ];
-
         $contents = [];
 
         if ($pallet) {
             // Strictly scoped query for this contract_id ONLY
             $entries = \App\Models\InventoryEntry::where('pallet_id', $pallet->id)
-                ->whereHasMorph('voucher', $voucherMorphClasses, function ($q) use ($contract) {
-                    $q->where('contract_id', $contract->id);
-                })
+                ->where('contract_id', $contract->id)
                 ->with(['inventoryItem', 'variant'])
                 ->get();
 

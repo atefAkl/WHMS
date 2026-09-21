@@ -381,14 +381,7 @@ class PalletRearrangementController extends Controller
     public function getContractRearrangementOptions(Contract $contract)
     {
         $entries = InventoryEntry::query()
-            ->whereHasMorph('voucher', [
-                \App\Models\Reception::class,
-                \App\Models\Delivery::class,
-                \App\Models\InventoryAdjustment::class,
-                \App\Models\PalletRearrangement::class
-            ], function ($q) use ($contract) {
-                $q->where('contract_id', $contract->id);
-            })
+            ->where('contract_id', $contract->id)
             ->with(['inventoryItem', 'variant', 'pallet'])
             ->get();
 
