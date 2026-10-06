@@ -48,12 +48,11 @@ export default function Print({ rearrangement, companySettings = {} }) {
         return rawText;
     };
 
-    // Calculate totals
-    const totalQty = rearrangement.items?.reduce((sum, item) => {
-        const qIn = parseFloat(item.quantity_in || 0);
-        const qOut = parseFloat(item.quantity_out || 0);
-        return sum + (qIn > 0 ? qIn : (qOut > 0 ? qOut : parseFloat(item.quantity || 0)));
-    }, 0) || 0;
+    // Double entry transfer calculation
+    const sumIn = rearrangement.items?.reduce((sum, item) => sum + parseFloat(item.quantity_in || 0), 0) || 0;
+    const sumOut = rearrangement.items?.reduce((sum, item) => sum + parseFloat(item.quantity_out || 0), 0) || 0;
+    const isBalanced = (sumIn > 0 || sumOut > 0) && Math.abs(sumIn - sumOut) < 0.001;
+    const netQty = sumIn > 0 ? sumIn : sumOut;
     const totalPallets = rearrangement.items?.length || 0;
 
     // Helper: Format item name, extract capacity/weight
@@ -347,8 +346,28 @@ export default function Print({ rearrangement, companySettings = {} }) {
                                                     <span className="font-mono text-sm font-black text-black">{totalPallets}</span>
                                                 </td>
                                                 <td colSpan="3" className="py-2 px-4 text-end font-bold">
-                                                    <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الكمية المنقولة / Total Transferred:" : "Total Transferred:"}</span>
-                                                    <span className="font-mono text-sm font-black text-black">{Math.round(totalQty).toLocaleString()}</span>
+                                                    {isBalanced ? (
+                                                        <div className="inline-flex items-center gap-2">
+                                                            <span className="text-gray-700 me-1">
+                                                                {lang === "ar" ? "إجمالي الكمية المحولة / Transferred Qty:" : "Transferred Qty:"}
+                                                            </span>
+                                                            <span className="font-mono text-sm font-black text-black me-1">
+                                                                {Math.round(netQty).toLocaleString()}
+                                                            </span>
+                                                            <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] font-black px-2 py-0.5 rounded">
+                                                                {lang === "ar" ? "✓ قيد تحويل متزن" : "✓ Double Entry Balanced"}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="inline-flex items-center gap-2">
+                                                            <span className="text-gray-700 me-1">
+                                                                {lang === "ar" ? `إجمالي الإضافة: ${Math.round(sumIn)} | إجمالي السحب: ${Math.round(sumOut)}` : `In: ${Math.round(sumIn)} | Out: ${Math.round(sumOut)}`}
+                                                            </span>
+                                                            <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-black px-2 py-0.5 rounded">
+                                                                {lang === "ar" ? "تعديل رصيد" : "Balance Adjustment"}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         )}
