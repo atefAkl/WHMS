@@ -514,8 +514,15 @@ class DeliveryController extends Controller
             'inventoryEntries.pallet',
         ]);
 
+        $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+        if (class_exists(\App\Models\TenantSetting::class)) {
+            $tenantSettings = \App\Models\TenantSetting::pluck('value', 'key')->all();
+            $companySettings = array_merge($companySettings, array_filter($tenantSettings));
+        }
+
         return Inertia::render('Warehouse/Deliveries/Print', [
-            'delivery' => $delivery
+            'delivery' => $delivery,
+            'companySettings' => $companySettings,
         ]);
     }
 

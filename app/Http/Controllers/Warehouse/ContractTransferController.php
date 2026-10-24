@@ -379,8 +379,15 @@ class ContractTransferController extends Controller
             'items.pallet'
         ])->findOrFail($id);
 
+        $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+        if (class_exists(\App\Models\TenantSetting::class)) {
+            $tenantSettings = \App\Models\TenantSetting::pluck('value', 'key')->all();
+            $companySettings = array_merge($companySettings, array_filter($tenantSettings));
+        }
+
         return Inertia::render('Warehouse/Transfers/Print', [
-            'transfer' => $transfer,
+            'transfer'        => $transfer,
+            'companySettings' => $companySettings,
         ]);
     }
 

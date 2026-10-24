@@ -522,6 +522,10 @@ class ReceptionController extends Controller
         ]);
 
         $companySettings = \App\Models\ContractSetting::pluck('value', 'key')->all();
+        if (class_exists(\App\Models\TenantSetting::class)) {
+            $tenantSettings = \App\Models\TenantSetting::pluck('value', 'key')->all();
+            $companySettings = array_merge($companySettings, array_filter($tenantSettings));
+        }
 
         return Inertia::render('Warehouse/Receptions/Print', [
             'reception' => $reception,

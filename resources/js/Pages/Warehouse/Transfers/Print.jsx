@@ -1,149 +1,452 @@
-import React, { useEffect } from "react";
-import { Head } from "@inertiajs/react";
+import React, { useEffect, useState } from "react";
+import { Head, usePage, Link } from "@inertiajs/react";
 import { useLang } from "@/Contexts/LanguageContext";
-import { Printer } from "lucide-react";
+import { ArrowRight, FileCheck, FileText, List, Plus, Printer, X } from "lucide-react";
 
-export default function Print({ transfer }) {
-    const { lang, __ } = useLang();
+export default function Print({ transfer, companySettings = {} }) {
+    const { lang } = useLang();
+    const user = usePage().props.auth.user;
 
-    const t = (key, fallback) => {
-        if (!key) return fallback || "";
-        const translated = __ ? __(key) : key;
-        return (translated && translated !== key) ? translated : fallback;
-    };
+    const [hasReferrer, setHasReferrer] = useState(false);
 
     useEffect(() => {
+        // Trigger print dialog automatically after component mounts
         const timer = setTimeout(() => {
             window.print();
         }, 500);
+
+        if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+            setHasReferrer(true);
+        }
+
         return () => clearTimeout(timer);
     }, []);
 
-    const totalQuantity = (transfer.items || []).reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0);
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleCloseOrBack = () => {
+        if (typeof window !== "undefined" && document.referrer && document.referrer.startsWith(window.location.origin)) {
+            window.location.href = document.referrer;
+        } else {
+            window.close();
+            setTimeout(() => {
+                if (!window.closed) {
+                    window.history.back();
+                }
+            }, 300);
+        }
+    };
+
+    const displayBilingual = (rawText) => {
+        if (!rawText) return "";
+        const parts = rawText.split("|").map((s) => s.trim());
+        if (parts.length > 1) {
+            return lang === "ar" ? parts[0] : parts[1];
+        }
+        return rawText;
+    };
+
+    // Calculate totals
+    const totalQty = (transfer.items || []).reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0);
+    const totalEntries = transfer.items?.length || 0;
+
+    // Helper: Format item name, extract capacity/weight
+    const formatItemAndPackage = (item) => {
+        let rawItemName = displayBilingual(item.inventory_item?.name || item.inventoryItem?.name) || "";
+        let rawVarName = displayBilingual(item.variant?.name) || "";
+        let boxType = item.variant?.unit || item.variant?.package_type || "كرتون";
+
+        let extraCap = "";
+        const capacityRegex = /(\d+(?:\.\d+)?\s*(?:كجم|ك|kg|k)\s*\w*|ك\s+\w+)/gi;
+
+        const mVar = rawVarName.match(capacityRegex);
+        if (mVar) {
+            extraCap = mVar[0].trim();
+            rawVarName = rawVarName.replace(capacityRegex, "").trim();
+        }
+
+        const mItem = rawItemName.match(capacityRegex);
+        if (mItem) {
+            if (!extraCap) extraCap = mItem[0].trim();
+            rawItemName = rawItemName.replace(capacityRegex, "").trim();
+        }
+
+        if (rawVarName.toLowerCase() === boxType.toLowerCase()) {
+            rawVarName = "";
+        }
+
+        let finalBoxDisplay = boxType;
+        if (extraCap) {
+            finalBoxDisplay = `${boxType} ${extraCap}`;
+        } else if (rawVarName) {
+            finalBoxDisplay = `${boxType} ${rawVarName}`;
+            rawVarName = "";
+        }
+
+        return { cleanItemName: rawItemName, cleanVarName: rawVarName, finalBoxDisplay };
+    };
+
+    const getGradeDisplay = (item) => {
+        return item.variant?.size || item.variant?.quality || item.pallet?.size || "—";
+    };
+
+    const getPalletFormatted = (item) => {
+        const palletNum = item.pallet?.pallet_number || item.pallet?.pallet_code || "—";
+        const palletSize = item.pallet?.size || item.variant?.size;
+        if (palletNum !== "—" && palletSize) {
+            return `${palletNum} / ${palletSize}`;
+        }
+        return palletNum;
+    };
+
+    // Company info & metadata defaults
+    const compName = companySettings.company_name || "مخازن أيمن محمد عبد الله الغماس للتخزين";
+    const compSlogan = companySettings.company_slogan || "تخزين - تبريد - تجميد - تعبئة وتغليف - بيع - تصدير";
+    const compCr = companySettings.company_cr || "1131305092";
+    const compPhone = companySettings.company_phone || "0568562615";
+    const compEmail = companySettings.company_email || "sales@ag-stores.com";
+    const compAddress = companySettings.company_address || "1131 - القصيم / ضراس - طريق الملك فهد";
+    const compWebsite = companySettings.company_website || "https://web.site";
+    const compLogo = companySettings.company_logo || null;
+
+    // Multi-page Chunking (25 items per page for clean A4 printing)
+    const ITEMS_PER_PAGE = 25;
+    const itemsList = transfer.items || [];
+    const totalPagesCount = Math.max(1, Math.ceil(totalEntries / ITEMS_PER_PAGE));
+
+    const pageChunks = [];
+    for (let p = 0; p < totalPagesCount; p++) {
+        const pageItems = itemsList.slice(p * ITEMS_PER_PAGE, (p + 1) * ITEMS_PER_PAGE);
+        pageChunks.push({
+            pageIndex: p + 1,
+            totalPages: totalPagesCount,
+            items: pageItems,
+            startIndex: p * ITEMS_PER_PAGE,
+            isLastPage: p === totalPagesCount - 1,
+        });
+    }
 
     return (
-        <div className="min-h-screen bg-white text-black p-8 font-sans" dir="rtl">
-            <Head title={`طباعة سند نقل طبالي - ${transfer.serial_number}`} />
+        <div 
+            className="min-h-screen bg-white text-black p-4 sm:p-6 font-sans text-xs print:p-0 print:m-0" 
+            dir={lang === "ar" ? "rtl" : "ltr"}
+            style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+        >
+            <Head title={lang === "ar" ? `طباعة سند نقل طبالي: ${transfer.serial_number}` : `Print Pallet Transfer: ${transfer.serial_number}`} />
 
-            {/* Print action button for screen view */}
-            <div className="no-print mb-6 flex justify-end">
-                <button
-                    onClick={() => window.print()}
-                    className="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2 font-bold rounded-none flex items-center gap-2 shadow"
-                >
-                    <Printer className="h-4 w-4" />
-                    <span>{t("common.print", "طباعة السند")}</span>
-                </button>
-            </div>
+            {/* Print Control Bar - Hidden when printing */}
+            <div className="print:hidden mb-6 flex flex-wrap justify-between items-center bg-gray-50 p-3 border border-gray-200 rounded-xl gap-3">
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        <FileText className="h-4 w-4 text-primary" />
+                        {lang === "ar" ? "معاينة طباعة سند نقل طبالي بين العقود" : "Contract Pallet Transfer Voucher Print Preview"}
+                    </span>
 
-            {/* Print Header */}
-            <div className="border-b-2 border-black pb-4 mb-6 flex justify-between items-center">
-                <div>
-                    <h1 className="text-xl font-extrabold tracking-tight">مخازن أيمن محمد عبد الله الغماس للتخزين</h1>
-                    <p className="text-xs text-gray-600 mt-1">تخزين - تبريد - تجميد - تعبئة وتغليف - بيع - تصدير</p>
-                    <p className="text-xs text-gray-600 font-mono mt-0.5">ست: 1131305092 | جوال: 0568562615</p>
-                </div>
-                <div className="text-end">
-                    <div className="border-2 border-black px-4 py-2 font-bold text-base inline-block">
-                        سند نقل طبالي بين العقود
+                    <div className="flex items-center gap-2 border-s border-gray-300 ps-3 ms-1">
+                        <Link
+                            href={route("contract-transfers.index")}
+                            className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-all"
+                        >
+                            <List className="h-3.5 w-3.5" />
+                            <span>{lang === "ar" ? "العودة إلى سندات النقل" : "Back to Transfers"}</span>
+                        </Link>
+
+                        {transfer.source_contract_id && (
+                            <Link
+                                href={`/contracts/${transfer.source_contract_id}`}
+                                className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-all"
+                            >
+                                <FileCheck className="h-3.5 w-3.5 text-blue-600" />
+                                <span>{lang === "ar" ? "عقد المصدر" : "Source Contract"}</span>
+                            </Link>
+                        )}
+
+                        {transfer.destination_contract_id && (
+                            <Link
+                                href={`/contracts/${transfer.destination_contract_id}`}
+                                className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-all"
+                            >
+                                <FileCheck className="h-3.5 w-3.5 text-emerald-600" />
+                                <span>{lang === "ar" ? "عقد الوجهة" : "Dest Contract"}</span>
+                            </Link>
+                        )}
                     </div>
-                    <p className="text-xs font-mono font-bold mt-2">رقم السند: {transfer.serial_number}</p>
-                    <p className="text-xs font-mono mt-0.5">
-                        التاريخ: {transfer.transfer_date ? new Date(transfer.transfer_date).toLocaleDateString("ar-EG") : "—"}
-                    </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Link
+                        href={route("contract-transfers.create")}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span>{lang === "ar" ? "إضافة سند نقل جديد" : "New Transfer"}</span>
+                    </Link>
+                    <button
+                        onClick={handlePrint}
+                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm"
+                    >
+                        <Printer className="h-4 w-4" />
+                        <span>{lang === "ar" ? "طباعة السند" : "Print Voucher"}</span>
+                    </button>
+                    <button
+                        onClick={handleCloseOrBack}
+                        className="px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5"
+                    >
+                        {hasReferrer ? (
+                            <>
+                                <ArrowRight className={`h-4 w-4 ${lang === "ar" ? "rotate-0" : "rotate-180"}`} />
+                                <span>{lang === "ar" ? "العودة للخلف" : "Go Back"}</span>
+                            </>
+                        ) : (
+                            <>
+                                <X className="h-4 w-4" />
+                                <span>{lang === "ar" ? "إغلاق النافذة" : "Close Window"}</span>
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
 
-            {/* Metadata Grid */}
-            <div className="grid grid-cols-2 gap-4 border border-black p-4 mb-6 text-xs">
-                {/* Source Side */}
-                <div className="border-e border-black pe-4">
-                    <span className="font-bold text-gray-700 block mb-1">بيانات عقد المصدر (منه):</span>
-                    <p className="font-bold text-sm">رقم العقد: {transfer.source_contract?.contract_number}</p>
-                    <p className="mt-1">اسم العميل: {transfer.source_customer?.name || transfer.source_contract?.customer?.name}</p>
-                    {transfer.farm_source && <p className="mt-1">المزرعة / البيان: {transfer.farm_source}</p>}
-                </div>
+            {/* Document Pages Container */}
+            <div className="max-w-4xl mx-auto w-full space-y-6 print:space-y-0">
+                {pageChunks.map((chunk) => (
+                    <div
+                        key={chunk.pageIndex}
+                        className="print-page-break bg-white border border-gray-200 print:border-none p-6 print:p-0 min-h-[27cm] flex flex-col justify-between"
+                    >
+                        {/* Page Content Header & Table */}
+                        <div className="space-y-3 print:space-y-2">
+                            {/* Header Section */}
+                            <div className="flex justify-between items-start border-b border-gray-400 pb-2">
+                                <div className="flex items-center gap-3">
+                                    {compLogo ? (
+                                        <img src={compLogo} alt="Logo" className="w-12 h-12 object-contain" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-300">
+                                            <FileText className="h-5 w-5 text-gray-800" />
+                                        </div>
+                                    )}
+                                    <div className="space-y-0.5 text-start">
+                                        <h2 className="font-black text-xs text-black leading-snug">
+                                            {compName}
+                                        </h2>
+                                        <p className="text-[10px] text-gray-600 font-medium">
+                                            {compSlogan}
+                                        </p>
+                                        <p className="text-[9px] text-gray-700 font-mono">
+                                            CR: <span className="font-bold">{compCr}</span> &nbsp;|&nbsp; TEL: <span className="font-bold">{compPhone}</span>
+                                        </p>
+                                    </div>
+                                </div>
 
-                {/* Destination Side */}
-                <div>
-                    <span className="font-bold text-gray-700 block mb-1">بيانات عقد الوجهة (إليه):</span>
-                    <p className="font-bold text-sm">رقم العقد: {transfer.destination_contract?.contract_number}</p>
-                    <p className="mt-1">اسم العميل: {transfer.destination_customer?.name || transfer.destination_contract?.customer?.name}</p>
-                    {transfer.driver && (
-                        <p className="mt-1">السائق الناقل: {transfer.driver.name} {transfer.driver.vehicle_plate ? `(${transfer.driver.vehicle_plate})` : ""}</p>
-                    )}
-                </div>
+                                <div className="text-end space-y-0.5">
+                                    <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
+                                        {lang === "ar" ? "سند نقل طبالي بين العقود" : "Contract Pallet Transfer Note"}
+                                    </h1>
+                                    <div className="text-xs font-black font-mono text-gray-900">
+                                        No: {transfer.serial_number}
+                                    </div>
+                                </div>
+                            </div>
 
-                {transfer.notes && (
-                    <div className="col-span-2 border-t border-black pt-2 mt-1">
-                        <span className="font-bold block">ملاحظات السند:</span>
-                        <p className="mt-0.5">{transfer.notes}</p>
+                            {/* Metadata Grid */}
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-[11px] border-b border-gray-300 pb-2">
+                                <div className="space-y-1">
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "عقد المصدر (منه):" : "Source Contract:"}</span>
+                                        <span className="font-mono font-bold text-black">{transfer.source_contract?.contract_number}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "عميل المصدر:" : "Source Client:"}</span>
+                                        <span className="font-bold text-black">{transfer.source_customer?.name || transfer.source_contract?.customer?.name}</span>
+                                    </div>
+                                    {transfer.farm_source && (
+                                        <div className="flex gap-2">
+                                            <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "المزرعة / البيان:" : "Farm / Source:"}</span>
+                                            <span className="font-medium text-gray-900">{transfer.farm_source}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "عقد الوجهة (إليه):" : "Dest Contract:"}</span>
+                                        <span className="font-mono font-bold text-black">{transfer.destination_contract?.contract_number}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "عميل الوجهة:" : "Dest Client:"}</span>
+                                        <span className="font-bold text-black">{transfer.destination_customer?.name || transfer.destination_contract?.customer?.name}</span>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex gap-2 flex-1">
+                                            <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "تاريخ النقل:" : "Date:"}</span>
+                                            <span className="font-mono font-bold text-black">{transfer.transfer_date ? new Date(transfer.transfer_date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US") : "—"}</span>
+                                        </div>
+                                    </div>
+                                    {transfer.driver && (
+                                        <div className="flex gap-2">
+                                            <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "السائق الناقل:" : "Driver:"}</span>
+                                            <span className="font-medium text-gray-900">{transfer.driver.name} {transfer.driver.vehicle_plate ? `(${transfer.driver.vehicle_plate})` : ""}</span>
+                                        </div>
+                                    )}
+                                    {transfer.notes && (
+                                        <div className="flex gap-2">
+                                            <span className="font-bold text-gray-600 w-28 shrink-0">{lang === "ar" ? "ملاحظات:" : "Notes:"}</span>
+                                            <span className="text-[10px] text-gray-800 leading-tight">{transfer.notes}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Chunk Items Table */}
+                            <div className="space-y-1">
+                                <table className="w-full text-xs text-center border-b border-gray-400">
+                                    <thead>
+                                        <tr className="border-b border-black text-black font-bold">
+                                            <th className="py-1.5 text-start w-10">#</th>
+                                            <th className="py-1.5 text-start">{lang === "ar" ? "الصنف (Items)" : "Items"}</th>
+                                            <th className="py-1.5 w-28">{lang === "ar" ? "الدرجة (Grade)" : "Grade"}</th>
+                                            <th className="py-1.5 w-32">{lang === "ar" ? "الطبلية (Pallet)" : "Pallet"}</th>
+                                            <th className="py-1.5 w-28">{lang === "ar" ? "الكمية المنقولة (Qty)" : "Qty"}</th>
+                                            <th className="py-1.5 text-start">{lang === "ar" ? "ملاحظات البند (Notes)" : "Notes"}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {chunk.items.map((item, idx) => {
+                                            const { cleanItemName, cleanVarName } = formatItemAndPackage(item);
+                                            const gradeDisplay = getGradeDisplay(item);
+                                            const palletFormatted = getPalletFormatted(item);
+                                            const val = parseFloat(item.quantity || 0);
+                                            const rowNum = chunk.startIndex + idx + 1;
+
+                                            return (
+                                                <tr key={item.id || idx} className="text-gray-900">
+                                                    <td className="py-1.5 text-start font-mono">{String(rowNum).padStart(2, '0')}</td>
+                                                    <td className="py-1.5 text-start font-bold">
+                                                        {cleanItemName}
+                                                        {cleanVarName ? <span className="text-gray-500 text-[10px] font-normal block">{cleanVarName}</span> : null}
+                                                    </td>
+                                                    <td className="py-1.5 font-medium">
+                                                        {gradeDisplay}
+                                                    </td>
+                                                    <td className="py-1.5 font-mono font-bold">
+                                                        {palletFormatted}
+                                                    </td>
+                                                    <td className="py-1.5 font-mono font-bold text-center">
+                                                        {Math.round(val).toLocaleString()}
+                                                    </td>
+                                                    <td className="py-1.5 text-start text-gray-700 text-[11px]">
+                                                        {item.notes || "—"}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+
+                                        {/* Total Summary Row (Rendered ONLY on Last Page) */}
+                                        {chunk.isLastPage && (
+                                            <tr className="border-t-2 border-black font-extrabold text-black">
+                                                <td colSpan="3" className="py-2 px-4 text-start font-bold">
+                                                    <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي بنود الحركة / Total Entries:" : "Total Entries:"}</span>
+                                                    <span className="font-mono text-sm font-black text-black">{totalEntries}</span>
+                                                </td>
+                                                <td colSpan="3" className="py-2 px-4 text-end font-bold">
+                                                    <span className="text-gray-700 me-2">{lang === "ar" ? "إجمالي الكمية المنقولة / Total Transferred:" : "Total Transferred:"}</span>
+                                                    <span className="font-mono text-sm font-black text-black">{Math.round(totalQty).toLocaleString()}</span>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Signatures & Footer Panel */}
+                        <div className="mt-auto pt-4 space-y-3">
+                            {/* Signatures Panel (Rendered ONLY on Last Page) */}
+                            {chunk.isLastPage ? (
+                                <div className="grid grid-cols-3 gap-8 text-center text-xs">
+                                    <div className="space-y-4">
+                                        <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                            {lang === "ar" ? "تسليم / عميل المصدر" : "Source Client"}
+                                        </p>
+                                        <div className="text-start text-[11px] space-y-0.5">
+                                            <p className="text-gray-800 font-semibold truncate">
+                                                {lang === "ar" ? "الاسم: " : "Name: "}{transfer.source_customer?.name || transfer.source_contract?.customer?.name || "________________"}
+                                            </p>
+                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                            {lang === "ar" ? "استلام / عميل الوجهة" : "Destination Client"}
+                                        </p>
+                                        <div className="text-start text-[11px] space-y-0.5">
+                                            <p className="text-gray-800 font-semibold truncate">
+                                                {lang === "ar" ? "الاسم: " : "Name: "}{transfer.destination_customer?.name || transfer.destination_contract?.customer?.name || "________________"}
+                                            </p>
+                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <p className="font-bold text-gray-800 border-b border-gray-300 pb-1">
+                                            {lang === "ar" ? "أمين / مسؤول المخزن" : "Storekeeper"}
+                                        </p>
+                                        <div className="text-start text-[11px] space-y-0.5">
+                                            <p className="text-gray-800 font-semibold">
+                                                {lang === "ar" ? "الاسم: " : "Name: "}{transfer.creator?.name || user?.name || "________________"}
+                                            </p>
+                                            <p className="text-gray-400 font-mono">{lang === "ar" ? "التوقيع: ________________" : "Signature: ________________"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center text-[10px] text-gray-500 italic">
+                                    {lang === "ar" ? "يتبع السند بالتوقيعات والإجمالي في الصفحة التالية..." : "Continued on next page..."}
+                                </div>
+                            )}
+
+                            {/* Page Footer Metadata */}
+                            <div className="border-t border-gray-300 pt-1.5 flex justify-between items-center text-[9px] text-gray-600">
+                                <div>
+                                    {compAddress} – Phone: <span className="font-mono font-bold">{compPhone}</span> | Email: <span className="font-mono">{compEmail}</span>
+                                </div>
+                                <div className="font-mono font-bold text-gray-700">
+                                    {lang === "ar" ? `صفحة ${chunk.pageIndex} من ${chunk.totalPages}` : `Page ${chunk.pageIndex} of ${chunk.totalPages}`}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                )}
+                ))}
             </div>
 
-            {/* Transferred Items Table */}
-            <table className="w-full text-xs border-collapse border border-black mb-8">
-                <thead>
-                    <tr className="bg-gray-100 border-b border-black font-bold text-black">
-                        <th className="border border-black p-2 text-start w-10">#</th>
-                        <th className="border border-black p-2 text-start">رقم الطبلية</th>
-                        <th className="border border-black p-2 text-start">الصنف</th>
-                        <th className="border border-black p-2 text-start">الدرجة / النوع</th>
-                        <th className="border border-black p-2 text-center w-28">الكمية المنقولة</th>
-                        <th className="border border-black p-2 text-start">ملاحظات البند</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {(transfer.items || []).map((item, idx) => (
-                        <tr key={item.id || idx} className="border-b border-black">
-                            <td className="border border-black p-2 text-center font-mono">{idx + 1}</td>
-                            <td className="border border-black p-2 font-bold font-mono">
-                                طبلية #{item.pallet?.pallet_number || item.pallet?.pallet_code || "—"}
-                            </td>
-                            <td className="border border-black p-2 font-bold">{item.inventory_item?.name || "—"}</td>
-                            <td className="border border-black p-2">{item.variant?.name || "—"}</td>
-                            <td className="border border-black p-2 text-center font-mono font-bold text-sm">
-                                {parseFloat(item.quantity || 0).toLocaleString()}
-                            </td>
-                            <td className="border border-black p-2">{item.notes || "—"}</td>
-                        </tr>
-                    ))}
-                </tbody>
-                <tfoot>
-                    <tr className="font-bold border-t-2 border-black bg-gray-50">
-                        <td colSpan="4" className="border border-black p-2 text-start">إجمالي الكمية المنقولة للسند:</td>
-                        <td className="border border-black p-2 text-center font-mono text-base">{totalQuantity.toLocaleString()}</td>
-                        <td className="border border-black p-2"></td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            {/* Signatures Footer */}
-            <div className="grid grid-cols-3 gap-8 text-xs font-bold text-center mt-12 pt-4">
-                <div>
-                    <p className="mb-12">تسليم / عميل المصدر</p>
-                    <p className="border-t border-black pt-1">التوقيع: ............................</p>
-                </div>
-                <div>
-                    <p className="mb-12">استلام / عميل الوجهة</p>
-                    <p className="border-t border-black pt-1">التوقيع: ............................</p>
-                </div>
-                <div>
-                    <p className="mb-12">أمين / مسئول المخزن</p>
-                    <p className="border-t border-black pt-1">التوقيع: ............................</p>
-                </div>
-            </div>
-
-            {/* Print Styles */}
+            {/* Print CSS Rules - Supports Multi-page Printing */}
             <style>{`
                 @media print {
-                    .no-print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 0.8cm;
+                    }
+                    html, body {
+                        background: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                    }
+                    .print\\:hidden {
                         display: none !important;
                     }
-                    body {
-                        background: white !important;
-                        padding: 0 !important;
+                    .print-page-break {
+                        page-break-after: always !important;
+                        break-after: page !important;
+                    }
+                    .print-page-break:last-child {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
                     }
                 }
             `}</style>

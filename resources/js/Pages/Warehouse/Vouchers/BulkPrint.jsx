@@ -146,8 +146,8 @@ export default function BulkPrint({ vouchers = [], contract, companySettings = {
                         <div className="text-end space-y-0.5">
                             <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
                                 {isReception 
-                                    ? __('vouchers.bulk_print.reception_note')
-                                    : __('vouchers.bulk_print.delivery_note')
+                                    ? (lang === "ar" ? "سند استلام بضائع" : __('vouchers.bulk_print.reception_note'))
+                                    : (lang === "ar" ? "سند تسليم وخروج بضائع" : __('vouchers.bulk_print.delivery_note'))
                                 }
                             </h1>
                             <div className="text-xs font-black font-mono text-gray-900">

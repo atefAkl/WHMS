@@ -247,7 +247,7 @@ export default function Print({ reception, companySettings = {} }) {
 
                                 <div className="text-end space-y-0.5">
                                     <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
-                                        {__("receptions.print.goods_reception_note")}
+                                        {lang === "ar" ? "سند استلام بضائع" : "Goods Reception Note"}
                                     </h1>
                                     <div className="text-xs font-black font-mono text-gray-900">
                                         No: {reception.serial_number}

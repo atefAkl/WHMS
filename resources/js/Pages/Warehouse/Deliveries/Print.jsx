@@ -112,11 +112,11 @@ export default function Print({ delivery, companySettings = {} }) {
     };
 
     // Company info & metadata defaults
-    const compName = companySettings.company_name || "مخازن سلطان العتبيبي الأشرم للتخزين";
+    const compName = companySettings.company_name || "مخازن أيمن محمد عبد الله الغماس للتخزين";
     const compSlogan = companySettings.company_slogan || "تخزين - تبريد - تجميد - تعبئة وتغليف - بيع - تصدير";
-    const compCr = companySettings.company_cr || "1301304587";
-    const compPhone = companySettings.company_phone || "0500000000";
-    const compEmail = companySettings.company_email || "account@web.site";
+    const compCr = companySettings.company_cr || "1131305092";
+    const compPhone = companySettings.company_phone || "0568562615";
+    const compEmail = companySettings.company_email || "sales@ag-stores.com";
     const compAddress = companySettings.company_address || "1131 - القصيم / ضراس - طريق الملك فهد";
     const compWebsite = companySettings.company_website || "https://web.site";
     const compLogo = companySettings.company_logo || null;
@@ -244,7 +244,7 @@ export default function Print({ delivery, companySettings = {} }) {
 
                                 <div className="text-end space-y-0.5">
                                     <h1 className="text-sm font-extrabold uppercase tracking-wide text-black">
-                                        {__("deliveries.print.goods_delivery_note")}
+                                        {lang === "ar" ? "سند تسليم وخروج بضائع" : "Goods Delivery Note"}
                                     </h1>
                                     <div className="text-xs font-black font-mono text-gray-900">
                                         No: {delivery.serial_number}
