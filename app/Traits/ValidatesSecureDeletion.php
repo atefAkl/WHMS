@@ -20,6 +20,7 @@ trait ValidatesSecureDeletion
     {
         $request->validate([
             'password' => 'required|string',
+            'reason'   => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -32,8 +33,20 @@ trait ValidatesSecureDeletion
 
         if (!Hash::check($request->password, $user->secure_password)) {
             throw new HttpResponseException(
-                redirect()->back()->with('error', 'كلمة مرور تأكيد الحذف غير صحيحة.')
+                redirect()->back()->with('error', 'كلمة مرور تأكيد الإجراء غير صحيحة.')
             );
         }
+    }
+
+    /**
+     * Alias for validateSecureDelete to support controllers calling validateDeletePassword
+     *
+     * @param Request $request
+     * @return void
+     * @throws HttpResponseException
+     */
+    protected function validateDeletePassword(Request $request)
+    {
+        $this->validateSecureDelete($request);
     }
 }

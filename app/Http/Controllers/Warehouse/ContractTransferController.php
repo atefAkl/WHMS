@@ -309,7 +309,7 @@ class ContractTransferController extends Controller
             return back()->withErrors(['error' => 'لا يمكن حذف سند معتمد ومغلق. يرجى إلغاء الاعتماد أولاً.']);
         }
 
-        $this->validateDeletePassword($request);
+        $this->validateSecureDelete($request);
 
         $transfer->delete();
 
@@ -345,19 +345,26 @@ class ContractTransferController extends Controller
             return back()->with('info', 'السند غير معتمد لكي يتم إعادة فتحه.');
         }
 
-        $this->validateDeletePassword($request);
+        $this->validateSecureDelete($request);
 
-        DB::transaction(function () use ($transfer) {
+        DB::transaction(function () use ($request, $transfer) {
             // Delete generated inventory entries
             InventoryEntry::where('voucher_type', ContractTransfer::class)
                 ->where('voucher_id', $transfer->id)
                 ->delete();
 
-            $transfer->update([
+            $updateData = [
                 'status'      => 'draft',
                 'approved_by' => null,
                 'approved_at' => null,
-            ]);
+            ];
+
+            if ($request->filled('reason')) {
+                $reasonStamp = "\n[إعادة فتح - " . now()->format('Y-m-d H:i') . ' - ' . (auth()->user()->name ?? 'المستخدم') . ']: ' . $request->reason;
+                $updateData['notes'] = ($transfer->notes ? $transfer->notes . "\n" : '') . $reasonStamp;
+            }
+
+            $transfer->update($updateData);
         });
 
         return back()->with('success', 'تم إلغاء اعتماد السند وتفريغ حركاته بنجاح.');
