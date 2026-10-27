@@ -21,7 +21,8 @@ if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
         'app/Http',
         'app/Http/Controllers',
         'app/Http/Controllers/Warehouse',
-        'app/Traits'
+        'app/Traits',
+        'public'
     ];
 
     foreach ($dirs as $dir) {
@@ -31,7 +32,8 @@ if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
 
     $files = [
         'app/Http/Controllers/Warehouse/ContractTransferController.php',
-        'app/Traits/ValidatesSecureDeletion.php'
+        'app/Traits/ValidatesSecureDeletion.php',
+        'public/apply_transfers_fix.php'
     ];
 
     foreach ($files as $relPath) {
