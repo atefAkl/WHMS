@@ -141,10 +141,10 @@ class ContractTransferController extends Controller
             'farm_source'             => 'nullable|string|max:255',
             'notes'                   => 'nullable|string',
             'status'                  => 'required|in:draft,approved',
-            'items'                   => 'required|array|min:1',
-            'items.*.inventory_item_id' => 'required|exists:inventory_items,id',
+            'items'                   => $request->status === 'approved' ? 'required|array|min:1' : 'nullable|array',
+            'items.*.inventory_item_id' => 'required_with:items|exists:inventory_items,id',
             'items.*.pallet_id'       => 'nullable|exists:pallets,id',
-            'items.*.quantity'        => 'required|numeric|min:0.01',
+            'items.*.quantity'        => 'required_with:items|numeric|min:0.01',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -175,15 +175,17 @@ class ContractTransferController extends Controller
                 'approved_at'             => $request->status === 'approved' ? now() : null,
             ]);
 
-            foreach ($request->items as $item) {
-                ContractTransferItem::create([
-                    'contract_transfer_id'      => $transfer->id,
-                    'inventory_item_id'         => $item['inventory_item_id'],
-                    'inventory_item_variant_id' => $item['inventory_item_variant_id'] ?? null,
-                    'pallet_id'                 => $item['pallet_id'] ?? null,
-                    'quantity'                  => $item['quantity'],
-                    'notes'                     => $item['notes'] ?? null,
-                ]);
+            if (!empty($request->items) && is_array($request->items)) {
+                foreach ($request->items as $item) {
+                    ContractTransferItem::create([
+                        'contract_transfer_id'      => $transfer->id,
+                        'inventory_item_id'         => $item['inventory_item_id'],
+                        'inventory_item_variant_id' => $item['inventory_item_variant_id'] ?? null,
+                        'pallet_id'                 => $item['pallet_id'] ?? null,
+                        'quantity'                  => $item['quantity'],
+                        'notes'                     => $item['notes'] ?? null,
+                    ]);
+                }
             }
 
             if ($transfer->status === 'approved') {
@@ -254,10 +256,10 @@ class ContractTransferController extends Controller
             'farm_source'             => 'nullable|string|max:255',
             'notes'                   => 'nullable|string',
             'status'                  => 'required|in:draft,approved',
-            'items'                   => 'required|array|min:1',
-            'items.*.inventory_item_id' => 'required|exists:inventory_items,id',
+            'items'                   => $request->status === 'approved' ? 'required|array|min:1' : 'nullable|array',
+            'items.*.inventory_item_id' => 'required_with:items|exists:inventory_items,id',
             'items.*.pallet_id'       => 'nullable|exists:pallets,id',
-            'items.*.quantity'        => 'required|numeric|min:0.01',
+            'items.*.quantity'        => 'required_with:items|numeric|min:0.01',
         ]);
 
         return DB::transaction(function () use ($request, $transfer) {
@@ -282,15 +284,17 @@ class ContractTransferController extends Controller
 
             $transfer->items()->delete();
 
-            foreach ($request->items as $item) {
-                ContractTransferItem::create([
-                    'contract_transfer_id'      => $transfer->id,
-                    'inventory_item_id'         => $item['inventory_item_id'],
-                    'inventory_item_variant_id' => $item['inventory_item_variant_id'] ?? null,
-                    'pallet_id'                 => $item['pallet_id'] ?? null,
-                    'quantity'                  => $item['quantity'],
-                    'notes'                     => $item['notes'] ?? null,
-                ]);
+            if (!empty($request->items) && is_array($request->items)) {
+                foreach ($request->items as $item) {
+                    ContractTransferItem::create([
+                        'contract_transfer_id'      => $transfer->id,
+                        'inventory_item_id'         => $item['inventory_item_id'],
+                        'inventory_item_variant_id' => $item['inventory_item_variant_id'] ?? null,
+                        'pallet_id'                 => $item['pallet_id'] ?? null,
+                        'quantity'                  => $item['quantity'],
+                        'notes'                     => $item['notes'] ?? null,
+                    ]);
+                }
             }
 
             if ($transfer->status === 'approved') {
@@ -311,6 +315,7 @@ class ContractTransferController extends Controller
 
         $this->validateSecureDelete($request);
 
+        $transfer->items()->delete();
         $transfer->delete();
 
         return redirect()->route('contract-transfers.index')->with('success', 'تم حذف سند نقل الطبالي بنجاح.');
@@ -322,6 +327,10 @@ class ContractTransferController extends Controller
 
         if ($transfer->status === 'approved') {
             return back()->with('info', 'السند معتمد بالفعل.');
+        }
+
+        if ($transfer->items->isEmpty()) {
+            return back()->withErrors(['error' => 'لا يمكن اعتماد سند نقل لا يحتوي على أية أصناف أو طبالي.']);
         }
 
         DB::transaction(function () use ($transfer) {

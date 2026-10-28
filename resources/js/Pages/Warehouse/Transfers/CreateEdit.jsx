@@ -38,6 +38,9 @@ export default function CreateEdit({ transfer = null, contracts = [], customers 
                   inventory_item_id: i.inventory_item_id,
                   inventory_item_variant_id: i.inventory_item_variant_id,
                   pallet_id: i.pallet_id,
+                  pallet_number: i.pallet?.pallet_number || i.pallet?.code || i.pallet_id,
+                  item_name: i.inventory_item?.name || "",
+                  variant_name: i.variant?.name || "",
                   quantity: i.quantity,
                   available_qty: i.quantity, // Default available
                   notes: i.notes || "",
@@ -158,6 +161,11 @@ export default function CreateEdit({ transfer = null, contracts = [], customers 
 
     const handleSubmit = (e, targetStatus = "draft") => {
         if (e) e.preventDefault();
+
+        if (targetStatus === "approved" && (!data.items || data.items.length === 0)) {
+            alert(t("transfers.cannot_approve_empty", "لا يمكن اعتماد السند بدون إضافة صفوف تحويل على الأقل."));
+            return;
+        }
 
         const formData = {
             ...data,
@@ -416,9 +424,21 @@ export default function CreateEdit({ transfer = null, contracts = [], customers 
                                 <ArrowLeftRight className="h-4 w-4 text-primary" />
                                 <span>{t("transfers.items_table_title", "جدول الأصناف والطبالي المراد تحويلها")}</span>
                             </h4>
-                            <span className="text-xs font-mono font-bold text-primary">
-                                {t("transfers.total_items_count", "عدد البنود")}: {data.items.length}
-                            </span>
+                            <div className="flex items-center gap-3">
+                                {data.items.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setData("items", [])}
+                                        className="text-xs text-danger hover:underline flex items-center gap-1 font-semibold"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <span>{t("transfers.clear_items", "إفراغ الجدول")}</span>
+                                    </button>
+                                )}
+                                <span className="text-xs font-mono font-bold text-primary">
+                                    {t("transfers.total_items_count", "عدد البنود")}: {data.items.length}
+                                </span>
+                            </div>
                         </div>
 
                         {data.items.length === 0 ? (

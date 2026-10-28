@@ -774,27 +774,17 @@ export default function Index({ transfers = { data: [] }, contracts = [], custom
             {/* Secure Delete Confirmation Modal */}
             <ConfirmationModal
                 show={!!transferToDelete}
-                onClose={cancelDelete}
-                onConfirm={confirmDelete}
                 title={t("transfers.delete_title", "تأكيد حذف سند التحويل")}
-                content={
-                    <div>
-                        <p className="text-xs text-text-muted mb-2">
-                            {t("transfers.delete_confirm_text", "هل أنت تأكد من إرادة حذف سند تحويل الطبالي؟")}
-                        </p>
-                        <TextInput
-                            type="password"
-                            placeholder={t("common.enter_secure_password", "ادخل كلمة السر لإنفاذ الحذف...")}
-                            value={deletePassword}
-                            onChange={(e) => setDeletePassword(e.target.value)}
-                            className="w-full text-xs rounded-none border-border"
-                        />
-                        {deleteError && <p className="text-xs text-danger mt-1">{deleteError}</p>}
-                    </div>
-                }
-                confirmText={t("common.delete", "حذف")}
-                cancelText={t("common.cancel", "إلغاء")}
-                isLoading={processingDelete}
+                message={t("transfers.delete_confirm_text", "هل أنت متأكد من رغبتك في حذف سند تحويل الطبالي؟")}
+                onConfirm={() => confirmDelete()}
+                onCancel={cancelDelete}
+                requirePassword={true}
+                passwordValue={deletePassword}
+                onPasswordChange={setDeletePassword}
+                passwordError={deleteError}
+                processing={processingDelete}
+                confirmLabel={t("common.delete", "حذف")}
+                cancelLabel={t("common.cancel", "إلغاء")}
             />
         </AuthenticatedLayout>
     );
