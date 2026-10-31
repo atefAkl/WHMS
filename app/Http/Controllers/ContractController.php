@@ -1254,7 +1254,7 @@ class ContractController extends Controller
             'password' => 'required|string',
             'ids' => 'required|array',
             'ids.*.id' => 'required|integer',
-            'ids.*.type' => 'required|string|in:reception,delivery',
+            'ids.*.type' => 'required|string|in:reception,delivery,transfer,transfer_in,transfer_out,rearrangement,adjustment',
         ]);
 
         $user = Auth::user();
@@ -1287,6 +1287,16 @@ class ContractController extends Controller
                         ]);
                         $approvedCount++;
                     }
+                } elseif ($item['type'] === 'rearrangement') {
+                    $rearrangement = \App\Models\PalletRearrangement::where('contract_id', $contract->id)->find($item['id']);
+                    if ($rearrangement && $rearrangement->status === 'draft') {
+                        $rearrangement->update([
+                            'status' => 'approved',
+                            'approved_by' => Auth::id(),
+                            'approved_at' => now(),
+                        ]);
+                        $approvedCount++;
+                    }
                 }
             }
         });
@@ -1306,7 +1316,7 @@ class ContractController extends Controller
             'reason' => 'required|string|max:500',
             'ids' => 'required|array',
             'ids.*.id' => 'required|integer',
-            'ids.*.type' => 'required|string|in:reception,delivery',
+            'ids.*.type' => 'required|string|in:reception,delivery,transfer,transfer_in,transfer_out,rearrangement,adjustment',
         ]);
 
         $user = Auth::user();
@@ -1350,6 +1360,16 @@ class ContractController extends Controller
                             'status' => 'draft',
                             'history' => $history,
                             'updated_by' => Auth::id(),
+                        ]);
+                        $reopenedCount++;
+                    }
+                } elseif ($item['type'] === 'rearrangement') {
+                    $rearrangement = \App\Models\PalletRearrangement::where('contract_id', $contract->id)->find($item['id']);
+                    if ($rearrangement && $rearrangement->status === 'approved') {
+                        $rearrangement->update([
+                            'status' => 'draft',
+                            'approved_by' => null,
+                            'approved_at' => null,
                         ]);
                         $reopenedCount++;
                     }

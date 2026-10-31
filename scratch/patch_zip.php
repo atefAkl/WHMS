@@ -7,7 +7,7 @@
 
 $zip = new ZipArchive();
 $baseDir = dirname(__DIR__);
-$zipFile = $baseDir . '/WHMS_update_transfers_fix.zip';
+$zipFile = $baseDir . '/WHMS_update_vouchers_fix.zip';
 
 if (file_exists($zipFile)) {
     unlink($zipFile);
@@ -18,8 +18,10 @@ echo "Packaging update patch: {$zipFile}...\n";
 if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
     // 1. Explicitly list individual changed code files
     $codeFiles = [
+        'app/Http/Controllers/ContractController.php',
         'app/Http/Controllers/Warehouse/ContractTransferController.php',
         'app/Traits/ValidatesSecureDeletion.php',
+        'resources/js/Pages/Contracts/Show.jsx',
         'resources/js/Pages/Warehouse/Transfers/Index.jsx',
         'resources/js/Pages/Warehouse/Transfers/CreateEdit.jsx',
     ];
